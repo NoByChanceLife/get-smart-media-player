@@ -90,7 +90,7 @@ export const StreamingPerformanceModal: React.FC<StreamingPerformanceModalProps>
       badge: 'Recommended',
       description: 'Starts with Balanced playback and adapts when repeated playback stalls are observed.',
       details:
-        'Tracks buffer depth, fragment response times, and stalls. Auto can increase the buffer cushion after repeated stalls and return to Balanced settings after playback remains stable.'
+        'Tracks buffer depth, fragment response times, and stalls. Auto can increase the buffer cushion after repeated stalls and return to Balanced settings after playback remains stable.',
       icon: <Sparkles className="w-5 h-5 text-cyan-400" />,
     },
     {
@@ -117,7 +117,7 @@ export const StreamingPerformanceModal: React.FC<StreamingPerformanceModalProps>
       badge: 'Maximum Buffer',
       description: 'Prioritizes uninterrupted playback over live latency and instant startup.',
       details:
-        'Builds a deep 35s live buffer (90s on movies) and employs conservative ABR bitrate selection. Useful when the network path or stream source is inconsistent.'
+        'Builds a deep 35s live buffer (90s on movies) and employs conservative ABR bitrate selection. Useful when the network path or stream source is inconsistent.',
       icon: <Shield className="w-5 h-5 text-indigo-400" />,
     },
   ];
