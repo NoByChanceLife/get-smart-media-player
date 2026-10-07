@@ -240,11 +240,55 @@ export async function safeFetch(
         continue;
       }
 
-      // If maxResponseBytes is specified, check content-length header
+      // If maxResponseBytes is specified, enforce the limit even when the
+      // upstream server omits Content-Length or uses chunked transfer encoding.
       if (maxResponseBytes) {
         const cl = res.headers.get('content-length');
         if (cl && parseInt(cl, 10) > maxResponseBytes) {
+          try {
+            await res.body?.cancel();
+          } catch {
+            // Best-effort cancellation only.
+          }
           throw new Error(`Response size exceeds limit of ${maxResponseBytes} bytes.`);
+        }
+
+        if (res.body) {
+          const reader = res.body.getReader();
+          const chunks: Uint8Array[] = [];
+          let totalBytes = 0;
+
+          try {
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
+              if (!value) continue;
+
+              totalBytes += value.byteLength;
+              if (totalBytes > maxResponseBytes) {
+                await reader.cancel();
+                throw new Error(`Response size exceeds limit of ${maxResponseBytes} bytes.`);
+              }
+
+              chunks.push(value);
+            }
+          } finally {
+            reader.releaseLock();
+          }
+
+          const body = new Uint8Array(totalBytes);
+          let offset = 0;
+          for (const chunk of chunks) {
+            body.set(chunk, offset);
+            offset += chunk.byteLength;
+          }
+
+          clearTimeout(timer);
+          return new Response(body, {
+            status: res.status,
+            statusText: res.statusText,
+            headers: new Headers(res.headers),
+          });
         }
       }
 
