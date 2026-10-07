@@ -69,6 +69,7 @@ export const ParentalControlsModal: React.FC<ParentalControlsModalProps> = ({
   if (!isOpen) return null;
 
   const selectedProfile = profiles.find((p) => p.id === selectedProfileId) || profiles[0];
+  const isPinConfigured = parentalControlService.isPinConfigured();
 
   const handleToggleHideContent = () => {
     const updated = !settings.hideLockedContentCompletely;
@@ -159,26 +160,37 @@ export const ParentalControlsModal: React.FC<ParentalControlsModalProps> = ({
     onConfigChanged();
   };
 
-  const handleChangePinSubmit = (e: React.FormEvent) => {
+  const handleChangePinSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (newPinInput !== confirmPinInput) {
       setPinFeedback({ type: 'error', text: 'New PINs do not match.' });
       return;
     }
-    if (newPinInput.length < 4) {
-      setPinFeedback({ type: 'error', text: 'PIN must be at least 4 digits.' });
+    if (!/^\d{4,6}$/.test(newPinInput)) {
+      setPinFeedback({ type: 'error', text: 'PIN must be 4 to 6 digits.' });
       return;
     }
-    const success = parentalControlService.updateMasterPin(currentPinInput, newPinInput);
+
+    const success = isPinConfigured
+      ? await parentalControlService.updateMasterPin(currentPinInput, newPinInput)
+      : await parentalControlService.setInitialMasterPin(newPinInput);
+
     if (success) {
-      setPinFeedback({ type: 'success', text: 'Master PIN successfully updated!' });
+      setPinFeedback({
+        type: 'success',
+        text: isPinConfigured ? 'Master PIN successfully updated!' : 'Master PIN successfully created!',
+      });
       setCurrentPinInput('');
       setNewPinInput('');
       setConfirmPinInput('');
       setSettings(parentalControlService.getSettings());
+      onConfigChanged();
       setTimeout(() => setPinFeedback(null), 3000);
     } else {
-      setPinFeedback({ type: 'error', text: 'Incorrect current Master PIN.' });
+      setPinFeedback({
+        type: 'error',
+        text: isPinConfigured ? 'Incorrect current Master PIN.' : 'Unable to create Master PIN.',
+      });
     }
   };
 
@@ -726,35 +738,45 @@ export const ParentalControlsModal: React.FC<ParentalControlsModalProps> = ({
             <div className="max-w-md mx-auto space-y-6 py-4">
               <div className="p-4 rounded-2xl bg-cyan-950/30 border border-cyan-500/20 text-center">
                 <KeyRound className="w-8 h-8 text-cyan-400 mx-auto mb-2" />
-                <h4 className="text-sm font-bold text-white">Master Admin PIN Security</h4>
+                <h4 className="text-sm font-bold text-white">
+                  {isPinConfigured ? 'Master Admin PIN Security' : 'Create Master PIN'}
+                </h4>
                 <p className="text-xs text-slate-400 mt-1">
-                  The Master PIN grants instant override of all parental restrictions and profile settings.
+                  {isPinConfigured
+                    ? 'The Master PIN temporarily unlocks protected controls and restricted content.'
+                    : 'No default PIN is provided. Create a private 4–6 digit PIN to enable protected controls.'}
                 </p>
               </div>
 
               <form onSubmit={handleChangePinSubmit} className="space-y-4">
                 <div className="space-y-3 text-xs">
-                  <div>
-                    <label className="block text-slate-300 mb-1 font-medium">Current Master PIN</label>
-                    <input
-                      type="password"
-                      maxLength={6}
-                      placeholder="••••"
-                      value={currentPinInput}
-                      onChange={(e) => setCurrentPinInput(e.target.value)}
-                      className="w-full bg-slate-950 border border-slate-700/80 rounded-xl px-3 py-2 text-white font-mono text-center tracking-widest text-base focus:outline-none focus:border-cyan-500"
-                      required
-                    />
-                  </div>
+                  {isPinConfigured && (
+                    <div>
+                      <label className="block text-slate-300 mb-1 font-medium">Current Master PIN</label>
+                      <input
+                        type="password"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        maxLength={6}
+                        placeholder="••••"
+                        value={currentPinInput}
+                        onChange={(e) => setCurrentPinInput(e.target.value.replace(/\D/g, ''))}
+                        className="w-full bg-slate-950 border border-slate-700/80 rounded-xl px-3 py-2 text-white font-mono text-center tracking-widest text-base focus:outline-none focus:border-cyan-500"
+                        required
+                      />
+                    </div>
+                  )}
 
                   <div>
                     <label className="block text-slate-300 mb-1 font-medium">New Master PIN (4 to 6 Digits)</label>
                     <input
                       type="password"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
                       maxLength={6}
                       placeholder="••••"
                       value={newPinInput}
-                      onChange={(e) => setNewPinInput(e.target.value)}
+                      onChange={(e) => setNewPinInput(e.target.value.replace(/\D/g, ''))}
                       className="w-full bg-slate-950 border border-slate-700/80 rounded-xl px-3 py-2 text-white font-mono text-center tracking-widest text-base focus:outline-none focus:border-cyan-500"
                       required
                     />
@@ -764,10 +786,12 @@ export const ParentalControlsModal: React.FC<ParentalControlsModalProps> = ({
                     <label className="block text-slate-300 mb-1 font-medium">Confirm New PIN</label>
                     <input
                       type="password"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
                       maxLength={6}
                       placeholder="••••"
                       value={confirmPinInput}
-                      onChange={(e) => setConfirmPinInput(e.target.value)}
+                      onChange={(e) => setConfirmPinInput(e.target.value.replace(/\D/g, ''))}
                       className="w-full bg-slate-950 border border-slate-700/80 rounded-xl px-3 py-2 text-white font-mono text-center tracking-widest text-base focus:outline-none focus:border-cyan-500"
                       required
                     />
@@ -795,7 +819,7 @@ export const ParentalControlsModal: React.FC<ParentalControlsModalProps> = ({
                   type="submit"
                   className="w-full py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold transition shadow-lg shadow-cyan-950/50"
                 >
-                  Update Master PIN
+                  {isPinConfigured ? 'Update Master PIN' : 'Create Master PIN'}
                 </button>
               </form>
 
