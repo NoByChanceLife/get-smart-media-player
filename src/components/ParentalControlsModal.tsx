@@ -139,8 +139,8 @@ export const ParentalControlsModal: React.FC<ParentalControlsModalProps> = ({
         canAccessSeries: true,
         canManageServers: false,
         canModifyParentalControls: false,
-        maxContentRating: isKids ? 'PG' : 'PG-13',
-        blockedCategories: isKids ? ['news', 'action', 'scifi', 'crime'] : [],
+        maxContentRating: 'all',
+        blockedCategories: [],
         blockedChannelIds: [],
       },
     });
@@ -540,32 +540,9 @@ export const ParentalControlsModal: React.FC<ParentalControlsModalProps> = ({
                     </div>
                   </div>
 
-                  {/* Content Rating Cap */}
-                  {selectedProfile.role !== 'master_admin' && (
-                    <div className="space-y-2 pt-2">
-                      <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                        Maximum Allowed Content Rating
-                      </h4>
-                      <div className="flex items-center gap-2">
-                        {['all', 'PG-13', 'PG'].map((rating) => {
-                          const isSel = (selectedProfile.privileges.maxContentRating || 'all') === rating;
-                          return (
-                            <button
-                              key={rating}
-                              onClick={() => handleUpdatePrivilege('maxContentRating', rating)}
-                              className={`px-4 py-1.5 rounded-xl text-xs font-bold transition ${
-                                isSel
-                                  ? 'bg-cyan-600 text-white shadow'
-                                  : 'bg-slate-900 text-slate-400 border border-slate-800 hover:text-white'
-                              }`}
-                            >
-                              {rating === 'all' ? 'All Ratings' : rating}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
+                  {/* Provider category/channel locks are enforced explicitly below.
+                      Rating caps are intentionally not shown until trustworthy provider
+                      rating metadata is available. */}
 
                   {/* Blocked Categories for this user */}
                   {selectedProfile.role !== 'master_admin' && (
