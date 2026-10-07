@@ -88,9 +88,9 @@ export const StreamingPerformanceModal: React.FC<StreamingPerformanceModalProps>
       id: 'auto',
       title: 'Auto',
       badge: 'Recommended',
-      description: 'Intelligently adapts playback strategy based on observed connection stability.',
+      description: 'Starts with Balanced playback and adapts when repeated playback stalls are observed.',
       details:
-        'Continuously tracks buffer depth, fragment response times, and stalls. Dynamically deepens buffer cushion when provider congestion occurs, and recovers to low-latency when stream stabilizes.',
+        'Tracks buffer depth, fragment response times, and stalls. Auto can increase the buffer cushion after repeated stalls and return to Balanced settings after playback remains stable.'
       icon: <Sparkles className="w-5 h-5 text-cyan-400" />,
     },
     {
@@ -117,7 +117,7 @@ export const StreamingPerformanceModal: React.FC<StreamingPerformanceModalProps>
       badge: 'Maximum Buffer',
       description: 'Prioritizes uninterrupted playback over live latency and instant startup.',
       details:
-        'Builds a deep 35s live buffer (90s on movies) and employs conservative ABR bitrate selection. Best for fluctuating WiFi or high-latency provider links.',
+        'Builds a deep 35s live buffer (90s on movies) and employs conservative ABR bitrate selection. Useful when the network path or stream source is inconsistent.'
       icon: <Shield className="w-5 h-5 text-indigo-400" />,
     },
   ];
@@ -155,7 +155,7 @@ export const StreamingPerformanceModal: React.FC<StreamingPerformanceModalProps>
         <div className="px-6 py-2.5 bg-cyan-950/30 border-b border-cyan-900/30 flex items-center gap-2.5 text-xs text-cyan-200/90">
           <Info className="w-4 h-4 text-cyan-400 shrink-0" />
           <span>
-            Smart Streaming maximizes playback resilience and recovers gracefully from temporary network and stream issues.
+            Smart Streaming adjusts buffering and recovery behavior to improve resilience, but it cannot eliminate buffering caused by insufficient bandwidth, source outages, or device limitations.
           </span>
         </div>
 
