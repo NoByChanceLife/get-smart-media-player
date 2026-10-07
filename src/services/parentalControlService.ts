@@ -63,8 +63,8 @@ export const DEFAULT_PROFILES: UserProfile[] = [
       canAccessSeries: true,
       canManageServers: false,
       canModifyParentalControls: false,
-      maxContentRating: 'PG',
-      blockedCategories: ['news', 'action', 'scifi', 'crime'],
+      maxContentRating: 'all',
+      blockedCategories: [],
       blockedChannelIds: [],
     },
     createdAt: new Date().toISOString(),
@@ -82,7 +82,7 @@ export const DEFAULT_PROFILES: UserProfile[] = [
       canAccessSeries: true,
       canManageServers: false,
       canModifyParentalControls: false,
-      maxContentRating: 'PG-13',
+      maxContentRating: 'all',
       blockedCategories: [],
       blockedChannelIds: [],
     },
@@ -186,7 +186,12 @@ class ParentalControlService {
   }
 
   public saveSettings(updates: Partial<ParentalControlsSettings>): void {
-    this.settings = { ...this.settings, ...updates };
+    const { masterPin: _plaintextPin, ...safeUpdates } = updates;
+    this.settings = { ...this.settings, ...safeUpdates, masterPin: undefined };
+    this.settings.unlockTimeoutMinutes = Math.min(
+      120,
+      Math.max(1, Number(this.settings.unlockTimeoutMinutes) || 30)
+    );
     localStorage.setItem(PARENTAL_SETTINGS_KEY, JSON.stringify(this.settings));
   }
 
@@ -333,7 +338,8 @@ class ParentalControlService {
   }
 
   public unlockSession(minutes: number): void {
-    this.sessionUnlockedUntil = Date.now() + minutes * 60 * 1000;
+    const boundedMinutes = Math.min(120, Math.max(1, Number(minutes) || 30));
+    this.sessionUnlockedUntil = Date.now() + boundedMinutes * 60 * 1000;
   }
 
   public relockSession(): void {
@@ -363,12 +369,6 @@ class ParentalControlService {
 
     if (isCategoryBlocked) return true;
 
-    // Kids profile check: restrict non-animation / non-kids channels if category is adult/news/action
-    if (active.isKids) {
-      if (['news', 'sports', 'movies', 'action', 'crime'].includes(channel.category_id)) {
-        return true;
-      }
-    }
 
     return false;
   }
@@ -388,9 +388,6 @@ class ParentalControlService {
 
     if (isGlobal || isUserBlocked) return true;
 
-    if (active.isKids) {
-      return ['news', 'sports', 'movies', 'action', 'scifi', 'crime'].includes(categoryId);
-    }
 
     return false;
   }
@@ -410,8 +407,6 @@ class ParentalControlService {
 
   public canAccessSection(section: 'live' | 'movies' | 'series'): boolean {
     const active = this.getActiveProfile();
-    if (active.role === 'master_admin') return true;
-
     if (section === 'live') return active.privileges.canAccessLiveTV;
     if (section === 'movies') return active.privileges.canAccessMovies;
     if (section === 'series') return active.privileges.canAccessSeries;
