@@ -850,6 +850,35 @@ class XtreamService {
     return generateDemoEPG(101);
   }
 
+  /**
+   * Exchanges a sensitive upstream media URL for a short-lived opaque server path.
+   * The provider URL is sent in the POST body and is not exposed in browser query strings.
+   */
+  public async createStreamTicket(streamUrl: string): Promise<string> {
+    const response = await fetch('/api/xtream/stream-ticket', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: streamUrl }),
+    });
+
+    if (!response.ok) {
+      let message = `Unable to prepare stream (HTTP ${response.status}).`;
+      try {
+        const data = await response.json();
+        if (data?.error) message = data.error;
+      } catch {
+        // Keep generic message.
+      }
+      throw new Error(message);
+    }
+
+    const data = await response.json();
+    if (!data?.streamPath || typeof data.streamPath !== 'string') {
+      throw new Error('Stream ticket response was invalid.');
+    }
+    return data.streamPath;
+  }
+
   // Generate Stream Playback URL
   public buildStreamUrl(
     type: 'live' | 'vod' | 'series',
