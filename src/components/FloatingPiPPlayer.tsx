@@ -45,7 +45,9 @@ export const FloatingPiPPlayer: React.FC<FloatingPiPPlayerProps> = ({
   const [layoutMode, setLayoutMode] = useState<'pip_corner' | 'side_by_side'>('pip_corner');
   const [isPlaying, setIsPlaying] = useState(true);
 
-  const resolvePlaybackUrl = async (target: PlaybackTarget): Promise<string> => {
+  type ResolvedPlaybackSource = { url: string; isHls: boolean };
+
+  const resolvePlaybackUrl = async (target: PlaybackTarget): Promise<ResolvedPlaybackSource> => {
     let streamUrl = '';
 
     if (target.type === 'live') {
@@ -81,29 +83,35 @@ export const FloatingPiPPlayer: React.FC<FloatingPiPPlayerProps> = ({
         );
     }
 
-    if (streamUrl.startsWith('/api/xtream/stream/')) return streamUrl;
+    let mediaHintUrl = streamUrl;
+    if (mediaHintUrl.startsWith('/api/xtream/stream?url=')) {
+      const encoded = mediaHintUrl.split('?url=')[1] || '';
+      mediaHintUrl = decodeURIComponent(encoded);
+    }
+    const isHls = /\.m3u8(?:$|[?#])/i.test(mediaHintUrl);
+
+    if (streamUrl.startsWith('/api/xtream/stream/')) return { url: streamUrl, isHls };
 
     if (streamUrl.startsWith('/api/xtream/stream?url=')) {
       const encoded = streamUrl.split('?url=')[1] || '';
-      return xtreamService.createStreamTicket(decodeURIComponent(encoded));
+      return { url: await xtreamService.createStreamTicket(decodeURIComponent(encoded)), isHls };
     }
 
     if (streamUrl.startsWith('http://') || streamUrl.startsWith('https://')) {
-      return xtreamService.createStreamTicket(streamUrl);
+      return { url: await xtreamService.createStreamTicket(streamUrl), isHls };
     }
 
-    return streamUrl;
+    return { url: streamUrl, isHls };
   };
 
   const attachStream = (
     video: HTMLVideoElement,
     streamUrl: string,
+    isHls: boolean,
     target: PlaybackTarget,
     isSecondary: boolean,
     hlsRef: React.MutableRefObject<Hls | null>
   ) => {
-    const isHls = streamUrl.includes('.m3u8') || target.type === 'live';
-
     if (isHls && Hls.isSupported()) {
       const config = streamingPerformanceService.getConfig();
       const hlsConfig = streamingPerformanceService.getHlsConfig(
@@ -146,9 +154,9 @@ export const FloatingPiPPlayer: React.FC<FloatingPiPPlayerProps> = ({
     }
 
     void resolvePlaybackUrl(primaryTarget)
-      .then((streamUrl) => {
+      .then((source) => {
         if (!cancelled) {
-          attachStream(video, streamUrl, primaryTarget, false, primaryHlsRef);
+          attachStream(video, source.url, source.isHls, primaryTarget, false, primaryHlsRef);
         }
       })
       .catch(() => {
@@ -179,9 +187,9 @@ export const FloatingPiPPlayer: React.FC<FloatingPiPPlayerProps> = ({
     }
 
     void resolvePlaybackUrl(secondaryTarget)
-      .then((streamUrl) => {
+      .then((source) => {
         if (!cancelled) {
-          attachStream(video, streamUrl, secondaryTarget, true, secondaryHlsRef);
+          attachStream(video, source.url, source.isHls, secondaryTarget, true, secondaryHlsRef);
         }
       })
       .catch(() => {
