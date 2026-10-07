@@ -241,7 +241,11 @@ export interface UserProfile {
 }
 
 export interface ParentalControlsSettings {
-  masterPin: string;
+  /** @deprecated Legacy plaintext PIN; migrated away by parentalControlService. */
+  masterPin?: string;
+  masterPinHash?: string;
+  masterPinSalt?: string;
+  pinConfigured?: boolean;
   hideLockedContentCompletely: boolean;
   lockedCategoryIds: string[];
   lockedChannelIds: string[];
