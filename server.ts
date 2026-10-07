@@ -10,6 +10,35 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = parseInt(process.env.PORT || '3000', 10);
 
+type StreamTicket = { url: string; expiresAt: number };
+const streamTickets = new Map<string, StreamTicket>();
+const STREAM_TICKET_TTL_MS = 10 * 60 * 1000;
+
+function createStreamTicket(url: string): string {
+  const id = crypto.randomUUID();
+  streamTickets.set(id, { url, expiresAt: Date.now() + STREAM_TICKET_TTL_MS });
+  return id;
+}
+
+function getStreamTicket(id: string): string | null {
+  const ticket = streamTickets.get(id);
+  if (!ticket) return null;
+  if (Date.now() > ticket.expiresAt) {
+    streamTickets.delete(id);
+    return null;
+  }
+  return ticket.url;
+}
+
+function cleanupStreamTickets(): void {
+  const now = Date.now();
+  for (const [id, ticket] of streamTickets.entries()) {
+    if (now > ticket.expiresAt) streamTickets.delete(id);
+  }
+}
+
+setInterval(cleanupStreamTickets, 5 * 60 * 1000).unref();
+
 app.use(express.json({ limit: '10mb' }));
 
 // Restrict cross-origin API access in production. Same-origin requests do not need CORS.
@@ -250,13 +279,40 @@ app.all('/api/xtream/proxy', async (req: Request, res: Response) => {
 });
 
 /**
- * Stream proxy to bypass CORS/mixed-content for HLS and media chunks.
- * SSRF protected with redirect checking and relative segment URI rewriting.
+ * Creates a short-lived opaque stream ticket so provider URLs, credentials, and
+ * signed HLS URLs do not need to appear in Get Smart browser query strings.
  */
-app.all('/api/xtream/stream', async (req: Request, res: Response) => {
-  const streamUrl = (req.body?.url as string) || (req.query.url as string);
+app.post('/api/xtream/stream-ticket', async (req: Request, res: Response) => {
+  const streamUrl = req.body?.url as string;
+  if (!streamUrl) return res.status(400).json({ error: 'Missing stream URL' });
+
+  try {
+    await validateTargetUrl(streamUrl);
+    const ticket = createStreamTicket(streamUrl);
+    return res.json({
+      streamPath: `/api/xtream/stream/${ticket}`,
+      expiresInSeconds: STREAM_TICKET_TTL_MS / 1000,
+    });
+  } catch (err: unknown) {
+    const classified = classifyNetworkError(err as Error);
+    return res.status(classified.type === 'RESTRICTED_HOST' ? 403 : 400).json({
+      error: classified.message,
+      errorType: classified.type,
+    });
+  }
+});
+
+/**
+ * Stream proxy to bypass CORS/mixed-content for HLS and media chunks.
+ * SSRF protected with redirect checking and opaque ticket-based HLS rewriting.
+ */
+app.all(['/api/xtream/stream', '/api/xtream/stream/:ticket'], async (req: Request, res: Response) => {
+  const ticketUrl = req.params.ticket ? getStreamTicket(req.params.ticket) : null;
+  const streamUrl = ticketUrl || (req.body?.url as string) || (req.query.url as string);
   if (!streamUrl) {
-    return res.status(400).send('Missing stream URL');
+    return res.status(req.params.ticket ? 404 : 400).send(
+      req.params.ticket ? 'Stream ticket expired or invalid' : 'Missing stream URL'
+    );
   }
 
   try {
@@ -315,7 +371,8 @@ app.all('/api/xtream/stream', async (req: Request, res: Response) => {
               if (!uri.startsWith('http://') && !uri.startsWith('https://')) {
                 absUri = new URL(uri, baseUrl).href;
               }
-              return `URI="/api/xtream/stream?url=${encodeURIComponent(absUri)}"`;
+              const childTicket = createStreamTicket(absUri);
+              return `URI="/api/xtream/stream/${childTicket}"`;
             });
           }
 
@@ -328,7 +385,8 @@ app.all('/api/xtream/stream', async (req: Request, res: Response) => {
           if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://')) {
             absoluteSegmentUrl = new URL(trimmed, baseUrl).href;
           }
-          return `/api/xtream/stream?url=${encodeURIComponent(absoluteSegmentUrl)}`;
+          const childTicket = createStreamTicket(absoluteSegmentUrl);
+          return `/api/xtream/stream/${childTicket}`;
         })
         .join('\n');
 
