@@ -463,7 +463,6 @@ class XtreamService {
           serverName: profile.name,
           serverBadgeColor: profile.colorBadge || SERVER_COLORS[3],
           isFavorite: favs.has(`live_${profile.id}_single_1`),
-          currentProgram: `${profile.singleStream.name} Direct Feed`,
         });
       }
     });
@@ -801,7 +800,10 @@ class XtreamService {
     const rawStreamId = sIdStr.substring(firstUnderscore + 1);
 
     const profile = this.profiles.find((p) => p.id === serverId);
-    if (!profile || profile.isDemo) {
+    if (!profile) {
+      return [];
+    }
+    if (profile.isDemo) {
       return generateDemoEPG(101);
     }
 
@@ -847,7 +849,9 @@ class XtreamService {
       // Fallback
     }
 
-    return generateDemoEPG(101);
+    // Never substitute demo programme data for a real provider whose EPG is
+    // unavailable or empty. The UI can show a neutral no-data state instead.
+    return [];
   }
 
   /**
