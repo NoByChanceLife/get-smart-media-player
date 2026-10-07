@@ -178,6 +178,15 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
       if (isCancelled) return;
 
+      // Preserve the upstream format hint before replacing the provider URL with
+      // an opaque ticket path. Do not assume every live stream is HLS.
+      let mediaHintUrl = resolvedUrl;
+      if (mediaHintUrl.startsWith('/api/xtream/stream?url=')) {
+        const encoded = mediaHintUrl.split('?url=')[1] || '';
+        mediaHintUrl = decodeURIComponent(encoded);
+      }
+      const isM3u8 = /\.m3u8(?:$|[?#])/i.test(mediaHintUrl);
+
       // Never hand a sensitive upstream HTTP URL (or legacy proxy URL containing one)
       // directly to the media element/HLS.js. Exchange it for an opaque short-lived path.
       try {
@@ -204,8 +213,6 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         hlsRef.current.destroy();
         hlsRef.current = null;
       }
-
-      const isM3u8 = resolvedUrl.includes('.m3u8') || target.type === 'live';
 
       if (isM3u8 && Hls.isSupported()) {
         const perfConfig = streamingPerformanceService.getConfig();
