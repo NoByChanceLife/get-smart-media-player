@@ -84,12 +84,12 @@ function isAllowedOrigin(origin: string): boolean {
   return false;
 }
 
-app.use((req, res, next) => {
+app.use('/api', (req, res, next) => {
   const origin = req.headers.origin;
 
   if (origin) {
     if (!isAllowedOrigin(origin)) {
-      return res.status(403).json({ error: 'Cross-origin request is not allowed.' });
+      return res.status(403).json({ error: 'Cross-origin API request is not allowed.' });
     }
 
     res.header('Access-Control-Allow-Origin', origin);
