@@ -45,30 +45,74 @@ export const FloatingPiPPlayer: React.FC<FloatingPiPPlayerProps> = ({
   const [layoutMode, setLayoutMode] = useState<'pip_corner' | 'side_by_side'>('pip_corner');
   const [isPlaying, setIsPlaying] = useState(true);
 
-  // Setup primary stream
-  useEffect(() => {
-    const video = primaryVideoRef.current;
-    if (!video) return;
-
-    if (primaryHlsRef.current) {
-      primaryHlsRef.current.destroy();
-      primaryHlsRef.current = null;
-    }
-
+  const resolvePlaybackUrl = async (target: PlaybackTarget): Promise<string> => {
     let streamUrl = '';
-    if (primaryTarget.type === 'live') {
-      streamUrl = primaryTarget.stream.direct_source || xtreamService.buildStreamUrl('live', primaryTarget.stream.stream_id, 'm3u8', undefined, primaryTarget.stream.serverId);
-    } else if (primaryTarget.type === 'vod') {
-      streamUrl = primaryTarget.movie.direct_source || xtreamService.buildStreamUrl('vod', primaryTarget.movie.stream_id, 'mp4');
+
+    if (target.type === 'live') {
+      streamUrl =
+        target.stream.direct_source ||
+        xtreamService.buildStreamUrl(
+          'live',
+          target.stream.stream_id,
+          'm3u8',
+          undefined,
+          target.stream.serverId
+        );
+    } else if (target.type === 'vod') {
+      streamUrl =
+        target.movie.direct_source ||
+        xtreamService.buildStreamUrl(
+          'vod',
+          target.movie.stream_id,
+          target.movie.container_extension || 'mp4',
+          undefined,
+          target.movie.serverId
+        );
     } else {
-      streamUrl = primaryTarget.episode.video_url || xtreamService.buildStreamUrl('series', primaryTarget.episode.id, 'mp4');
+      streamUrl =
+        target.episode.video_url ||
+        target.episode.direct_source ||
+        xtreamService.buildStreamUrl(
+          'series',
+          target.episode.id,
+          target.episode.container_extension || 'mp4',
+          undefined,
+          target.series.serverId
+        );
     }
 
-    if (streamUrl.includes('.m3u8') && Hls.isSupported()) {
+    if (streamUrl.startsWith('/api/xtream/stream/')) return streamUrl;
+
+    if (streamUrl.startsWith('/api/xtream/stream?url=')) {
+      const encoded = streamUrl.split('?url=')[1] || '';
+      return xtreamService.createStreamTicket(decodeURIComponent(encoded));
+    }
+
+    if (streamUrl.startsWith('http://') || streamUrl.startsWith('https://')) {
+      return xtreamService.createStreamTicket(streamUrl);
+    }
+
+    return streamUrl;
+  };
+
+  const attachStream = (
+    video: HTMLVideoElement,
+    streamUrl: string,
+    target: PlaybackTarget,
+    isSecondary: boolean,
+    hlsRef: React.MutableRefObject<Hls | null>
+  ) => {
+    const isHls = streamUrl.includes('.m3u8') || target.type === 'live';
+
+    if (isHls && Hls.isSupported()) {
       const config = streamingPerformanceService.getConfig();
-      const hlsConfig = streamingPerformanceService.getHlsConfig(config.mode, primaryTarget.type, false);
+      const hlsConfig = streamingPerformanceService.getHlsConfig(
+        config.mode,
+        target.type,
+        isSecondary
+      );
       const hls = new Hls(hlsConfig);
-      primaryHlsRef.current = hls;
+      hlsRef.current = hls;
       hls.loadSource(streamUrl);
       hls.attachMedia(video);
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
@@ -87,12 +131,38 @@ export const FloatingPiPPlayer: React.FC<FloatingPiPPlayerProps> = ({
       video.src = streamUrl;
       video.play().catch(() => {});
     }
+  };
+
+  // Setup primary stream
+  useEffect(() => {
+    const video = primaryVideoRef.current;
+    if (!video) return;
+
+    let cancelled = false;
+
+    if (primaryHlsRef.current) {
+      primaryHlsRef.current.destroy();
+      primaryHlsRef.current = null;
+    }
+
+    void resolvePlaybackUrl(primaryTarget)
+      .then((streamUrl) => {
+        if (!cancelled) {
+          attachStream(video, streamUrl, primaryTarget, false, primaryHlsRef);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) video.removeAttribute('src');
+      });
 
     return () => {
+      cancelled = true;
       if (primaryHlsRef.current) {
         primaryHlsRef.current.destroy();
         primaryHlsRef.current = null;
       }
+      video.removeAttribute('src');
+      video.load();
     };
   }, [primaryTarget]);
 
@@ -101,46 +171,31 @@ export const FloatingPiPPlayer: React.FC<FloatingPiPPlayerProps> = ({
     const video = secondaryVideoRef.current;
     if (!video || !secondaryTarget) return;
 
+    let cancelled = false;
+
     if (secondaryHlsRef.current) {
       secondaryHlsRef.current.destroy();
       secondaryHlsRef.current = null;
     }
 
-    let streamUrl = '';
-    if (secondaryTarget.type === 'live') {
-      streamUrl = secondaryTarget.stream.direct_source || xtreamService.buildStreamUrl('live', secondaryTarget.stream.stream_id, 'm3u8', undefined, secondaryTarget.stream.serverId);
-    }
-
-    if (streamUrl.includes('.m3u8') && Hls.isSupported()) {
-      const config = streamingPerformanceService.getConfig();
-      // Secondary stream receives throttled profile to protect primary playback bandwidth
-      const hlsConfig = streamingPerformanceService.getHlsConfig(config.mode, 'live', true);
-      const hls = new Hls(hlsConfig);
-      secondaryHlsRef.current = hls;
-      hls.loadSource(streamUrl);
-      hls.attachMedia(video);
-      hls.on(Hls.Events.MANIFEST_PARSED, () => {
-        video.play().catch(() => {});
-      });
-      hls.on(Hls.Events.ERROR, (_event, data) => {
-        if (data.fatal) {
-          if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
-            hls.startLoad();
-          } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
-            hls.recoverMediaError();
-          }
+    void resolvePlaybackUrl(secondaryTarget)
+      .then((streamUrl) => {
+        if (!cancelled) {
+          attachStream(video, streamUrl, secondaryTarget, true, secondaryHlsRef);
         }
+      })
+      .catch(() => {
+        if (!cancelled) video.removeAttribute('src');
       });
-    } else {
-      video.src = streamUrl;
-      video.play().catch(() => {});
-    }
 
     return () => {
+      cancelled = true;
       if (secondaryHlsRef.current) {
         secondaryHlsRef.current.destroy();
         secondaryHlsRef.current = null;
       }
+      video.removeAttribute('src');
+      video.load();
     };
   }, [secondaryTarget]);
 
