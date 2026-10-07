@@ -105,16 +105,13 @@ export function parseM3uContent(
       }
 
       const lowerUrl = streamUrl.toLowerCase();
-      const lowerGroup = groupName.toLowerCase();
 
+      // Only classify an entry as VOD when the stream URL itself provides a
+      // concrete VOD signal. Category names such as "Movies" or "Cinema" are
+      // descriptive metadata and are not reliable proof that a stream is VOD.
       const isVod =
-        lowerUrl.includes('.mp4') ||
-        lowerUrl.includes('.mkv') ||
-        lowerUrl.includes('/movie/') ||
-        lowerGroup.includes('movie') ||
-        lowerGroup.includes('vod') ||
-        lowerGroup.includes('cinema') ||
-        lowerGroup.includes('films');
+        /\.(mp4|mkv)(?:$|[?#])/i.test(streamUrl) ||
+        lowerUrl.includes('/movie/');
 
       if (isVod) {
         vodStreams.push({
