@@ -2,7 +2,6 @@ import React from 'react';
 import {
   Home,
   Tv,
-  Calendar,
   Film,
   Layers,
   Star,
@@ -22,7 +21,6 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
   const tabs: Array<{ id: NavTab; label: string; icon: React.ReactNode }> = [
     { id: 'home', label: 'Home', icon: <Home className="w-5 h-5" /> },
     { id: 'live', label: 'Live TV', icon: <Tv className="w-5 h-5" /> },
-    { id: 'epg', label: 'Guide', icon: <Calendar className="w-5 h-5" /> },
     { id: 'movies', label: 'Movies', icon: <Film className="w-5 h-5" /> },
     { id: 'series', label: 'Series', icon: <Layers className="w-5 h-5" /> },
     { id: 'favorites', label: 'Favorites', icon: <Star className="w-5 h-5" /> },
@@ -30,7 +28,7 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
 
   return (
     <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#06090f]/95 backdrop-blur-xl border-t border-slate-800/80 pb-safe">
-      <div className="grid grid-cols-6 items-center h-16 px-1">
+      <div className="grid grid-cols-5 items-center h-16 px-1">
         {tabs.map((tab) => {
           const isActive = currentTab === tab.id;
           return (
