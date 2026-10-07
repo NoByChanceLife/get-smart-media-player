@@ -32,6 +32,7 @@ import { parentalControlService } from './services/parentalControlService';
 
 export default function App() {
   const [currentTab, setCurrentTab] = useState<NavTab>('home');
+  const [liveView, setLiveView] = useState<'channels' | 'guide'>('channels');
   const [isRailExpanded, setIsRailExpanded] = useState<boolean>(false);
   const [activeProfiles, setActiveProfiles] = useState<SavedProfile[]>(() => xtreamService.getActiveProfiles());
   const [serverFilter, setServerFilter] = useState<string>('all');
@@ -321,15 +322,12 @@ export default function App() {
             setCurrentTab('live');
             break;
           case '3':
-            setCurrentTab('epg');
-            break;
-          case '4':
             setCurrentTab('movies');
             break;
-          case '5':
+          case '4':
             setCurrentTab('series');
             break;
-          case '6':
+          case '5':
             setCurrentTab('favorites');
             break;
           case '/':
@@ -446,20 +444,47 @@ export default function App() {
               )}
 
               {currentTab === 'live' && (
-                <LiveTVView
-                  categories={liveCategories}
-                  streams={liveStreams}
-                  selectedCategoryId={selectedLiveCat}
-                  onSelectCategory={handleSelectLiveCategory}
-                  onPlayStream={handlePlayLiveStream}
-                  onLaunchPiP={handleLaunchDirectPiP}
-                  onToggleFavorite={handleToggleLiveFavorite}
-                  onPromptPinForStream={handlePromptPinForStream}
-                />
-              )}
+                <div className="flex flex-col gap-3">
+                  <div className="flex items-center justify-center">
+                    <div className="inline-flex rounded-2xl border border-slate-800 bg-[#090e1a] p-1 shadow-lg">
+                      <button
+                        onClick={() => setLiveView('channels')}
+                        className={`px-5 py-2 rounded-xl text-xs font-bold transition tv-focus-target ${
+                          liveView === 'channels'
+                            ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20'
+                            : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                        }`}
+                      >
+                        Channels
+                      </button>
+                      <button
+                        onClick={() => setLiveView('guide')}
+                        className={`px-5 py-2 rounded-xl text-xs font-bold transition tv-focus-target ${
+                          liveView === 'guide'
+                            ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20'
+                            : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                        }`}
+                      >
+                        Guide
+                      </button>
+                    </div>
+                  </div>
 
-              {currentTab === 'epg' && (
-                <EPGView streams={liveStreams} onPlayStream={handlePlayLiveStream} />
+                  {liveView === 'channels' ? (
+                    <LiveTVView
+                      categories={liveCategories}
+                      streams={liveStreams}
+                      selectedCategoryId={selectedLiveCat}
+                      onSelectCategory={handleSelectLiveCategory}
+                      onPlayStream={handlePlayLiveStream}
+                      onLaunchPiP={handleLaunchDirectPiP}
+                      onToggleFavorite={handleToggleLiveFavorite}
+                      onPromptPinForStream={handlePromptPinForStream}
+                    />
+                  ) : (
+                    <EPGView streams={liveStreams} onPlayStream={handlePlayLiveStream} />
+                  )}
+                </div>
               )}
 
               {currentTab === 'movies' && (
