@@ -63,6 +63,7 @@ export function useStreamHealthTracker({
   const mediaRecoveryCountRef = useRef<number>(0);
   const networkRecoveryCountRef = useRef<number>(0);
   const lastHealthyTimeRef = useRef<number>(Date.now());
+  const lastStallRecordedAtRef = useRef<number>(0);
   const currentAdaptationRef = useRef<PerformanceMode>(
     config.mode === 'auto' ? 'balanced' : config.mode
   );
@@ -74,6 +75,7 @@ export function useStreamHealthTracker({
     mediaRecoveryCountRef.current = 0;
     networkRecoveryCountRef.current = 0;
     lastHealthyTimeRef.current = Date.now();
+    lastStallRecordedAtRef.current = 0;
     currentAdaptationRef.current = config.mode === 'auto' ? 'balanced' : config.mode;
 
     setStats((prev) => ({
@@ -204,7 +206,7 @@ export function useStreamHealthTracker({
             targetAdaptation = 'stable';
             currentAdaptationRef.current = 'stable';
             diagnostic =
-              'Auto-adapted to Stable buffer: increasing cushion (30s) to overcome provider network jitter.';
+              'Auto-adapted to Stable buffer after repeated playback stalls; increasing the buffer cushion.';
 
             // Dynamically reconfigure live Hls instance for deeper buffer
             if (hls && streamType === 'live') {
@@ -234,8 +236,13 @@ export function useStreamHealthTracker({
             if (targetAdaptation === 'stable') {
               targetAdaptation = 'balanced';
               currentAdaptationRef.current = 'balanced';
-              diagnostic = 'Playback stabilized. Relaxed buffer towards balanced mode.';
+              diagnostic = 'Playback stabilized. Restored Balanced playback settings.';
               lastHealthyTimeRef.current = now;
+
+              if (hls && streamType === 'live') {
+                const balanced = streamingPerformanceService.getHlsConfig('balanced', streamType, isSecondaryStream);
+                Object.assign(hls.config, balanced);
+              }
             }
           }
         }
@@ -298,7 +305,18 @@ export function useStreamHealthTracker({
 
   // Hook into video and Hls events for stall/rebuffer detection & error recovery
   const recordStall = useCallback(() => {
-    stallEventsRef.current.push(Date.now());
+    const now = Date.now();
+
+    // Browsers commonly emit both "waiting" and "stalled" for the same
+    // interruption. Treat events within 1.5s as one rebuffer incident.
+    if (now - lastStallRecordedAtRef.current < 1500) {
+      setStats((prev) => ({ ...prev, state: 'buffering' }));
+      return;
+    }
+
+    lastStallRecordedAtRef.current = now;
+    stallEventsRef.current.push(now);
+    lastHealthyTimeRef.current = now;
     setStats((prev) => ({
       ...prev,
       rebufferCount: prev.rebufferCount + 1,
@@ -372,7 +390,7 @@ export function useStreamHealthTracker({
           setStats((prev) => ({
             ...prev,
             state: 'recovering',
-            diagnosticMessage: `Network interruption detected. Reconnecting to provider feed (${attempt}/${maxRetries})...`,
+            diagnosticMessage: `Network or source interruption detected. Reconnecting (${attempt}/${maxRetries})...`,
           }));
 
           setTimeout(() => {
@@ -387,7 +405,7 @@ export function useStreamHealthTracker({
             state: 'error',
             lastError: errorDetails || 'Stream source unreachable after 3 reconnect attempts.',
             diagnosticMessage:
-              'IPTV source feed unreachable. Server may be rate-limiting or offline.',
+              'Playback could not reconnect. The source, network path, or connection may be unavailable.',
           }));
           return false;
         }
