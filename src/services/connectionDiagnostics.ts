@@ -183,10 +183,6 @@ function analyzeMediaProbe(probe: {
     return { isPlayable: true, formatDesc: `Progressive media (${cType})`, isHtmlReject: false };
   }
 
-  if (probe.ok && (probe.status === 200 || probe.status === 206) && cType.includes('application/octet-stream')) {
-    return { isPlayable: true, formatDesc: 'Binary media stream', isHtmlReject: false };
-  }
-
   return { isPlayable: false, formatDesc: cType || 'Unknown format', isHtmlReject: false };
 }
 
@@ -561,8 +557,11 @@ export async function diagnosePortalConnection(
           playbackVerified = true;
           updateStep('testing_playback', 'success', `Playback verified: ${analysis.formatDesc} (${streamProbe.latencyMs}ms)`);
         } else if (streamProbe.ok && (streamProbe.status === 200 || streamProbe.status === 206)) {
-          playbackVerified = true;
-          updateStep('testing_playback', 'success', `Stream endpoint active (${streamProbe.latencyMs}ms)`);
+          updateStep(
+            'testing_playback',
+            'success',
+            `Stream endpoint reachable but media format was not verified (${streamProbe.latencyMs}ms)`
+          );
         } else {
           // Channels loaded, but playback probe was inconclusive (e.g. restrictive token or unsupported format)
           updateStep('testing_playback', 'success', 'Portal authenticated and channels loaded. Playback endpoint has not yet been verified.');
@@ -720,9 +719,12 @@ export async function diagnoseM3uConnection(
       if (analysis.isPlayable) {
         playbackVerified = true;
         updateStep('testing_playback', 'success', `Sample stream verified: ${analysis.formatDesc} (${streamProbe.latencyMs}ms)`);
-      } else if (streamProbe.ok || streamProbe.status === 200 || streamProbe.status === 206) {
-        playbackVerified = true;
-        updateStep('testing_playback', 'success', `Sample stream verified (${streamProbe.latencyMs}ms)`);
+      } else if (streamProbe.ok && (streamProbe.status === 200 || streamProbe.status === 206)) {
+        updateStep(
+          'testing_playback',
+          'success',
+          `Sample stream reachable but media format was not verified (${streamProbe.latencyMs}ms)`
+        );
       } else {
         updateStep('testing_playback', 'success', 'Sample URL preserved for client playback (playback not yet verified)');
       }
@@ -733,7 +735,9 @@ export async function diagnoseM3uConnection(
     // Ready
     updateStep('ready', 'success', 'Playlist verified and ready to save.');
     report.success = true;
-    report.summaryMessage = `Playlist verified: ${totalStreams} streams across ${parsed.categories.length} categories.`;
+    report.summaryMessage = playbackVerified
+      ? `Playlist parsed: ${totalStreams} streams across ${parsed.categories.length} categories; sample playback verified.`
+      : `Playlist parsed: ${totalStreams} streams across ${parsed.categories.length} categories; sample playback not yet verified.`;
     report.meta = {
       categoriesCount: parsed.categories.length,
       streamsCount: totalStreams,
