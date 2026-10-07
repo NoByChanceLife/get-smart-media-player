@@ -75,3 +75,52 @@
   padding-top: env(safe-area-inset-top, 12px);
 }
 
+
+
+/* Unified Live TV workspace */
+.live-group {
+  width: 100%;
+  min-height: 36px;
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 9px;
+  border-radius: 9px;
+  color: #94a3b8;
+  font-size: 11px;
+  font-weight: 600;
+  text-align: left;
+  transition: background-color .15s ease, color .15s ease, box-shadow .15s ease;
+}
+.live-group > span:nth-child(2) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.live-group small {
+  color: #64748b;
+  font-size: 9px;
+}
+.live-group:hover,
+.live-group:focus-visible {
+  background: #111a29;
+  color: #f8fafc;
+  outline: none;
+}
+.live-group-active {
+  background: #075985;
+  color: #fff;
+  box-shadow: inset 3px 0 0 #38bdf8;
+}
+.live-group-active small {
+  color: #bae6fd;
+}
+
+@media (pointer: coarse) and (max-width: 767px) {
+  .live-workspace button,
+  .live-workspace select,
+  .live-workspace input {
+    min-height: 44px;
+  }
+}
