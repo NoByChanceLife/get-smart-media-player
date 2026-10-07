@@ -399,8 +399,11 @@ export async function diagnoseXtreamConnection(
         updateStep('testing_playback', 'success', 'Connection verified; playback not yet verified (provider returned non-media response)');
       }
     } else if (m3u8Probe.ok && (m3u8Probe.status === 200 || m3u8Probe.status === 206)) {
-      playbackVerified = true;
-      updateStep('testing_playback', 'success', `Playback endpoint active (${m3u8Probe.latencyMs}ms)`);
+      updateStep(
+        'testing_playback',
+        'success',
+        `Playback endpoint reachable but media format was not verified (HTTP ${m3u8Probe.status})`
+      );
     } else {
       // Conservative handling: Do not falsely claim verified
       updateStep('testing_playback', 'success', 'Connection verified; playback not yet verified');
@@ -838,15 +841,25 @@ export async function diagnoseDirectStreamConnection(
   if (analysis.isPlayable) {
     updateStep('testing_playback', 'success', `Verified ${analysis.formatDesc}`);
   } else if (probe.status === 200 || probe.status === 206) {
-    updateStep('testing_playback', 'success', `Verified media endpoint (HTTP ${probe.status}, Content-Type: ${probe.contentType || 'binary stream'})`);
+    updateStep(
+      'testing_playback',
+      'success',
+      `Endpoint reachable, but playable media format was not verified (HTTP ${probe.status}, Content-Type: ${probe.contentType || 'unknown'})`
+    );
   } else {
     return fail('testing_playback', 'STREAM_ENDPOINT_UNAVAILABLE', `Media server returned unexpected status HTTP ${probe.status}.`);
   }
 
   // Step 7: Ready
-  updateStep('ready', 'success', 'Direct stream line verified.');
+  updateStep(
+    'ready',
+    'success',
+    analysis.isPlayable ? 'Direct stream line verified.' : 'Direct stream endpoint reachable; playback format remains unverified.'
+  );
   report.success = true;
-  report.summaryMessage = `Direct stream line "${config.name}" verified and ready.`;
+  report.summaryMessage = analysis.isPlayable
+    ? `Direct stream line "${config.name}" verified and ready.`
+    : `Direct stream line "${config.name}" is reachable, but playback format is not yet verified.`;
   report.meta = {
     streamsCount: 1,
     latencyMs: probe.latencyMs,
