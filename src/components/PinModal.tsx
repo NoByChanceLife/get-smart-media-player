@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Lock, X, Delete, ShieldAlert, KeyRound } from 'lucide-react';
+import { Lock, X, Delete, ShieldAlert } from 'lucide-react';
 import { parentalControlService } from '../services/parentalControlService';
 
 interface PinModalProps {
@@ -13,7 +13,7 @@ interface PinModalProps {
 export const PinModal: React.FC<PinModalProps> = ({
   isOpen,
   title = 'Enter Master PIN',
-  description = 'Parental controls are active. Enter your 4-digit PIN to unlock.',
+  description = 'Parental controls are active. Enter your 4–6 digit PIN to unlock.',
   onSuccess,
   onCancel,
 }) => {
@@ -122,7 +122,7 @@ export const PinModal: React.FC<PinModalProps> = ({
 
         {/* PIN Indicators Dots */}
         <div className="flex items-center gap-3 my-6">
-          {[0, 1, 2, 3].map((idx) => {
+          {[0, 1, 2, 3, 4, 5].map((idx) => {
             const isFilled = pin.length > idx;
             return (
               <div
