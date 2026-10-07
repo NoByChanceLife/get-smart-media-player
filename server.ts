@@ -12,14 +12,56 @@ const PORT = parseInt(process.env.PORT || '3000', 10);
 
 app.use(express.json({ limit: '10mb' }));
 
-// Enable CORS for internal applet API
-app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, X-Target-Mac, X-Target-Token');
-  if (req.method === 'OPTIONS') {
-    return res.sendStatus(200);
+// Restrict cross-origin API access in production. Same-origin requests do not need CORS.
+// Extra production origins may be supplied as a comma-separated CORS_ALLOWED_ORIGINS value.
+const isProduction = process.env.NODE_ENV === 'production';
+const configuredOrigins = (process.env.CORS_ALLOWED_ORIGINS || '')
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
+function isAllowedOrigin(origin: string): boolean {
+  if (configuredOrigins.includes(origin)) return true;
+
+  if (!isProduction) {
+    try {
+      const parsed = new URL(origin);
+      return (
+        (parsed.protocol === 'http:' || parsed.protocol === 'https:') &&
+        (parsed.hostname === 'localhost' ||
+          parsed.hostname === '127.0.0.1' ||
+          parsed.hostname === '::1')
+      );
+    } catch {
+      return false;
+    }
   }
+
+  return false;
+}
+
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+
+  if (origin) {
+    if (!isAllowedOrigin(origin)) {
+      return res.status(403).json({ error: 'Cross-origin request is not allowed.' });
+    }
+
+    res.header('Access-Control-Allow-Origin', origin);
+    res.header('Vary', 'Origin');
+  }
+
+  res.header('Access-Control-Allow-Methods', 'GET, POST, HEAD, OPTIONS');
+  res.header(
+    'Access-Control-Allow-Headers',
+    'Origin, X-Requested-With, Content-Type, Accept, Authorization, X-Target-Mac, X-Target-Token, Range'
+  );
+
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(204);
+  }
+
   next();
 });
 
@@ -323,8 +365,6 @@ app.all('/api/xtream/stream', async (req: Request, res: Response) => {
 
 // Start server
 async function startServer() {
-  const isProduction = process.env.NODE_ENV === 'production';
-
   if (!isProduction) {
     const { createServer } = await import('vite');
     const vite = await createServer({
