@@ -223,7 +223,8 @@ export default function App() {
 
   // Handle Parental Controls button with PIN check
   const handleOpenParentalControls = () => {
-    if (parentalControlService.isSessionUnlocked()) {
+    // First-run setup must remain reachable because there is intentionally no default PIN.
+    if (!parentalControlService.isPinConfigured() || parentalControlService.isSessionUnlocked()) {
       setIsParentalControlsOpen(true);
     } else {
       setPinPromptState({
@@ -590,7 +591,7 @@ export default function App() {
           parentalControlService.setActiveProfile(selected.id);
           setUserProfile(selected);
         }}
-        onOpenParentalControls={() => setIsParentalControlsOpen(true)}
+        onOpenParentalControls={handleOpenParentalControls}
       />
 
       {/* Global PIN Prompt Modal */}
