@@ -20,12 +20,14 @@ export const PinModal: React.FC<PinModalProps> = ({
   const [pin, setPin] = useState('');
   const [hasError, setHasError] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [isVerifying, setIsVerifying] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
       setPin('');
       setHasError(false);
       setErrorMessage('');
+      setIsVerifying(false);
     }
   }, [isOpen]);
 
@@ -39,6 +41,9 @@ export const PinModal: React.FC<PinModalProps> = ({
       } else if (e.key === 'Backspace') {
         e.preventDefault();
         handleBackspace();
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        void handleSubmit();
       } else if (e.key === 'Escape') {
         e.preventDefault();
         onCancel();
@@ -52,24 +57,31 @@ export const PinModal: React.FC<PinModalProps> = ({
   if (!isOpen) return null;
 
   const handleDigit = (digit: string) => {
-    if (pin.length >= 6) return;
-    const nextPin = pin + digit;
-    setPin(nextPin);
+    if (pin.length >= 6 || isVerifying) return;
+    setPin(pin + digit);
     setHasError(false);
     setErrorMessage('');
+  };
 
-    // If reaches 4 digits, attempt verification automatically
-    if (nextPin.length === 4) {
-      setTimeout(() => {
-        const isValid = parentalControlService.verifyMasterPin(nextPin);
-        if (isValid) {
-          onSuccess();
-        } else {
-          setHasError(true);
-          setErrorMessage('Incorrect PIN. Please try again.');
-          setPin('');
-        }
-      }, 100);
+  const handleSubmit = async () => {
+    if (pin.length < 4 || pin.length > 6 || isVerifying) return;
+
+    setIsVerifying(true);
+    try {
+      const isValid = await parentalControlService.verifyMasterPin(pin);
+      if (isValid) {
+        onSuccess();
+      } else {
+        setHasError(true);
+        setErrorMessage(
+          parentalControlService.isPinConfigured()
+            ? 'Incorrect PIN. Please try again.'
+            : 'No Master PIN is configured. Open Parental Controls to create one.'
+        );
+        setPin('');
+      }
+    } finally {
+      setIsVerifying(false);
     }
   };
 
@@ -134,7 +146,7 @@ export const PinModal: React.FC<PinModalProps> = ({
           </p>
         ) : (
           <p className="text-[11px] text-slate-500 mb-4">
-            Default master PIN is <span className="font-mono text-cyan-400 font-semibold">0000</span>
+            Enter your configured 4–6 digit Master PIN, then select Unlock.
           </p>
         )}
 
@@ -172,6 +184,15 @@ export const PinModal: React.FC<PinModalProps> = ({
             <Delete className="w-5 h-5" />
           </button>
         </div>
+
+        <button
+          type="button"
+          onClick={() => void handleSubmit()}
+          disabled={pin.length < 4 || isVerifying}
+          className="mt-4 w-full max-w-[260px] h-11 rounded-2xl bg-cyan-600 hover:bg-cyan-500 disabled:bg-slate-800 disabled:text-slate-500 text-white text-xs font-bold transition tv-focus-target"
+        >
+          {isVerifying ? 'Verifying…' : 'Unlock'}
+        </button>
       </div>
     </div>
   );
