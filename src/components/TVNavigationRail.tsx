@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   Home,
   Tv,
-  Calendar,
   Film,
   Layers,
   Star,
@@ -22,7 +21,7 @@ import {
 import { SavedProfile, UserProfile } from '../types/xtream';
 import { PWAInstallButton } from './PWAInstallButton';
 
-export type NavTab = 'home' | 'live' | 'epg' | 'movies' | 'series' | 'favorites' | 'search';
+export type NavTab = 'home' | 'live' | 'movies' | 'series' | 'favorites' | 'search';
 
 interface TVNavigationRailProps {
   currentTab: NavTab;
@@ -64,10 +63,9 @@ export const TVNavigationRail: React.FC<TVNavigationRailProps> = ({
   }> = [
     { id: 'home', label: 'Home', icon: <Home className="w-5 h-5 shrink-0" />, keyHint: '1' },
     { id: 'live', label: 'Live TV', icon: <Tv className="w-5 h-5 shrink-0" />, keyHint: '2' },
-    { id: 'epg', label: 'TV Guide', icon: <Calendar className="w-5 h-5 shrink-0" />, keyHint: '3' },
-    { id: 'movies', label: 'Movies', icon: <Film className="w-5 h-5 shrink-0" />, keyHint: '4' },
-    { id: 'series', label: 'Series', icon: <Layers className="w-5 h-5 shrink-0" />, keyHint: '5' },
-    { id: 'favorites', label: 'Favorites', icon: <Star className="w-5 h-5 shrink-0" />, keyHint: '6' },
+    { id: 'movies', label: 'Movies', icon: <Film className="w-5 h-5 shrink-0" />, keyHint: '3' },
+    { id: 'series', label: 'Series', icon: <Layers className="w-5 h-5 shrink-0" />, keyHint: '4' },
+    { id: 'favorites', label: 'Favorites', icon: <Star className="w-5 h-5 shrink-0" />, keyHint: '5' },
     { id: 'search', label: 'Search', icon: <Search className="w-5 h-5 shrink-0" />, keyHint: '/' },
   ];
 
