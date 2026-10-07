@@ -13,8 +13,19 @@ const PORT = parseInt(process.env.PORT || '3000', 10);
 type StreamTicket = { url: string; expiresAt: number };
 const streamTickets = new Map<string, StreamTicket>();
 const STREAM_TICKET_TTL_MS = 10 * 60 * 1000;
+const MAX_STREAM_TICKETS = 5000;
 
 function createStreamTicket(url: string): string {
+  cleanupStreamTickets();
+
+  // Bound the in-memory ticket store so malformed or very large manifests cannot
+  // grow it indefinitely. Evict the oldest entries first when the cap is reached.
+  while (streamTickets.size >= MAX_STREAM_TICKETS) {
+    const oldestId = streamTickets.keys().next().value as string | undefined;
+    if (!oldestId) break;
+    streamTickets.delete(oldestId);
+  }
+
   const id = crypto.randomUUID();
   streamTickets.set(id, { url, expiresAt: Date.now() + STREAM_TICKET_TTL_MS });
   return id;
@@ -27,6 +38,10 @@ function getStreamTicket(id: string): string | null {
     streamTickets.delete(id);
     return null;
   }
+
+  // Sliding expiry keeps an actively used live/HLS ticket valid while still
+  // expiring abandoned tickets shortly after playback stops.
+  ticket.expiresAt = Date.now() + STREAM_TICKET_TTL_MS;
   return ticket.url;
 }
 
