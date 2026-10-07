@@ -21,7 +21,7 @@ export const DEFAULT_PARENTAL_SETTINGS: ParentalControlsSettings = {
   masterPinSalt: undefined,
   pinConfigured: false,
   hideLockedContentCompletely: false,
-  lockedCategoryIds: []
+  lockedCategoryIds: [],
   lockedChannelIds: [],
   lockedVodCategoryIds: [],
   lockedSeriesCategoryIds: [],
