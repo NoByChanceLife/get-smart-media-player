@@ -178,6 +178,27 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
       if (isCancelled) return;
 
+      // Never hand a sensitive upstream HTTP URL (or legacy proxy URL containing one)
+      // directly to the media element/HLS.js. Exchange it for an opaque short-lived path.
+      try {
+        if (resolvedUrl.startsWith('/api/xtream/stream?url=')) {
+          const encoded = resolvedUrl.split('?url=')[1] || '';
+          const upstreamUrl = decodeURIComponent(encoded);
+          resolvedUrl = await xtreamService.createStreamTicket(upstreamUrl);
+        } else if (resolvedUrl.startsWith('http://') || resolvedUrl.startsWith('https://')) {
+          resolvedUrl = await xtreamService.createStreamTicket(resolvedUrl);
+        }
+      } catch (err: unknown) {
+        if (!isCancelled) {
+          const error = err as Error;
+          setErrorMsg(error.message || 'Unable to prepare stream securely.');
+          setIsLoading(false);
+        }
+        return;
+      }
+
+      if (isCancelled) return;
+
       // Destroy existing hls instance
       if (hlsRef.current) {
         hlsRef.current.destroy();
