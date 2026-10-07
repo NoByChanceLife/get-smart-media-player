@@ -17,9 +17,11 @@ const UNLOCKED_UNTIL_KEY = 'getsmart_unlocked_until';
 const LEGACY_UNLOCKED_UNTIL_KEY = 'streampulse_unlocked_until';
 
 export const DEFAULT_PARENTAL_SETTINGS: ParentalControlsSettings = {
-  masterPin: '0000',
+  masterPinHash: undefined,
+  masterPinSalt: undefined,
+  pinConfigured: false,
   hideLockedContentCompletely: false,
-  lockedCategoryIds: ['news'], // default example locked category
+  lockedCategoryIds: []
   lockedChannelIds: [],
   lockedVodCategoryIds: [],
   lockedSeriesCategoryIds: [],
@@ -98,6 +100,68 @@ class ParentalControlService {
     this.settings = this.loadSettings();
     this.profiles = this.loadProfiles();
     this.activeProfileId = this.loadActiveProfileId();
+    void this.migrateLegacyPin();
+  }
+
+  private bytesToBase64(bytes: Uint8Array): string {
+    let binary = '';
+    bytes.forEach((byte) => {
+      binary += String.fromCharCode(byte);
+    });
+    return btoa(binary);
+  }
+
+  private async hashPin(pin: string, saltBase64: string): Promise<string> {
+    const saltBinary = atob(saltBase64);
+    const salt = Uint8Array.from(saltBinary, (char) => char.charCodeAt(0));
+    const pinBytes = new TextEncoder().encode(pin.trim());
+    const combined = new Uint8Array(salt.length + pinBytes.length);
+    combined.set(salt);
+    combined.set(pinBytes, salt.length);
+    const digest = await crypto.subtle.digest('SHA-256', combined);
+    return this.bytesToBase64(new Uint8Array(digest));
+  }
+
+  private async createPinVerifier(pin: string): Promise<{ hash: string; salt: string }> {
+    const saltBytes = crypto.getRandomValues(new Uint8Array(16));
+    const salt = this.bytesToBase64(saltBytes);
+    const hash = await this.hashPin(pin, salt);
+    return { hash, salt };
+  }
+
+  private async migrateLegacyPin(): Promise<void> {
+    const legacyPin = this.settings.masterPin?.trim();
+    if (!legacyPin) return;
+
+    // The shipped 0000 value was never a user secret. Treat it as unconfigured.
+    if (legacyPin === '0000') {
+      const { masterPin: _removed, ...safeSettings } = this.settings;
+      this.settings = {
+        ...safeSettings,
+        masterPinHash: undefined,
+        masterPinSalt: undefined,
+        pinConfigured: false,
+      };
+      localStorage.setItem(PARENTAL_SETTINGS_KEY, JSON.stringify(this.settings));
+      return;
+    }
+
+    try {
+      const verifier = await this.createPinVerifier(legacyPin);
+      const { masterPin: _removed, ...safeSettings } = this.settings;
+      this.settings = {
+        ...safeSettings,
+        masterPinHash: verifier.hash,
+        masterPinSalt: verifier.salt,
+        pinConfigured: true,
+      };
+      localStorage.setItem(PARENTAL_SETTINGS_KEY, JSON.stringify(this.settings));
+    } catch {
+      // Do not keep a plaintext PIN if secure browser crypto is unavailable.
+      const { masterPin: _removed, ...safeSettings } = this.settings;
+      this.settings = { ...safeSettings, pinConfigured: false };
+      localStorage.setItem(PARENTAL_SETTINGS_KEY, JSON.stringify(this.settings));
+    }
   }
 
   // Settings
@@ -219,22 +283,52 @@ class ParentalControlService {
   }
 
   // PIN Verification & Session Unlocking
-  public verifyMasterPin(inputPin: string): boolean {
-    const isValid = inputPin.trim() === this.settings.masterPin.trim();
+  public isPinConfigured(): boolean {
+    return Boolean(
+      this.settings.pinConfigured &&
+      this.settings.masterPinHash &&
+      this.settings.masterPinSalt
+    );
+  }
+
+  public async verifyMasterPin(inputPin: string): Promise<boolean> {
+    if (!this.isPinConfigured()) return false;
+
+    const candidateHash = await this.hashPin(inputPin, this.settings.masterPinSalt!);
+    const isValid = candidateHash === this.settings.masterPinHash;
     if (isValid) {
       this.unlockSession(this.settings.unlockTimeoutMinutes || 30);
     }
     return isValid;
   }
 
-  public updateMasterPin(oldPin: string, newPin: string): boolean {
-    if (oldPin.trim() !== this.settings.masterPin.trim()) {
-      return false;
-    }
-    if (newPin.trim().length < 4) {
-      return false;
-    }
-    this.saveSettings({ masterPin: newPin.trim() });
+  public async setInitialMasterPin(newPin: string): Promise<boolean> {
+    const pin = newPin.trim();
+    if (this.isPinConfigured() || !/^\d{4,6}$/.test(pin)) return false;
+
+    const verifier = await this.createPinVerifier(pin);
+    this.saveSettings({
+      masterPin: undefined,
+      masterPinHash: verifier.hash,
+      masterPinSalt: verifier.salt,
+      pinConfigured: true,
+    });
+    this.unlockSession(this.settings.unlockTimeoutMinutes || 30);
+    return true;
+  }
+
+  public async updateMasterPin(oldPin: string, newPin: string): Promise<boolean> {
+    const pin = newPin.trim();
+    if (!/^\d{4,6}$/.test(pin)) return false;
+    if (!(await this.verifyMasterPin(oldPin))) return false;
+
+    const verifier = await this.createPinVerifier(pin);
+    this.saveSettings({
+      masterPin: undefined,
+      masterPinHash: verifier.hash,
+      masterPinSalt: verifier.salt,
+      pinConfigured: true,
+    });
     return true;
   }
 
@@ -247,9 +341,6 @@ class ParentalControlService {
   }
 
   public isSessionUnlocked(): boolean {
-    const active = this.getActiveProfile();
-    // Master admin is always unlocked
-    if (active.role === 'master_admin') return true;
     return Date.now() < this.sessionUnlockedUntil;
   }
 
@@ -312,12 +403,8 @@ class ParentalControlService {
     if (this.settings.lockedVodCategoryIds.includes(movie.category_id)) return true;
     if (active.privileges.blockedCategories?.includes(movie.category_id)) return true;
 
-    // Check rating constraint for profile
-    const profileRating = active.privileges.maxContentRating || 'all';
-    if (profileRating === 'PG' && (movie.category_id === 'action' || movie.category_id === 'scifi')) {
-      return true;
-    }
-
+    // Do not infer content ratings from category names. Only explicit category/channel
+    // restrictions are enforced until trustworthy provider rating metadata is available.
     return false;
   }
 
@@ -333,8 +420,8 @@ class ParentalControlService {
 
   public canManageServers(): boolean {
     const active = this.getActiveProfile();
-    if (active.role === 'master_admin') return true;
-    if (!this.settings.restrictServerSettings) return true;
+    if (!this.settings.restrictServerSettings) return active.privileges.canManageServers;
+    if (!this.isPinConfigured()) return active.role === 'master_admin';
     return active.privileges.canManageServers && this.isSessionUnlocked();
   }
 
