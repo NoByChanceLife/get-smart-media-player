@@ -1,7 +1,6 @@
 import React from 'react';
 import {
   Tv,
-  Calendar,
   Film,
   Layers,
   Star,
@@ -52,8 +51,6 @@ export const TopBar: React.FC<TopBarProps> = ({
         return 'Home';
       case 'live':
         return 'Live TV Channels';
-      case 'epg':
-        return 'Electronic Programme Guide';
       case 'movies':
         return 'Movies & Cinema';
       case 'series':
