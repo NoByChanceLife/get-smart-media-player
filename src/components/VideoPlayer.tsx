@@ -75,7 +75,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
   const currentProgramTitle =
     target.type === 'live'
-      ? epgList[0]?.title || target.stream.currentProgram || 'Live Satellite Feed'
+      ? epgList[0]?.title || target.stream.currentProgram || 'Live TV'
       : target.type === 'vod'
       ? target.movie.plot || 'Feature Film Presentation'
       : target.episode.info?.plot || 'Episode Broadcast';
@@ -268,7 +268,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
               case Hls.ErrorTypes.NETWORK_ERROR: {
                 const recovered = triggerBoundedRecovery('network', data.details);
                 if (!recovered) {
-                  setErrorMsg('Stream source unreachable after 3 reconnect attempts. Channel may be offline at provider.');
+                  setErrorMsg('Stream could not be recovered after the configured reconnect attempts.');
                   setIsLoading(false);
                   hls.destroy();
                 }
@@ -285,7 +285,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
               }
               default:
                 console.error('Fatal HLS error:', data.type, data.details);
-                setErrorMsg('Channel stream unreachable. Server might be offline or rate-limited.');
+                setErrorMsg('Playback stopped because the stream returned a fatal HLS error.');
                 setIsLoading(false);
                 hls.destroy();
                 break;
