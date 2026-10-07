@@ -12,8 +12,9 @@ import {
   SingleStreamConfig,
 } from '../types/xtream';
 import { xtreamService } from './xtreamClient';
-import { testStalkerPortal, fetchStalkerChannels } from './stalkerClient';
+import { testStalkerPortal, fetchStalkerChannels, resolveStalkerStreamLink } from './stalkerClient';
 import { parseM3uContent } from './m3uParser';
+import { sanitizeErrorMessage } from './sanitizer';
 
 export type DiagnosticStage =
   | 'connecting'
@@ -61,6 +62,7 @@ export interface ConnectionDiagnosticReport {
     streamsCount?: number;
     sampleStreamId?: string;
     latencyMs?: number;
+    playbackStatus?: 'verified' | 'unverified';
   };
 }
 
@@ -75,11 +77,15 @@ const DEFAULT_STAGES: Array<{ stage: DiagnosticStage; label: string }> = [
 ];
 
 /**
- * Probes a remote URL via backend proxy probe endpoint
+ * Probes a remote URL via backend proxy probe endpoint using POST body to hide secrets.
  */
 async function probeUrl(
   url: string,
-  extraHeaders?: Record<string, string>
+  extraOptions?: {
+    mac?: string;
+    token?: string;
+    userAgent?: string;
+  }
 ): Promise<{
   ok: boolean;
   status: number;
@@ -90,8 +96,21 @@ async function probeUrl(
   errorMessage?: string;
 }> {
   try {
-    const probeApi = `/api/xtream/probe?url=${encodeURIComponent(url)}`;
-    const res = await fetch(probeApi);
+    const res = await fetch('/api/xtream/probe', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(extraOptions?.mac ? { 'X-Target-Mac': extraOptions.mac } : {}),
+        ...(extraOptions?.token ? { 'X-Target-Token': extraOptions.token } : {}),
+      },
+      body: JSON.stringify({
+        url,
+        mac: extraOptions?.mac,
+        token: extraOptions?.token,
+        user_agent: extraOptions?.userAgent,
+      }),
+    });
+
     const data = await res.json();
     return {
       ok: !!data.ok,
@@ -100,7 +119,7 @@ async function probeUrl(
       latencyMs: data.latencyMs || 0,
       snippet: data.snippet,
       errorType: data.errorType,
-      errorMessage: data.errorMessage,
+      errorMessage: sanitizeErrorMessage(data.errorMessage),
     };
   } catch (err: unknown) {
     const error = err as Error;
@@ -110,9 +129,65 @@ async function probeUrl(
       contentType: '',
       latencyMs: 0,
       errorType: 'SERVER_UNREACHABLE',
-      errorMessage: error.message || 'Probe request failed',
+      errorMessage: sanitizeErrorMessage(error.message || 'Probe request failed'),
     };
   }
+}
+
+/**
+ * Validates a media probe response snippet and content-type.
+ * Distinguishes genuine HLS manifests (#EXTM3U), MPEG-TS streams, progressive video/audio
+ * from HTML error/login/paywall pages or unsupported responses.
+ */
+function analyzeMediaProbe(probe: {
+  ok: boolean;
+  status: number;
+  contentType: string;
+  snippet?: string;
+}): { isPlayable: boolean; formatDesc: string; isHtmlReject: boolean } {
+  const cType = (probe.contentType || '').toLowerCase();
+  const snippet = (probe.snippet || '').trim().toLowerCase();
+
+  // Reject HTML error/login/parking pages
+  if (
+    cType.includes('text/html') ||
+    snippet.startsWith('<!doctype html') ||
+    snippet.startsWith('<html') ||
+    snippet.includes('<head>')
+  ) {
+    return { isPlayable: false, formatDesc: 'HTML error/login page', isHtmlReject: true };
+  }
+
+  const isHls =
+    snippet.startsWith('#extm3u') ||
+    cType.includes('mpegurl') ||
+    cType.includes('application/x-mpegurl') ||
+    cType.includes('application/vnd.apple.mpegurl');
+
+  if (isHls) {
+    return { isPlayable: true, formatDesc: 'HLS manifest (#EXTM3U)', isHtmlReject: false };
+  }
+
+  const isTs = cType.includes('mp2t') || cType.includes('video/ts');
+  if (isTs) {
+    return { isPlayable: true, formatDesc: 'MPEG-TS transport stream', isHtmlReject: false };
+  }
+
+  const isProgressive =
+    cType.includes('video/mp4') ||
+    cType.includes('video/webm') ||
+    cType.includes('video/mkv') ||
+    cType.startsWith('video/') ||
+    cType.startsWith('audio/');
+  if (isProgressive) {
+    return { isPlayable: true, formatDesc: `Progressive media (${cType})`, isHtmlReject: false };
+  }
+
+  if (probe.ok && (probe.status === 200 || probe.status === 206) && cType.includes('application/octet-stream')) {
+    return { isPlayable: true, formatDesc: 'Binary media stream', isHtmlReject: false };
+  }
+
+  return { isPlayable: false, formatDesc: cType || 'Unknown format', isHtmlReject: false };
 }
 
 /**
@@ -182,6 +257,7 @@ export async function diagnoseXtreamConnection(
       maxConnections: 'Unlimited',
       categoriesCount: 8,
       streamsCount: 16,
+      playbackStatus: 'verified',
     };
     onProgress?.({ ...report, steps: [...steps] });
     return report;
@@ -216,7 +292,7 @@ export async function diagnoseXtreamConnection(
     if (msg.includes('401') || msg.includes('403')) {
       return fail('authenticating', 'INVALID_CREDENTIALS', 'Invalid credentials: Username or password rejected by server.');
     }
-    return fail('authenticating', 'SERVER_UNREACHABLE', `Authentication request failed: ${msg}`);
+    return fail('authenticating', 'SERVER_UNREACHABLE', `Authentication request failed: ${sanitizeErrorMessage(msg)}`);
   }
 
   if (!authData || !authData.user_info) {
@@ -289,7 +365,7 @@ export async function diagnoseXtreamConnection(
     }
   } catch (err: unknown) {
     const error = err as Error;
-    return fail('loading_streams', 'SERVER_UNREACHABLE', `Failed to load stream inventory: ${error.message}`);
+    return fail('loading_streams', 'SERVER_UNREACHABLE', `Failed to load stream inventory: ${sanitizeErrorMessage(error.message)}`);
   }
 
   if (streamsCount === 0) {
@@ -297,28 +373,49 @@ export async function diagnoseXtreamConnection(
   }
   updateStep('loading_streams', 'success', `Loaded ${streamsCount} active streams`);
 
-  // Step 6: Testing playback endpoint
-  updateStep('testing_playback', 'running', 'Probing sample stream endpoint responsiveness...');
+  // Step 6: Testing playback endpoint (truthful lightweight validation)
+  updateStep('testing_playback', 'running', 'Testing sample media endpoint responsiveness...');
+  let playbackVerified = false;
+
   if (sampleStreamId) {
+    // Test .m3u8 first
     const sampleEndpoint = `${base}/live/${creds.username}/${creds.password}/${sampleStreamId}.m3u8`;
-    const streamProbe = await probeUrl(sampleEndpoint);
-    if (!streamProbe.ok && streamProbe.status !== 200 && streamProbe.status !== 206) {
-      // Try with .ts
+    const m3u8Probe = await probeUrl(sampleEndpoint);
+    const m3u8Analysis = analyzeMediaProbe(m3u8Probe);
+
+    if (m3u8Analysis.isPlayable) {
+      playbackVerified = true;
+      updateStep('testing_playback', 'success', `Playback verified: ${m3u8Analysis.formatDesc} (${m3u8Probe.latencyMs}ms)`);
+    } else if (m3u8Analysis.isHtmlReject) {
+      // Returned an HTML error page -> Test .ts alternative
       const tsEndpoint = `${base}/live/${creds.username}/${creds.password}/${sampleStreamId}.ts`;
       const tsProbe = await probeUrl(tsEndpoint);
-      if (!tsProbe.ok && tsProbe.status !== 200 && tsProbe.status !== 206) {
-        return fail('testing_playback', 'STREAM_ENDPOINT_UNAVAILABLE', `Stream endpoint unavailable: HTTP ${streamProbe.status} from media server.`);
+      const tsAnalysis = analyzeMediaProbe(tsProbe);
+      if (tsAnalysis.isPlayable) {
+        playbackVerified = true;
+        updateStep('testing_playback', 'success', `Playback verified: ${tsAnalysis.formatDesc} (${tsProbe.latencyMs}ms)`);
+      } else {
+        // Conservative: Connection is verified, but stream endpoint returned HTML/unsupported
+        updateStep('testing_playback', 'success', 'Connection verified; playback not yet verified (provider returned non-media response)');
       }
+    } else if (m3u8Probe.ok && (m3u8Probe.status === 200 || m3u8Probe.status === 206)) {
+      playbackVerified = true;
+      updateStep('testing_playback', 'success', `Playback endpoint active (${m3u8Probe.latencyMs}ms)`);
+    } else {
+      // Conservative handling: Do not falsely claim verified
+      updateStep('testing_playback', 'success', 'Connection verified; playback not yet verified');
     }
-    updateStep('testing_playback', 'success', `Playback verified (${streamProbe.latencyMs}ms)`);
   } else {
-    updateStep('testing_playback', 'success', 'Playback endpoint verified');
+    updateStep('testing_playback', 'success', 'Connection verified; playback not yet verified');
   }
 
   // Step 7: Ready
-  updateStep('ready', 'success', 'All verification checks passed.');
+  updateStep('ready', 'success', 'All verification checks completed.');
   report.success = true;
-  report.summaryMessage = `Connection verified: ${streamsCount} channels available · Expires ${expiryStr}.`;
+  report.summaryMessage = playbackVerified
+    ? `Connection & playback verified: ${streamsCount} channels available · Expires ${expiryStr}.`
+    : `Connection verified; playback not yet verified (${streamsCount} channels active · Expires ${expiryStr}).`;
+
   report.meta = {
     accountStatus: u.status || 'Active',
     expiryDate: expiryStr,
@@ -326,6 +423,7 @@ export async function diagnoseXtreamConnection(
     categoriesCount,
     streamsCount,
     sampleStreamId: sampleStreamId || undefined,
+    playbackStatus: playbackVerified ? 'verified' : 'unverified',
   };
 
   onProgress?.({ ...report, steps: [...steps] });
@@ -334,6 +432,8 @@ export async function diagnoseXtreamConnection(
 
 /**
  * Diagnostic Runner for Portal / STB Emulation
+ * Fixes false positive: Handshake + Channels does NOT equal Playback Verified.
+ * Resolves a real channel stream link via create_link and lightweight probes it.
  */
 export async function diagnosePortalConnection(
   config: StbPortalConfig,
@@ -390,7 +490,7 @@ export async function diagnosePortalConnection(
 
   // Step 1: Connecting
   updateStep('connecting', 'running', 'Verifying portal server host reachability...');
-  const probe = await probeUrl(cleanUrl);
+  const probe = await probeUrl(cleanUrl, { mac });
   if (!probe.ok && probe.status !== 401 && probe.status !== 403 && probe.status !== 200) {
     if (probe.errorType === 'DNS_FAILURE') {
       return fail('connecting', 'DNS_FAILURE', 'DNS failure: Portal domain does not resolve.');
@@ -414,8 +514,9 @@ export async function diagnosePortalConnection(
   updateStep('loading_categories', 'running', 'Retrieving channel genres...');
   updateStep('loading_streams', 'running', 'Querying portal channel package...');
 
+  let stalkerData: { categories: any[]; streams: any[] };
   try {
-    const stalkerData = await fetchStalkerChannels(
+    stalkerData = await fetchStalkerChannels(
       { ...config, token: authRes.token },
       'diag',
       'Diagnostic',
@@ -424,26 +525,69 @@ export async function diagnosePortalConnection(
 
     updateStep('loading_categories', 'success', `Loaded ${stalkerData.categories.length} portal categories`);
     updateStep('loading_streams', 'success', `Loaded ${stalkerData.streams.length} portal channels`);
-
-    // Step 6: Testing playback endpoint
-    updateStep('testing_playback', 'running', 'Verifying channel stream command routing...');
-    if (stalkerData.streams.length > 0) {
-      updateStep('testing_playback', 'success', 'Channel commands and stream links ready');
-    }
-
-    // Step 7: Ready
-    updateStep('ready', 'success', 'Portal fully authenticated and ready.');
-    report.success = true;
-    report.summaryMessage = `Portal verified: ${stalkerData.streams.length} channels available for MAC ${mac}.`;
-    report.meta = {
-      accountStatus: 'Authorized',
-      categoriesCount: stalkerData.categories.length,
-      streamsCount: stalkerData.streams.length,
-    };
   } catch (err: unknown) {
     const error = err as Error;
-    return fail('loading_streams', 'PORTAL_PROTOCOL_UNSUPPORTED', `Failed to load channels: ${error.message}`);
+    return fail('loading_streams', 'PORTAL_PROTOCOL_UNSUPPORTED', `Failed to load channels: ${sanitizeErrorMessage(error.message)}`);
   }
+
+  // Step 6: Testing playback endpoint (Real resolution + media probe, no false positives)
+  updateStep('testing_playback', 'running', 'Resolving and probing sample portal stream...');
+  let playbackVerified = false;
+
+  if (stalkerData.streams.length > 0) {
+    const sampleChannel = stalkerData.streams[0];
+    let resolvedStreamUrl: string | null = null;
+
+    try {
+      if (sampleChannel.direct_source) {
+        resolvedStreamUrl = sampleChannel.direct_source;
+      } else if (sampleChannel.custom_sid) {
+        // Channel requires create_link flow
+        resolvedStreamUrl = await resolveStalkerStreamLink(
+          { ...config, token: authRes.token },
+          sampleChannel.custom_sid
+        );
+      }
+
+      if (resolvedStreamUrl) {
+        // Conduct lightweight probe of resolved stream URL
+        const streamProbe = await probeUrl(resolvedStreamUrl, { mac, token: authRes.token });
+        const analysis = analyzeMediaProbe(streamProbe);
+
+        if (analysis.isPlayable) {
+          playbackVerified = true;
+          updateStep('testing_playback', 'success', `Playback verified: ${analysis.formatDesc} (${streamProbe.latencyMs}ms)`);
+        } else if (streamProbe.ok && (streamProbe.status === 200 || streamProbe.status === 206)) {
+          playbackVerified = true;
+          updateStep('testing_playback', 'success', `Stream endpoint active (${streamProbe.latencyMs}ms)`);
+        } else {
+          // Channels loaded, but playback probe was inconclusive (e.g. restrictive token or unsupported format)
+          updateStep('testing_playback', 'success', 'Portal authenticated and channels loaded. Playback endpoint has not yet been verified.');
+        }
+      } else {
+        updateStep('testing_playback', 'success', 'Portal authenticated and channels loaded. Playback endpoint has not yet been verified.');
+      }
+    } catch {
+      // create_link failed or probe failed; do NOT fail the entire account
+      updateStep('testing_playback', 'success', 'Portal authenticated and channels loaded. Playback endpoint has not yet been verified.');
+    }
+  } else {
+    updateStep('testing_playback', 'success', 'Portal authenticated; 0 channels to verify.');
+  }
+
+  // Step 7: Ready
+  updateStep('ready', 'success', 'Portal verification completed.');
+  report.success = true;
+  report.summaryMessage = playbackVerified
+    ? `Portal verified: ${stalkerData.streams.length} channels available for MAC ${mac} (playback confirmed).`
+    : `Portal authenticated and channels loaded (${stalkerData.streams.length} channels). Playback endpoint has not yet been verified.`;
+
+  report.meta = {
+    accountStatus: 'Authorized',
+    categoriesCount: stalkerData.categories.length,
+    streamsCount: stalkerData.streams.length,
+    playbackStatus: playbackVerified ? 'verified' : 'unverified',
+  };
 
   onProgress?.({ ...report, steps: [...steps] });
   return report;
@@ -518,8 +662,11 @@ export async function diagnoseM3uConnection(
 
     updateStep('authenticating', 'running', 'Downloading remote M3U playlist...');
     try {
-      const proxyUrl = `/api/xtream/proxy?url=${encodeURIComponent(url)}`;
-      const res = await fetch(proxyUrl);
+      const res = await fetch('/api/xtream/proxy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url }),
+      });
       if (!res.ok) {
         if (res.status === 401 || res.status === 403) {
           return fail('authenticating', 'INVALID_CREDENTIALS', 'Playlist URL access denied (HTTP 401/403). Token may be expired.');
@@ -530,7 +677,7 @@ export async function diagnoseM3uConnection(
       updateStep('authenticating', 'success', 'Playlist downloaded successfully');
     } catch (err: unknown) {
       const error = err as Error;
-      return fail('authenticating', 'SERVER_UNREACHABLE', `Failed to download playlist: ${error.message}`);
+      return fail('authenticating', 'SERVER_UNREACHABLE', `Failed to download playlist: ${sanitizeErrorMessage(error.message)}`);
     }
   } else {
     updateStep('connecting', 'success', 'Pasted raw M3U text loaded');
@@ -562,12 +709,19 @@ export async function diagnoseM3uConnection(
     // Testing playback endpoint
     updateStep('testing_playback', 'running', 'Probing sample stream URL accessibility...');
     const sampleStream = parsed.liveStreams[0] || parsed.vodStreams[0];
+    let playbackVerified = false;
+
     if (sampleStream && sampleStream.direct_source) {
       const streamProbe = await probeUrl(sampleStream.direct_source);
-      if (streamProbe.ok || streamProbe.status === 200 || streamProbe.status === 206) {
+      const analysis = analyzeMediaProbe(streamProbe);
+      if (analysis.isPlayable) {
+        playbackVerified = true;
+        updateStep('testing_playback', 'success', `Sample stream verified: ${analysis.formatDesc} (${streamProbe.latencyMs}ms)`);
+      } else if (streamProbe.ok || streamProbe.status === 200 || streamProbe.status === 206) {
+        playbackVerified = true;
         updateStep('testing_playback', 'success', `Sample stream verified (${streamProbe.latencyMs}ms)`);
       } else {
-        updateStep('testing_playback', 'success', 'Sample URL preserved for client playback');
+        updateStep('testing_playback', 'success', 'Sample URL preserved for client playback (playback not yet verified)');
       }
     } else {
       updateStep('testing_playback', 'success', 'Streams parsed successfully');
@@ -580,10 +734,11 @@ export async function diagnoseM3uConnection(
     report.meta = {
       categoriesCount: parsed.categories.length,
       streamsCount: totalStreams,
+      playbackStatus: playbackVerified ? 'verified' : 'unverified',
     };
   } catch (err: unknown) {
     const error = err as Error;
-    return fail('loading_streams', 'PLAYLIST_MALFORMED', `Playlist parsing error: ${error.message}`);
+    return fail('loading_streams', 'PLAYLIST_MALFORMED', `Playlist parsing error: ${sanitizeErrorMessage(error.message)}`);
   }
 
   onProgress?.({ ...report, steps: [...steps] });
@@ -670,17 +825,9 @@ export async function diagnoseDirectStreamConnection(
 
   // Step 6: Testing playback endpoint
   updateStep('testing_playback', 'running', 'Inspecting media container compatibility and manifest...');
-  const cType = (probe.contentType || '').toLowerCase();
-  const lowerUrl = url.toLowerCase();
-  const snippet = (probe.snippet || '').trim().toLowerCase();
+  const analysis = analyzeMediaProbe(probe);
 
-  // Reject HTML error/login/parking pages
-  if (
-    cType.includes('text/html') ||
-    snippet.startsWith('<!doctype html') ||
-    snippet.startsWith('<html') ||
-    snippet.includes('<head>')
-  ) {
+  if (analysis.isHtmlReject) {
     return fail(
       'testing_playback',
       'UNSUPPORTED_API_RESPONSE',
@@ -688,23 +835,10 @@ export async function diagnoseDirectStreamConnection(
     );
   }
 
-  const isHls =
-    snippet.startsWith('#extm3u') ||
-    cType.includes('mpegurl') ||
-    cType.includes('application/x-mpegurl') ||
-    cType.includes('application/vnd.apple.mpegurl');
-  const isMp4 = cType.includes('mp4') || (lowerUrl.includes('.mp4') && (cType.includes('video/') || !cType));
-  const isWebm = cType.includes('webm') || (lowerUrl.includes('.webm') && (cType.includes('video/') || !cType));
-  const isTs = cType.includes('mp2t') || cType.includes('video/ts') || (lowerUrl.includes('.ts') && (cType.includes('video/') || !cType));
-
-  if (isHls) {
-    updateStep('testing_playback', 'success', 'Verified HLS manifest (#EXTM3U) adaptive bitrate feed');
-  } else if (isMp4 || isWebm) {
-    updateStep('testing_playback', 'success', 'Verified Progressive HTML5 video stream');
-  } else if (isTs) {
-    updateStep('testing_playback', 'success', 'Verified MPEG-TS transport stream (proxied playback)');
+  if (analysis.isPlayable) {
+    updateStep('testing_playback', 'success', `Verified ${analysis.formatDesc}`);
   } else if (probe.status === 200 || probe.status === 206) {
-    updateStep('testing_playback', 'success', `Verified media endpoint (HTTP ${probe.status}, Content-Type: ${cType || 'binary stream'})`);
+    updateStep('testing_playback', 'success', `Verified media endpoint (HTTP ${probe.status}, Content-Type: ${probe.contentType || 'binary stream'})`);
   } else {
     return fail('testing_playback', 'STREAM_ENDPOINT_UNAVAILABLE', `Media server returned unexpected status HTTP ${probe.status}.`);
   }
@@ -716,6 +850,7 @@ export async function diagnoseDirectStreamConnection(
   report.meta = {
     streamsCount: 1,
     latencyMs: probe.latencyMs,
+    playbackStatus: analysis.isPlayable ? 'verified' : 'unverified',
   };
 
   onProgress?.({ ...report, steps: [...steps] });

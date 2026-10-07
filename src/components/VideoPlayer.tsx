@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { PlaybackTarget, XtreamLiveStream, XtreamEPGProgramme } from '../types/xtream';
 import { xtreamService } from '../services/xtreamClient';
+import { resolveStalkerStreamLink } from '../services/stalkerClient';
 import { streamingPerformanceService } from '../services/streamingPerformanceService';
 import { useStreamHealthTracker } from '../hooks/useStreamHealthTracker';
 import { StreamHealthPanel } from './StreamHealthPanel';
@@ -137,138 +138,181 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     const video = videoRef.current;
     if (!video) return;
 
+    let isCancelled = false;
     setIsLoading(true);
     setErrorMsg(null);
-    const streamUrl = getStreamUrl();
 
-    // Destroy existing hls instance
-    if (hlsRef.current) {
-      hlsRef.current.destroy();
-      hlsRef.current = null;
-    }
+    const initStream = async () => {
+      let resolvedUrl = getStreamUrl();
 
-    const isM3u8 = streamUrl.includes('.m3u8') || target.type === 'live';
-
-    if (isM3u8 && Hls.isSupported()) {
-      const perfConfig = streamingPerformanceService.getConfig();
-      const hlsConfig = streamingPerformanceService.getHlsConfig(perfConfig.mode, target.type, false);
-      const hls = new Hls(hlsConfig);
-
-      hlsRef.current = hls;
-      hls.loadSource(streamUrl);
-      hls.attachMedia(video);
-
-      hls.on(Hls.Events.MANIFEST_PARSED, (_event, data) => {
-        setIsLoading(false);
-
-        // Apply quality preference if manual setting configured
-        if (perfConfig.qualityPreference !== 'auto' && data.levels && data.levels.length > 0) {
-          const targetHeight =
-            perfConfig.qualityPreference === '1080p'
-              ? 1080
-              : perfConfig.qualityPreference === '720p'
-              ? 720
-              : perfConfig.qualityPreference === '480p'
-              ? 480
-              : 0;
-
-          if (targetHeight > 0) {
-            let bestIdx = -1;
-            let closestDiff = 9999;
-            data.levels.forEach((lvl, idx) => {
-              const diff = Math.abs((lvl.height || 0) - targetHeight);
-              if (diff < closestDiff) {
-                closestDiff = diff;
-                bestIdx = idx;
-              }
-            });
-            if (bestIdx >= 0) {
-              hls.currentLevel = bestIdx;
+      // If channel is a Stalker channel requiring dynamic link creation (cmd without direct_source)
+      if (
+        target.type === 'live' &&
+        !target.stream.direct_source &&
+        target.stream.custom_sid &&
+        target.stream.serverId
+      ) {
+        const profile = xtreamService.getActiveProfiles().find((p) => p.id === target.stream.serverId);
+        if (profile?.type === 'stalker' && profile.stbConfig) {
+          try {
+            const dynamicUrl = await resolveStalkerStreamLink(
+              profile.stbConfig,
+              target.stream.custom_sid,
+              profile.id
+            );
+            if (dynamicUrl) {
+              resolvedUrl = dynamicUrl.startsWith('https://')
+                ? dynamicUrl
+                : `/api/xtream/stream?url=${encodeURIComponent(dynamicUrl)}`;
             }
-          } else if (perfConfig.qualityPreference === 'low') {
-            hls.currentLevel = 0; // Lowest bitrate level
-          }
-        }
-
-        video.play().catch(() => {
-          setIsPlaying(false);
-        });
-      });
-
-      hls.on(Hls.Events.ERROR, (_event, data) => {
-        if (data.fatal) {
-          switch (data.type) {
-            case Hls.ErrorTypes.NETWORK_ERROR: {
-              const recovered = triggerBoundedRecovery('network', data.details);
-              if (!recovered) {
-                setErrorMsg('Stream source unreachable after 3 reconnect attempts. Channel may be offline at provider.');
-                setIsLoading(false);
-                hls.destroy();
-              }
-              break;
-            }
-            case Hls.ErrorTypes.MEDIA_ERROR: {
-              const recovered = triggerBoundedRecovery('media', data.details);
-              if (!recovered) {
-                setErrorMsg('Device media decoder error. Format may require server transcoding.');
-                setIsLoading(false);
-                hls.destroy();
-              }
-              break;
-            }
-            default:
-              console.error('Fatal HLS error:', data.type, data.details);
-              setErrorMsg('Channel stream unreachable. Server might be offline or rate-limited.');
+          } catch (err: unknown) {
+            if (!isCancelled) {
+              const error = err as Error;
+              setErrorMsg(error.message || 'Failed to resolve Stalker portal channel stream link.');
               setIsLoading(false);
-              hls.destroy();
-              break;
-          }
-        } else {
-          // Track non-fatal stalls
-          if (data.details === Hls.ErrorDetails.BUFFER_STALLED_ERROR) {
-            recordStall();
+            }
+            return;
           }
         }
-      });
-    } else if (video.canPlayType('application/vnd.apple.mpegurl') || !isM3u8) {
-      // Native Safari HLS or regular MP4/MKV video
-      video.src = streamUrl;
-      video.onloadedmetadata = () => {
-        setIsLoading(false);
-        video.play().catch(() => {
-          setIsPlaying(false);
-        });
-      };
-      video.onerror = () => {
-        setIsLoading(false);
-        setErrorMsg('Video playback error. Stream format may require server transcoding.');
-      };
-    } else {
-      setErrorMsg('Browser does not support HLS media decoding.');
-      setIsLoading(false);
-    }
+      }
 
-    // Save to watch history
-    xtreamService.addToHistory({
-      id:
-        target.type === 'live'
-          ? `live_${target.stream.stream_id}`
-          : target.type === 'vod'
-          ? `vod_${target.movie.stream_id}`
-          : `ep_${target.episode.id}`,
-      type: target.type,
-      title,
-      subtitle: currentProgramTitle,
-      icon:
-        target.type === 'live'
-          ? target.stream.stream_icon
-          : target.type === 'vod'
-          ? target.movie.stream_icon
-          : target.series.cover,
-      streamUrl,
-    });
+      if (isCancelled) return;
+
+      // Destroy existing hls instance
+      if (hlsRef.current) {
+        hlsRef.current.destroy();
+        hlsRef.current = null;
+      }
+
+      const isM3u8 = resolvedUrl.includes('.m3u8') || target.type === 'live';
+
+      if (isM3u8 && Hls.isSupported()) {
+        const perfConfig = streamingPerformanceService.getConfig();
+        const hlsConfig = streamingPerformanceService.getHlsConfig(perfConfig.mode, target.type, false);
+        const hls = new Hls(hlsConfig);
+
+        hlsRef.current = hls;
+        hls.loadSource(resolvedUrl);
+        hls.attachMedia(video);
+
+        hls.on(Hls.Events.MANIFEST_PARSED, (_event, data) => {
+          if (isCancelled) return;
+          setIsLoading(false);
+
+          // Apply quality preference if manual setting configured
+          if (perfConfig.qualityPreference !== 'auto' && data.levels && data.levels.length > 0) {
+            const targetHeight =
+              perfConfig.qualityPreference === '1080p'
+                ? 1080
+                : perfConfig.qualityPreference === '720p'
+                ? 720
+                : perfConfig.qualityPreference === '480p'
+                ? 480
+                : 0;
+
+            if (targetHeight > 0) {
+              let bestIdx = -1;
+              let closestDiff = 9999;
+              data.levels.forEach((lvl, idx) => {
+                const diff = Math.abs((lvl.height || 0) - targetHeight);
+                if (diff < closestDiff) {
+                  closestDiff = diff;
+                  bestIdx = idx;
+                }
+              });
+              if (bestIdx >= 0) {
+                hls.currentLevel = bestIdx;
+              }
+            } else if (perfConfig.qualityPreference === 'low') {
+              hls.currentLevel = 0; // Lowest bitrate level
+            }
+          }
+
+          video.play().catch(() => {
+            if (!isCancelled) setIsPlaying(false);
+          });
+        });
+
+        hls.on(Hls.Events.ERROR, (_event, data) => {
+          if (isCancelled) return;
+          if (data.fatal) {
+            switch (data.type) {
+              case Hls.ErrorTypes.NETWORK_ERROR: {
+                const recovered = triggerBoundedRecovery('network', data.details);
+                if (!recovered) {
+                  setErrorMsg('Stream source unreachable after 3 reconnect attempts. Channel may be offline at provider.');
+                  setIsLoading(false);
+                  hls.destroy();
+                }
+                break;
+              }
+              case Hls.ErrorTypes.MEDIA_ERROR: {
+                const recovered = triggerBoundedRecovery('media', data.details);
+                if (!recovered) {
+                  setErrorMsg('Device media decoder error. Format may require server transcoding.');
+                  setIsLoading(false);
+                  hls.destroy();
+                }
+                break;
+              }
+              default:
+                console.error('Fatal HLS error:', data.type, data.details);
+                setErrorMsg('Channel stream unreachable. Server might be offline or rate-limited.');
+                setIsLoading(false);
+                hls.destroy();
+                break;
+            }
+          } else {
+            // Track non-fatal stalls
+            if (data.details === Hls.ErrorDetails.BUFFER_STALLED_ERROR) {
+              recordStall();
+            }
+          }
+        });
+      } else if (video.canPlayType('application/vnd.apple.mpegurl') || !isM3u8) {
+        // Native Safari HLS or regular MP4/MKV video
+        video.src = resolvedUrl;
+        video.onloadedmetadata = () => {
+          if (isCancelled) return;
+          setIsLoading(false);
+          video.play().catch(() => {
+            if (!isCancelled) setIsPlaying(false);
+          });
+        };
+        video.onerror = () => {
+          if (isCancelled) return;
+          setIsLoading(false);
+          setErrorMsg('Video playback error. Stream format may require server transcoding.');
+        };
+      } else {
+        setErrorMsg('Browser does not support HLS media decoding.');
+        setIsLoading(false);
+      }
+
+      // Save to watch history
+      xtreamService.addToHistory({
+        id:
+          target.type === 'live'
+            ? `live_${target.stream.stream_id}`
+            : target.type === 'vod'
+            ? `vod_${target.movie.stream_id}`
+            : `ep_${target.episode.id}`,
+        type: target.type,
+        title,
+        subtitle: currentProgramTitle,
+        icon:
+          target.type === 'live'
+            ? target.stream.stream_icon
+            : target.type === 'vod'
+            ? target.movie.stream_icon
+            : target.series.cover,
+      });
+    };
+
+    initStream();
 
     return () => {
+      isCancelled = true;
       if (hlsRef.current) {
         hlsRef.current.destroy();
         hlsRef.current = null;

@@ -1,9 +1,12 @@
 /**
  * Get Smart Media Player — Portal / STB Emulation Client (Stalker / Ministra Middleware)
  * Implements real STB MAG emulation protocol without simulated fallbacks or fake channels.
+ * Uses POST bodies and headers to communicate with proxy, avoiding sensitive tokens in query strings.
  */
 
 import { StbPortalConfig, XtreamCategory, XtreamLiveStream } from '../types/xtream';
+import { sessionTokenStore } from './sessionStore';
+import { sanitizeErrorMessage } from './sanitizer';
 
 export function generateRandomMac(): string {
   const hex = () => Math.floor(Math.random() * 256).toString(16).padStart(2, '0').toUpperCase();
@@ -44,7 +47,7 @@ export interface StalkerAuthResult {
  * Normalizes portal URLs to base path (e.g. http://portal.com/c/ or http://portal.com/server/load.php)
  */
 export function normalizePortalUrl(raw: string): string {
-  let clean = raw.trim();
+  let clean = (raw || '').trim();
   if (!clean.startsWith('http://') && !clean.startsWith('https://')) {
     clean = 'http://' + clean;
   }
@@ -52,7 +55,9 @@ export function normalizePortalUrl(raw: string): string {
 }
 
 /**
- * Executes a Stalker JSON API request via the backend proxy
+ * Executes a Stalker JSON API request via the backend proxy.
+ * Transmits target URL, MAC, and authorization token inside the POST body and headers
+ * rather than in the browser's URL query string.
  */
 export async function executeStalkerApi(
   portalUrl: string,
@@ -81,14 +86,23 @@ export async function executeStalkerApi(
       const queryParts = Object.entries(params).map(
         ([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`
       );
-      const targetUrl = `${endpoint}?${queryParts.join('&')}`;
+      const upstreamTargetUrl = `${endpoint}?${queryParts.join('&')}`;
 
-      let proxyUrl = `/api/xtream/proxy?url=${encodeURIComponent(targetUrl)}&mac=${encodeURIComponent(mac)}`;
-      if (token) {
-        proxyUrl += `&token=${encodeURIComponent(token)}`;
-      }
+      // POST to /api/xtream/proxy with target info in body and custom headers
+      const response = await fetch('/api/xtream/proxy', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Target-Mac': mac,
+          ...(token ? { 'X-Target-Token': token } : {}),
+        },
+        body: JSON.stringify({
+          url: upstreamTargetUrl,
+          mac,
+          token,
+        }),
+      });
 
-      const response = await fetch(proxyUrl);
       if (!response.ok) {
         let errorDetail = `HTTP ${response.status}`;
         try {
@@ -97,7 +111,7 @@ export async function executeStalkerApi(
         } catch {
           // Ignore
         }
-        throw new Error(errorDetail);
+        throw new Error(sanitizeErrorMessage(errorDetail));
       }
 
       const text = await response.text();
@@ -155,7 +169,7 @@ export async function testStalkerPortal(config: StbPortalConfig): Promise<Stalke
         success: false,
         errorStage: 'Authentication',
         errorType: 'PORTAL_PROTOCOL_UNSUPPORTED',
-        message: `Portal handshake rejected: ${handshakeData.error}`,
+        message: `Portal handshake rejected: ${sanitizeErrorMessage(handshakeData.error)}`,
       };
     } else {
       return {
@@ -180,7 +194,7 @@ export async function testStalkerPortal(config: StbPortalConfig): Promise<Stalke
       success: false,
       errorStage: 'Connecting',
       errorType: 'SERVER_UNREACHABLE',
-      message: `Failed to contact portal: ${msg}`,
+      message: `Failed to contact portal: ${sanitizeErrorMessage(msg)}`,
     };
   }
 
@@ -207,7 +221,7 @@ export async function testStalkerPortal(config: StbPortalConfig): Promise<Stalke
         success: false,
         errorStage: 'Account verified',
         errorType: 'PORTAL_PROTOCOL_UNSUPPORTED',
-        message: `Portal profile rejected: ${profileData.error}`,
+        message: `Portal profile rejected: ${sanitizeErrorMessage(profileData.error)}`,
       };
     }
 
@@ -241,9 +255,31 @@ export async function testStalkerPortal(config: StbPortalConfig): Promise<Stalke
       success: false,
       errorStage: 'Authentication',
       errorType: 'PORTAL_PROTOCOL_UNSUPPORTED',
-      message: `Profile authentication error: ${error.message}`,
+      message: `Profile authentication error: ${sanitizeErrorMessage(error.message)}`,
     };
   }
+}
+
+/**
+ * Ensures an active session token exists for the given portal config and server ID.
+ * Retrieves from in-memory sessionTokenStore or conducts a fresh handshake.
+ */
+export async function getOrRefreshPortalToken(
+  config: StbPortalConfig,
+  serverId: string
+): Promise<string> {
+  const cached = sessionTokenStore.getToken(serverId);
+  if (cached) {
+    return cached;
+  }
+
+  const auth = await testStalkerPortal(config);
+  if (auth.success && auth.token) {
+    sessionTokenStore.setToken(serverId, auth.token);
+    return auth.token;
+  }
+
+  throw new Error(auth.message || 'Failed to authenticate Stalker portal session.');
 }
 
 /**
@@ -258,7 +294,11 @@ export async function fetchStalkerChannels(
 ): Promise<{ categories: XtreamCategory[]; streams: XtreamLiveStream[] }> {
   const mac = config.macAddress.trim();
   const portalUrl = config.portalUrl.trim();
-  const token = config.token || '';
+
+  let token = config.token || sessionTokenStore.getToken(serverId);
+  if (!token) {
+    token = await getOrRefreshPortalToken(config, serverId);
+  }
 
   // 1. Fetch Genres / Categories
   const categories: XtreamCategory[] = [
@@ -292,12 +332,26 @@ export async function fetchStalkerChannels(
   }
 
   // 2. Fetch Channels
-  const channelData = await executeStalkerApi(
-    portalUrl,
-    { type: 'itv', action: 'get_all_channels' },
-    mac,
-    token
-  );
+  let channelData: any = null;
+  try {
+    channelData = await executeStalkerApi(
+      portalUrl,
+      { type: 'itv', action: 'get_all_channels' },
+      mac,
+      token
+    );
+  } catch (err: unknown) {
+    // If token expired, attempt one refresh
+    sessionTokenStore.clearToken(serverId);
+    const freshToken = await getOrRefreshPortalToken(config, serverId);
+    channelData = await executeStalkerApi(
+      portalUrl,
+      { type: 'itv', action: 'get_all_channels' },
+      mac,
+      freshToken
+    );
+    token = freshToken;
+  }
 
   let rawList: any[] = [];
   if (channelData && channelData.js) {
@@ -357,11 +411,13 @@ export async function fetchStalkerChannels(
 }
 
 /**
- * Resolves a playable stream link for a Stalker channel if required by portal middleware
+ * Resolves a playable stream link for a Stalker channel if required by portal middleware.
+ * Uses current or refreshed session token from session store.
  */
 export async function resolveStalkerStreamLink(
   config: StbPortalConfig,
-  cmd: string
+  cmd: string,
+  serverId?: string
 ): Promise<string> {
   const cleanCmd = cmd.replace(/^ffmpeg\s+/, '').replace(/^auto\s+/, '');
   if (cleanCmd.startsWith('http://') || cleanCmd.startsWith('https://')) {
@@ -370,18 +426,42 @@ export async function resolveStalkerStreamLink(
 
   const mac = config.macAddress.trim();
   const portalUrl = config.portalUrl.trim();
-  const token = config.token || '';
+  let token = config.token || (serverId ? sessionTokenStore.getToken(serverId) : undefined);
 
-  const linkData = await executeStalkerApi(
-    portalUrl,
-    {
-      type: 'itv',
-      action: 'create_link',
-      cmd,
-    },
-    mac,
-    token
-  );
+  if (!token && serverId) {
+    token = await getOrRefreshPortalToken(config, serverId);
+  }
+
+  let linkData: any = null;
+  try {
+    linkData = await executeStalkerApi(
+      portalUrl,
+      {
+        type: 'itv',
+        action: 'create_link',
+        cmd,
+      },
+      mac,
+      token
+    );
+  } catch (err: unknown) {
+    if (serverId) {
+      sessionTokenStore.clearToken(serverId);
+      token = await getOrRefreshPortalToken(config, serverId);
+      linkData = await executeStalkerApi(
+        portalUrl,
+        {
+          type: 'itv',
+          action: 'create_link',
+          cmd,
+        },
+        mac,
+        token
+      );
+    } else {
+      throw err;
+    }
+  }
 
   if (linkData && linkData.js && linkData.js.cmd) {
     const resolved = String(linkData.js.cmd).replace(/^ffmpeg\s+/, '').replace(/^auto\s+/, '');

@@ -39,7 +39,7 @@ export interface WatchHistoryItem {
   title: string;
   subtitle?: string;
   icon?: string;
-  streamUrl: string;
+  streamUrl?: string; // Optional; deprecated for localStorage to avoid storing authenticated URLs
   progressSeconds?: number;
   durationSeconds?: number;
   updatedAt: number;
@@ -78,8 +78,11 @@ class XtreamService {
     let content = profile.m3uConfig.rawM3uContent || '';
     if (!content && profile.m3uConfig.playlistUrl) {
       try {
-        const proxyUrl = `/api/xtream/proxy?url=${encodeURIComponent(profile.m3uConfig.playlistUrl)}`;
-        const res = await fetch(proxyUrl);
+        const res = await fetch('/api/xtream/proxy', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: profile.m3uConfig.playlistUrl }),
+        });
         if (res.ok) {
           content = await res.text();
         }
@@ -216,13 +219,22 @@ class XtreamService {
     this.serverFilter = filter;
   }
 
-  // Proxy request helper
+  // Proxy request helper using POST body and headers (protects credentials from query strings)
   public async fetchViaProxy<T>(url: string, mac?: string, token?: string): Promise<T> {
-    let proxyUrl = `/api/xtream/proxy?url=${encodeURIComponent(url)}`;
-    if (mac) proxyUrl += `&mac=${encodeURIComponent(mac)}`;
-    if (token) proxyUrl += `&token=${encodeURIComponent(token)}`;
+    const response = await fetch('/api/xtream/proxy', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(mac ? { 'X-Target-Mac': mac } : {}),
+        ...(token ? { 'X-Target-Token': token } : {}),
+      },
+      body: JSON.stringify({
+        url,
+        mac,
+        token,
+      }),
+    });
 
-    const response = await fetch(proxyUrl);
     if (!response.ok) {
       let errDetail = `HTTP ${response.status}`;
       try {
@@ -939,8 +951,10 @@ class XtreamService {
   public addToHistory(item: Omit<WatchHistoryItem, 'updatedAt'>): void {
     try {
       const history = this.getHistory().filter((h) => h.id !== item.id);
+      // Strip sensitive streamUrl containing credentials/tokens before localStorage write
+      const { streamUrl: _sensitiveUrl, ...safeItem } = item;
       history.unshift({
-        ...item,
+        ...safeItem,
         updatedAt: Date.now(),
       });
       localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(history.slice(0, 50)));
