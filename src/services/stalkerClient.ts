@@ -295,9 +295,13 @@ export async function fetchStalkerChannels(
   const mac = config.macAddress.trim();
   const portalUrl = config.portalUrl.trim();
 
-  let token = config.token || sessionTokenStore.getToken(serverId);
+  // Prefer the ephemeral session token. A token persisted in an older profile may
+  // be stale and should only be used as a bootstrap fallback.
+  let token = sessionTokenStore.getToken(serverId) || config.token;
   if (!token) {
     token = await getOrRefreshPortalToken(config, serverId);
+  } else if (!sessionTokenStore.getToken(serverId)) {
+    sessionTokenStore.setToken(serverId, token);
   }
 
   // 1. Fetch Genres / Categories
@@ -341,9 +345,10 @@ export async function fetchStalkerChannels(
       token
     );
   } catch (err: unknown) {
-    // If token expired, attempt one refresh
+    // Retry once with a genuinely fresh handshake. Do not let a stale
+    // profile token win again after the session cache is cleared.
     sessionTokenStore.clearToken(serverId);
-    const freshToken = await getOrRefreshPortalToken(config, serverId);
+    const freshToken = await getOrRefreshPortalToken({ ...config, token: undefined }, serverId);
     channelData = await executeStalkerApi(
       portalUrl,
       { type: 'itv', action: 'get_all_channels' },
@@ -400,7 +405,6 @@ export async function fetchStalkerChannels(
       direct_source: streamUrl,
       custom_sid: item.cmd, // Store original cmd for dynamic link resolution
       tv_archive: item.enable_tv_archive ? 1 : 0,
-      currentProgram: `${item.name || 'Channel'} Live Feed`,
       serverId,
       serverName,
       serverBadgeColor: badgeColor,
@@ -426,10 +430,13 @@ export async function resolveStalkerStreamLink(
 
   const mac = config.macAddress.trim();
   const portalUrl = config.portalUrl.trim();
-  let token = config.token || (serverId ? sessionTokenStore.getToken(serverId) : undefined);
+  let token = serverId ? sessionTokenStore.getToken(serverId) : undefined;
+  token = token || config.token;
 
   if (!token && serverId) {
     token = await getOrRefreshPortalToken(config, serverId);
+  } else if (token && serverId && !sessionTokenStore.getToken(serverId)) {
+    sessionTokenStore.setToken(serverId, token);
   }
 
   let linkData: any = null;
@@ -447,7 +454,7 @@ export async function resolveStalkerStreamLink(
   } catch (err: unknown) {
     if (serverId) {
       sessionTokenStore.clearToken(serverId);
-      token = await getOrRefreshPortalToken(config, serverId);
+      token = await getOrRefreshPortalToken({ ...config, token: undefined }, serverId);
       linkData = await executeStalkerApi(
         portalUrl,
         {
