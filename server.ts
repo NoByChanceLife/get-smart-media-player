@@ -64,21 +64,42 @@ const configuredOrigins = (process.env.CORS_ALLOWED_ORIGINS || '')
   .map((origin) => origin.trim())
   .filter(Boolean);
 
-function isAllowedOrigin(origin: string): boolean {
+function getRequestOrigin(req: express.Request): string | null {
+  const forwardedProto = String(req.headers['x-forwarded-proto'] || '')
+    .split(',')[0]
+    .trim();
+  const forwardedHost = String(req.headers['x-forwarded-host'] || '')
+    .split(',')[0]
+    .trim();
+  const host = forwardedHost || req.get('host') || '';
+  const protocol = forwardedProto || req.protocol;
+
+  if (!host || (protocol !== 'http' && protocol !== 'https')) return null;
+  return `${protocol}://${host}`;
+}
+
+function isAllowedOrigin(origin: string, req: express.Request): boolean {
   if (configuredOrigins.includes(origin)) return true;
 
-  if (!isProduction) {
-    try {
-      const parsed = new URL(origin);
+  try {
+    const parsed = new URL(origin);
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return false;
+
+    // Module scripts, manifests, and other browser resources may include an
+    // Origin header even when they are being requested from this same app.
+    // Same-origin requests are not cross-origin and must not be rejected.
+    const requestOrigin = getRequestOrigin(req);
+    if (requestOrigin && parsed.origin === requestOrigin) return true;
+
+    if (!isProduction) {
       return (
-        (parsed.protocol === 'http:' || parsed.protocol === 'https:') &&
-        (parsed.hostname === 'localhost' ||
-          parsed.hostname === '127.0.0.1' ||
-          parsed.hostname === '::1')
+        parsed.hostname === 'localhost' ||
+        parsed.hostname === '127.0.0.1' ||
+        parsed.hostname === '::1'
       );
-    } catch {
-      return false;
     }
+  } catch {
+    return false;
   }
 
   return false;
@@ -88,7 +109,7 @@ app.use((req, res, next) => {
   const origin = req.headers.origin;
 
   if (origin) {
-    if (!isAllowedOrigin(origin)) {
+    if (!isAllowedOrigin(origin, req)) {
       return res.status(403).json({ error: 'Cross-origin request is not allowed.' });
     }
 
