@@ -503,7 +503,7 @@ export default function App() {
       <div
         className={`flex-1 flex flex-col transition-all duration-300 ${
           isRailExpanded ? 'md:ml-64' : 'md:ml-[74px]'
-        } ${playbackTarget && isBrowsingDuringPlayback ? 'relative z-[55] bg-black/10' : ''}`}
+        } ${playbackTarget && isBrowsingDuringPlayback ? 'relative z-[55] bg-transparent' : ''}`}
       >
         {/* Top Header */}
         <TopBar
