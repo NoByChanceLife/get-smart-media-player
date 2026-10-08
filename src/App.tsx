@@ -397,7 +397,9 @@ export default function App() {
           !target.matches('[data-media-card]') &&
           !target.closest('[data-media-card]') &&
           !target.matches('[data-media-navigation]') &&
-          !target.closest('[data-media-navigation]')
+          !target.closest('[data-media-navigation]') &&
+          !target.matches('[data-tv-zone]') &&
+          !target.closest('[data-tv-zone]')
         ) {
           e.preventDefault();
           focusNavigationRail();
