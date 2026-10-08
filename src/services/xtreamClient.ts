@@ -221,7 +221,7 @@ class XtreamService {
 
   // Proxy request helper using POST body and headers (protects credentials from query strings)
   public async fetchViaProxy<T>(url: string, mac?: string, token?: string): Promise<T> {
-    const response = await fetch('/api/xtream/proxy', {
+    const response = await fetch('/api/provider-api', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
