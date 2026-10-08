@@ -22,6 +22,7 @@ export const WatchingGuideOverlay: React.FC<WatchingGuideOverlayProps> = ({
   const [groupId, setGroupId] = useState<string>('all');
   const [focusedStreamId, setFocusedStreamId] = useState<string>(String(currentStream.stream_id));
   const rowRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+  const groupRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const closeButtonRef = useRef<HTMLButtonElement | null>(null);
 
   const groups = useMemo(() => [
@@ -82,8 +83,9 @@ export const WatchingGuideOverlay: React.FC<WatchingGuideOverlayProps> = ({
       focusStream(index + 1);
     } else if (event.key === 'ArrowLeft') {
       event.preventDefault();
-      const activeGroup = document.querySelector<HTMLElement>('[data-watching-group].watching-group-active');
+      const activeGroup = groupRefs.current[groupId] || groupRefs.current.all;
       activeGroup?.focus();
+      activeGroup?.scrollIntoView({ block: 'nearest' });
     } else if (event.key === 'ArrowRight') {
       event.preventDefault();
       closeButtonRef.current?.focus();
@@ -94,7 +96,7 @@ export const WatchingGuideOverlay: React.FC<WatchingGuideOverlayProps> = ({
   };
 
   const handleGroupKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>, index: number) => {
-    const groupButtons = Array.from(document.querySelectorAll<HTMLElement>('[data-watching-group]'));
+    const groupButtons = groups.map((group) => groupRefs.current[group.id]).filter((button): button is HTMLButtonElement => Boolean(button));
     if (event.key === 'ArrowUp') {
       event.preventDefault();
       groupButtons[Math.max(0, index - 1)]?.focus();
@@ -154,6 +156,7 @@ export const WatchingGuideOverlay: React.FC<WatchingGuideOverlayProps> = ({
               {groups.map((group, index) => (
                 <button
                   key={group.id}
+                  ref={(element) => { groupRefs.current[group.id] = element; }}
                   data-watching-group
                   onKeyDown={(event) => handleGroupKeyDown(event, index)}
                   onClick={() => {
