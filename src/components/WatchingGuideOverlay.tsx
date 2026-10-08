@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Layers, Star, Tv } from 'lucide-react';
+import { ArrowLeft, Layers, Star, Tv } from 'lucide-react';
 import { XtreamCategory, XtreamLiveStream } from '../types/xtream';
 
 interface WatchingGuideOverlayProps {
@@ -20,6 +20,7 @@ export const WatchingGuideOverlay: React.FC<WatchingGuideOverlayProps> = ({
   const [groupId, setGroupId] = useState<string>('all');
   const [focusedStreamId, setFocusedStreamId] = useState<string>(String(currentStream.stream_id));
   const rowRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+  const closeButtonRef = useRef<HTMLButtonElement | null>(null);
 
   const groups = useMemo(() => [
     { id: 'all', name: 'All Channels' },
@@ -34,6 +35,17 @@ export const WatchingGuideOverlay: React.FC<WatchingGuideOverlayProps> = ({
     if (groupId === 'all') return streams;
     return streams.filter((stream) => stream.category_id === groupId);
   }, [groupId, streams]);
+
+  useEffect(() => {
+    const handleOverlayBack = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape' && event.key !== 'Backspace') return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      onClose();
+    };
+    window.addEventListener('keydown', handleOverlayBack, true);
+    return () => window.removeEventListener('keydown', handleOverlayBack, true);
+  }, [onClose]);
 
   useEffect(() => {
     const id = String(currentStream.stream_id);
@@ -67,6 +79,9 @@ export const WatchingGuideOverlay: React.FC<WatchingGuideOverlayProps> = ({
       event.preventDefault();
       const activeGroup = document.querySelector<HTMLElement>('[data-watching-group].watching-group-active');
       activeGroup?.focus();
+    } else if (event.key === 'ArrowRight') {
+      event.preventDefault();
+      closeButtonRef.current?.focus();
     } else if (event.key === 'Escape' || event.key === 'Backspace') {
       event.preventDefault();
       onClose();
@@ -110,7 +125,20 @@ export const WatchingGuideOverlay: React.FC<WatchingGuideOverlayProps> = ({
                 </span>
               </div>
             </div>
-            <div className="text-[11px] text-slate-400">Back to video · Enter to watch</div>
+            <button
+              ref={closeButtonRef}
+              onClick={onClose}
+              onKeyDown={(event) => {
+                if (event.key === 'ArrowLeft' || event.key === 'ArrowDown') {
+                  event.preventDefault();
+                  const currentIndex = Math.max(0, visibleStreams.findIndex((stream) => String(stream.stream_id) === focusedStreamId));
+                  focusStream(currentIndex);
+                }
+              }}
+              className="tv-focus-target flex items-center gap-2 rounded-xl border border-white/15 bg-black/30 px-3 py-2 text-xs font-semibold text-white hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-cyan-400/95"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" /> Back to Video
+            </button>
           </div>
 
           <div className="flex h-[min(58vh,520px)] min-h-[330px]">
