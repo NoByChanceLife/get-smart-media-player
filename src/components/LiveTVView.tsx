@@ -95,6 +95,10 @@ export const LiveTVView: React.FC<LiveTVViewProps> = ({
   const visibleCount = Math.ceil(viewportHeight / ROW_HEIGHT) + OVERSCAN * 2;
   const endIndex = Math.min(filteredStreams.length, startIndex + visibleCount);
   const windowedStreams = filteredStreams.slice(startIndex, endIndex);
+  const selectedStream =
+    filteredStreams.find((stream) => String(stream.stream_id) === selectedStreamId) || filteredStreams[0];
+  const selectedPrograms = selectedStream ? epg[String(selectedStream.stream_id)] || [] : [];
+  const selectedNow = selectedPrograms[0];
 
   useEffect(() => {
     const node = scrollerRef.current;
@@ -300,6 +304,38 @@ export const LiveTVView: React.FC<LiveTVViewProps> = ({
         </aside>
 
         <div className="flex-1 min-w-0 flex flex-col">
+          <div className="live-feature shrink-0 hidden xl:flex min-h-[138px] border-b border-slate-800/80 relative overflow-hidden">
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_82%_30%,rgba(14,165,233,0.16),transparent_34%),linear-gradient(100deg,#08111f_0%,#0a1220_58%,#060a11_100%)]" />
+            <div className="relative z-10 flex w-full items-center justify-between gap-8 px-6 py-4">
+              <div className="flex min-w-0 items-center gap-4">
+                <div className="w-16 h-16 shrink-0 rounded-2xl border border-slate-700/70 bg-[#0a1423] shadow-xl flex items-center justify-center overflow-hidden p-2">
+                  {selectedStream?.stream_icon ? (
+                    <img src={selectedStream.stream_icon} alt="" className="max-w-full max-h-full object-contain" />
+                  ) : (
+                    <Tv className="w-7 h-7 text-cyan-400" />
+                  )}
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.18em] text-cyan-400 font-bold mb-1">
+                    <span>Live TV</span><span className="w-1 h-1 rounded-full bg-slate-600" /><span>{quickFilter === 'category' ? (visibleCategories.find((cat) => cat.category_id === selectedCategoryId)?.category_name || 'All Channels') : quickFilter === 'favorites' ? 'Favorites' : 'Recently Watched'}</span>
+                  </div>
+                  <h2 className="text-xl 2xl:text-2xl font-bold text-white font-heading truncate">{selectedNow?.title || selectedStream?.currentProgram || selectedStream?.name || 'Live TV'}</h2>
+                  <div className="mt-1 text-xs text-slate-300 flex items-center gap-2">
+                    <span className="font-semibold">{selectedStream?.name || 'Select a channel'}</span>
+                    {selectedNow && <span className="text-slate-500 font-mono">{timeLabel(selectedNow.start)}–{timeLabel(selectedNow.end)}</span>}
+                    {selectedStream && <span className="px-1.5 py-0.5 rounded bg-rose-500/15 border border-rose-500/30 text-[9px] font-black text-rose-400 uppercase">Live</span>}
+                  </div>
+                  <p className="mt-2 max-w-2xl text-[11px] leading-relaxed text-slate-400 line-clamp-2">{selectedNow?.description || 'Browse the guide, choose a channel, and keep your place while exploring what is on now and next.'}</p>
+                </div>
+              </div>
+              {selectedStream && (
+                <button onClick={() => play(selectedStream)} className="tv-focus-target shrink-0 flex items-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-500 border border-blue-400/40 px-4 py-2.5 text-xs font-bold text-white shadow-lg shadow-blue-950/40">
+                  <Play className="w-4 h-4 fill-current" /> Watch Live
+                </button>
+              )}
+            </div>
+          </div>
+
           <header className="h-14 shrink-0 flex items-center gap-3 px-3 sm:px-4 border-b border-slate-800/80 bg-[#070b13]">
             <select
               value={quickFilter === 'category' ? selectedCategoryId : quickFilter}
@@ -330,13 +366,14 @@ export const LiveTVView: React.FC<LiveTVViewProps> = ({
             <span className="hidden sm:block text-[11px] text-slate-500 tabular-nums">{filteredStreams.length.toLocaleString()} channels</span>
           </header>
 
-          <div className="h-9 shrink-0 flex border-b border-slate-800 bg-[#060a11] text-[10px] uppercase tracking-wider text-slate-500">
+          <div className="h-10 shrink-0 flex border-b border-slate-800 bg-[#060a11] text-[10px] uppercase tracking-wider text-slate-500">
             <div className="w-48 sm:w-56 shrink-0 px-3 flex items-center border-r border-slate-800">Channel</div>
             <div className="flex-1 grid grid-cols-3">
-              <div className="px-3 flex items-center">Now</div>
+              <div className="px-3 flex items-center gap-2"><span className="text-cyan-400">Now</span><span className="h-px flex-1 bg-cyan-900/50" /></div>
               <div className="px-3 flex items-center border-l border-slate-800/60">Next</div>
               <div className="px-3 flex items-center border-l border-slate-800/60">Later</div>
             </div>
+            <div className="w-16 shrink-0 border-l border-slate-800/60" />
           </div>
 
           <div ref={scrollerRef} onScroll={(e) => setScrollTop(e.currentTarget.scrollTop)} className="flex-1 min-h-0 overflow-y-auto custom-scrollbar relative" role="grid" aria-label="Live channels and program guide">
@@ -346,7 +383,7 @@ export const LiveTVView: React.FC<LiveTVViewProps> = ({
                 const programs = epg[String(stream.stream_id)] || [];
                 const selected = selectedStreamId === String(stream.stream_id);
                 return (
-                  <div key={stream.stream_id} style={{ position: 'absolute', top: index * ROW_HEIGHT, left: 0, right: 0, height: ROW_HEIGHT }} className={`flex border-b border-slate-800/60 ${selected ? 'bg-cyan-950/30' : 'bg-[#070b12] hover:bg-[#0b121e]'}`}>
+                  <div key={stream.stream_id} style={{ position: 'absolute', top: index * ROW_HEIGHT, left: 0, right: 0, height: ROW_HEIGHT }} className={`live-guide-row flex border-b border-slate-800/60 ${selected ? 'live-guide-row-selected' : 'bg-[#070b12] hover:bg-[#0b121e]'}`}>
                     <button
                       data-live-row={index}
                       data-live-col={0}
