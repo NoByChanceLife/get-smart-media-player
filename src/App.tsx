@@ -636,9 +636,10 @@ export default function App() {
           onPlayStream={handlePlayLiveStream}
           onClose={() => setIsBrowsingDuringPlayback(false)}
           onOpenAppNavigation={() => {
-            // Leave the quick Watching Guide, but remain in persistent browse
-            // mode so the video stays visible behind the normal app shell.
+            // Home means browse the actual app Home while the existing media
+            // session keeps playing behind the translucent shell.
             setCurrentTab('home');
+            setIsBrowsingDuringPlayback(true);
             requestAnimationFrame(() => focusNavigationRail());
           }}
         />
@@ -649,8 +650,11 @@ export default function App() {
         <VideoPlayer
           target={playbackTarget}
           onClose={() => {
-            setPlaybackTarget(null);
-            setSecondaryPlaybackTarget(null);
+            // Player Back/Close is navigation, not Stop. Keep the session alive
+            // and reveal Home over it. Explicit Stop owns session termination.
+            setCurrentTab('home');
+            setIsBrowsingDuringPlayback(true);
+            requestAnimationFrame(() => focusNavigationRail());
           }}
           onMinimizeToPiP={() => setIsFloatingPiP(true)}
           onLaunchDualPiP={handleLaunchDualPiP}
