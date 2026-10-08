@@ -388,7 +388,10 @@ export const LiveTVView: React.FC<LiveTVViewProps> = ({
                       data-live-row={index}
                       data-live-col={0}
                       onFocus={() => setSelectedStreamId(String(stream.stream_id))}
-                      onClick={() => setSelectedStreamId(String(stream.stream_id))}
+                      onClick={() => {
+                        setSelectedStreamId(String(stream.stream_id));
+                        play(stream);
+                      }}
                       onKeyDown={(e) => {
                         handleCellKeyDown(e, index, 0);
                         if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); play(stream); }
