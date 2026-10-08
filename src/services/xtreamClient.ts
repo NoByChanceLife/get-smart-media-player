@@ -235,17 +235,38 @@ class XtreamService {
       }),
     });
 
+    const responseContentType = response.headers.get('content-type') || '';
+
     if (!response.ok) {
       let errDetail = `HTTP ${response.status}`;
       try {
         const errJson = await response.json();
-        if (errJson.error) errDetail = errJson.error;
+        if (errJson?.error) {
+          const diagnosticParts = [
+            errJson.error,
+            errJson.errorType ? `type=${errJson.errorType}` : '',
+            errJson.upstreamStatus ? `upstream=${errJson.upstreamStatus}` : '',
+            errJson.upstreamContentType ? `content-type=${errJson.upstreamContentType}` : '',
+          ].filter(Boolean);
+          errDetail = diagnosticParts.join(' · ');
+        }
       } catch {
-        // Ignore JSON error
+        if (responseContentType.includes('text/html')) {
+          errDetail = 'Get Smart proxy returned HTML instead of its API response.';
+        }
       }
       throw new Error(errDetail);
     }
-    return response.json();
+
+    try {
+      return await response.json();
+    } catch {
+      throw new Error(
+        responseContentType.includes('text/html')
+          ? 'Get Smart proxy returned HTML instead of Xtream JSON.'
+          : 'Get Smart proxy returned an invalid JSON response.'
+      );
+    }
   }
 
   // Authenticate Xtream credentials without logging passwords
