@@ -39,6 +39,13 @@ export const MoviesView: React.FC<MoviesViewProps> = ({
   const movieGridRef = useRef<HTMLDivElement | null>(null);
   const movieViewRef = useRef<HTMLDivElement | null>(null);
 
+  const focusNavigationRailFromMedia = () => {
+    const rail = document.querySelector<HTMLElement>(
+      '[data-tv-navigation-rail] .tv-focus-target, nav .tv-focus-target, aside .tv-focus-target'
+    );
+    rail?.focus();
+  };
+
   const focusTopBarFromMedia = () => {
     const target = document.querySelector<HTMLElement>(
       '[data-tv-topbar] .tv-focus-target, [data-tv-topbar] button:not([disabled]), [data-tv-topbar] select:not([disabled])'
@@ -79,6 +86,10 @@ export const MoviesView: React.FC<MoviesViewProps> = ({
         e.stopPropagation();
         zoneItems[nextIndex].focus();
         zoneItems[nextIndex].scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+      } else if (e.key === 'ArrowLeft' && index === 0) {
+        e.preventDefault();
+        e.stopPropagation();
+        focusNavigationRailFromMedia();
       }
       return;
     }
@@ -109,7 +120,12 @@ export const MoviesView: React.FC<MoviesViewProps> = ({
     let next = index;
     if (e.key === 'ArrowRight') next = Math.min(cards.length - 1, index + 1);
     else if (e.key === 'ArrowLeft') {
-      if (index % columns === 0) return;
+      if (index % columns === 0) {
+        e.preventDefault();
+        e.stopPropagation();
+        focusNavigationRailFromMedia();
+        return;
+      }
       next = Math.max(0, index - 1);
     }
     else if (e.key === 'ArrowDown') next = Math.min(cards.length - 1, index + columns);
