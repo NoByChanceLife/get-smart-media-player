@@ -6,6 +6,11 @@ import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig(() => {
   return {
+    // Android TV/Fire TV devices can ship older System WebView versions.
+    // Compile the packaged web UI to syntax they can parse reliably.
+    build: {
+      target: 'chrome80',
+    },
     plugins: [
       react(),
       tailwindcss(),
