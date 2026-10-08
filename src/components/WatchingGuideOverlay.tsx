@@ -40,15 +40,36 @@ export const WatchingGuideOverlay: React.FC<WatchingGuideOverlayProps> = ({
   }, [groupId, streams]);
 
   useEffect(() => {
-    const handleOverlayBack = (event: KeyboardEvent) => {
-      if (event.key !== 'Escape' && event.key !== 'Backspace') return;
-      event.preventDefault();
-      event.stopImmediatePropagation();
-      onClose();
+    const handleOverlayKeys = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' || event.key === 'Backspace') {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        onClose();
+        return;
+      }
+
+      const target = event.target as HTMLElement | null;
+      if (event.key === 'ArrowLeft' && target?.hasAttribute('data-watching-channel')) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        const activeGroup = groupRefs.current[groupId] || groupRefs.current.all;
+        activeGroup?.focus();
+        activeGroup?.scrollIntoView({ block: 'nearest' });
+        return;
+      }
+
+      if (event.key === 'ArrowLeft' && target?.hasAttribute('data-watching-group')) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        onOpenAppNavigation();
+      }
     };
-    window.addEventListener('keydown', handleOverlayBack, true);
-    return () => window.removeEventListener('keydown', handleOverlayBack, true);
-  }, [onClose]);
+
+    // Capture phase makes the temporary Watching Guide the sole owner of its
+    // spatial Left/Back routes before App-level TV navigation can intercept them.
+    window.addEventListener('keydown', handleOverlayKeys, true);
+    return () => window.removeEventListener('keydown', handleOverlayKeys, true);
+  }, [groupId, onClose, onOpenAppNavigation]);
 
   useEffect(() => {
     const id = String(currentStream.stream_id);
