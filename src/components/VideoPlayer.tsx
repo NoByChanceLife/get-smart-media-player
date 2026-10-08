@@ -197,7 +197,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       const isPublicPlaybackControl =
         target.type === 'live' &&
         String(target.stream.stream_id) === '100' &&
-        resolvedUrl === 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4';
+        resolvedUrl === 'https://archive.org/download/BigBuckBunny_124/Content/big_buck_bunny_720p_surround.mp4';
 
       if (!isPublicPlaybackControl) {
         // Never hand a sensitive upstream HTTP URL (or legacy proxy URL containing one)
