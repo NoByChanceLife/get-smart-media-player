@@ -232,6 +232,9 @@ class XtreamService {
         url,
         mac,
         token,
+        // Compatibility profile observed in the user-supplied known-working
+        // MegaPlusXC/XCIPTV Android artifact (OkHttp 3.12.11).
+        user_agent: mac ? undefined : 'okhttp/3.12.11',
       }),
     });
 
