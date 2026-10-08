@@ -200,8 +200,9 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         resolvedUrl === 'https://archive.org/download/BigBuckBunny_124/Content/big_buck_bunny_720p_surround.mp4';
       const isPublicHlsControl =
         target.type === 'live' &&
-        String(target.stream.stream_id) === '104' &&
-        resolvedUrl === 'https://devstreaming-cdn.apple.com/videos/streaming/examples/bipbop_4x3/bipbop_4x3_variant.m3u8';
+        ['101', '102', '103', '104'].includes(String(target.stream.stream_id)) &&
+        /^https:\/\//i.test(resolvedUrl) &&
+        /\.m3u8(?:$|[?#])/i.test(resolvedUrl);
 
       if (!isPublicPlaybackControl && !isPublicHlsControl) {
         // Never hand a sensitive upstream HTTP URL (or legacy proxy URL containing one)
