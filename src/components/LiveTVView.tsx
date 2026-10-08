@@ -442,9 +442,7 @@ export const LiveTVView: React.FC<LiveTVViewProps> = ({
                       <button data-live-row={index} data-live-col={4} onFocus={() => setSelectedStreamId(String(stream.stream_id))} onKeyDown={(e) => handleCellKeyDown(e, index, 4)} onClick={() => onToggleFavorite(stream.stream_id)} className="p-1.5 rounded-md text-slate-500 hover:text-amber-400 tv-focus-target" aria-label={`${stream.isFavorite ? 'Remove' : 'Add'} ${stream.name} favorite`}>
                         <Star className={`w-3.5 h-3.5 ${stream.isFavorite ? 'fill-amber-400 text-amber-400' : ''}`} />
                       </button>
-                      <button data-live-row={index} data-live-col={5} onFocus={() => setSelectedStreamId(String(stream.stream_id))} onKeyDown={(e) => { handleCellKeyDown(e, index, 5); if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); play(stream); } }} onClick={() => play(stream)} className="p-1.5 rounded-md bg-cyan-500 text-slate-950 tv-focus-target" aria-label={`Watch ${stream.name}`}>
-                        <Play className="w-3.5 h-3.5 fill-current" />
-                      </button>
+                      <span className="w-7 h-7" aria-hidden="true" />
                     </div>
                   </div>
                 );
