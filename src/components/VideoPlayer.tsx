@@ -62,6 +62,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const [duration, setDuration] = useState<number>(0);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [errorDetail, setErrorDetail] = useState<string | null>(null);
   const [epgList, setEpgList] = useState<XtreamEPGProgramme[]>([]);
   const [showHealthPanel, setShowHealthPanel] = useState<boolean>(false);
 
@@ -143,6 +144,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     let isCancelled = false;
     setIsLoading(true);
     setErrorMsg(null);
+    setErrorDetail(null);
 
     const initStream = async () => {
       let resolvedUrl = getStreamUrl();
@@ -322,7 +324,17 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         video.onerror = () => {
           if (isCancelled) return;
           setIsLoading(false);
-          setErrorMsg('Video playback error. Stream format may require server transcoding.');
+          const mediaError = video.error;
+          const code = mediaError?.code ?? 0;
+          const codeName =
+            code === 1 ? 'ABORTED' :
+            code === 2 ? 'NETWORK' :
+            code === 3 ? 'DECODE' :
+            code === 4 ? 'SRC_NOT_SUPPORTED' :
+            'UNKNOWN';
+          const source = isPublicPlaybackControl ? 'direct HTTPS control' : 'prepared stream';
+          setErrorMsg('Video playback error.');
+          setErrorDetail(`MediaError ${code} (${codeName}) · ${source}`);
         };
       } else {
         setErrorMsg('Browser does not support HLS media decoding.');
@@ -563,6 +575,13 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             : 'object-fill'
         }`}
       />
+
+      {errorMsg && errorDetail && (
+        <div className="absolute left-1/2 top-1/2 z-[70] w-[min(90vw,680px)] -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-red-400/30 bg-black/85 p-5 text-center shadow-2xl">
+          <p className="text-base font-semibold text-white">{errorMsg}</p>
+          <p className="mt-2 font-mono text-sm text-red-200">{errorDetail}</p>
+        </div>
+      )}
 
       {/* Loading Overlay */}
       {isLoading && (
