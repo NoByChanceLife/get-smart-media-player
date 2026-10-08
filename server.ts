@@ -297,11 +297,39 @@ app.all('/api/xtream/proxy', async (req: Request, res: Response) => {
       });
     }
 
-    const contentType = upstreamResponse.headers.get('content-type') || 'application/json';
-    res.setHeader('Content-Type', contentType);
-
+    const contentType = upstreamResponse.headers.get('content-type') || '';
     const bodyText = await upstreamResponse.text();
-    return res.send(bodyText);
+    const trimmed = bodyText.trim();
+    const looksHtml =
+      contentType.toLowerCase().includes('text/html') ||
+      /^<!doctype html/i.test(trimmed) ||
+      /^<html/i.test(trimmed);
+
+    // API consumers should always receive a JSON envelope from Get Smart on
+    // non-JSON upstream responses. This prevents browser response.json() from
+    // hiding whether HTML came from the provider or from our own application.
+    if (looksHtml) {
+      return res.status(502).json({
+        error: 'Upstream Xtream endpoint returned HTML instead of JSON.',
+        errorType: 'UPSTREAM_HTML_RESPONSE',
+        upstreamStatus: upstreamResponse.status,
+        upstreamContentType: contentType || 'unknown',
+      });
+    }
+
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(bodyText);
+    } catch {
+      return res.status(502).json({
+        error: 'Upstream Xtream endpoint returned a non-JSON response.',
+        errorType: 'UPSTREAM_NON_JSON_RESPONSE',
+        upstreamStatus: upstreamResponse.status,
+        upstreamContentType: contentType || 'unknown',
+      });
+    }
+
+    return res.status(upstreamResponse.status).json(parsed);
   } catch (err: unknown) {
     const error = err as Error;
     const classified = classifyNetworkError(error);
