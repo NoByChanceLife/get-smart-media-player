@@ -34,135 +34,59 @@ export const DEMO_AUTH_DATA: XtreamAuthResponse = {
 };
 
 export const DEMO_LIVE_CATEGORIES: XtreamCategory[] = [
-  { category_id: 'all', category_name: '⭐ All Channels' },
-  { category_id: 'news', category_name: '📰 News & Information' },
-  { category_id: 'sports', category_name: '⚽ Sports & Action' },
-  { category_id: 'movies', category_name: '🎬 Cinema & Movies' },
-  { category_id: 'docs', category_name: '🌍 Documentaries & Space' },
-  { category_id: 'animation', category_name: '🎨 Animation & Kids' },
-  { category_id: 'music', category_name: '🎵 Music & Live Events' },
+  { category_id: 'all', category_name: 'All Channels' },
+  { category_id: 'news', category_name: 'News' },
+  { category_id: 'test', category_name: 'Playback Test' },
 ];
 
 export const DEMO_LIVE_STREAMS: XtreamLiveStream[] = [
   {
     num: 1,
-    name: 'NASA TV HD | Live Deep Space & ISS',
+    name: 'Bloomberg TV US',
     stream_type: 'live',
     stream_id: 101,
-    stream_icon: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=160&auto=format&fit=crop&q=80',
-    category_id: 'docs',
-    tv_archive: 1,
-    tv_archive_duration: 7,
-    direct_source: 'https://ntv1.akamaized.net/hls/live/2014075/NASA-NTV1-HLS/master.m3u8',
-    currentProgram: 'Earth From Orbit 4K & Artemis Mission Control',
+    stream_icon: '',
+    category_id: 'news',
+    tv_archive: 0,
+    tv_archive_duration: 0,
+    direct_source: 'https://bloomberg.com/media-manifest/streams/us.m3u8',
+    currentProgram: 'Live programming',
   },
   {
     num: 2,
-    name: 'Red Bull TV | Extreme Action Sports Live',
+    name: 'Bloomberg TV+',
     stream_type: 'live',
     stream_id: 102,
-    stream_icon: 'https://images.unsplash.com/photo-1517649763962-0c623266ddc0?w=160&auto=format&fit=crop&q=80',
-    category_id: 'sports',
-    tv_archive: 1,
-    tv_archive_duration: 7,
-    direct_source: 'https://rbmn-live.akamaized.net/hls/live/590964/BoRB-AT/master.m3u8',
-    currentProgram: 'Red Bull Rampage & World Rally Championship',
+    stream_icon: '',
+    category_id: 'news',
+    tv_archive: 0,
+    tv_archive_duration: 0,
+    direct_source: 'https://bloomberg.com/media-manifest/streams/phoenix-us.m3u8',
+    currentProgram: 'Live programming',
   },
   {
     num: 3,
-    name: 'Bloomberg TV International | Global Markets',
+    name: 'France 24 English',
     stream_type: 'live',
     stream_id: 103,
-    stream_icon: 'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=160&auto=format&fit=crop&q=80',
+    stream_icon: '',
     category_id: 'news',
-    tv_archive: 1,
-    tv_archive_duration: 5,
-    direct_source: 'https://liveproduseast.akamaized.net/us/Channel-USTV-AWS-virginia-1/Source-USTV-1000-1_live.m3u8',
-    currentProgram: 'Markets Today & Global Financial Close',
+    tv_archive: 0,
+    tv_archive_duration: 0,
+    direct_source: 'https://live.france24.com/hls/live/2037218/F24_EN_HI_HLS/master_900.m3u8',
+    currentProgram: 'Live programming',
   },
   {
     num: 4,
-    name: 'Euronews HD | World Bulletin 24/7',
+    name: 'Apple HLS Reference Stream',
     stream_type: 'live',
     stream_id: 104,
-    stream_icon: 'https://images.unsplash.com/photo-1585829365295-ab7cd400c167?w=160&auto=format&fit=crop&q=80',
-    category_id: 'news',
-    tv_archive: 1,
-    tv_archive_duration: 3,
-    direct_source: 'https://euronews-euronews-world-1-au.samsung.wurl.tv/playlist.m3u8',
-    currentProgram: 'World News Headlines & Brussels Live Update',
-  },
-  {
-    num: 5,
-    name: 'Cinema 4K | Sintel Blade of the Valkyrie',
-    stream_type: 'live',
-    stream_id: 105,
-    stream_icon: 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=160&auto=format&fit=crop&q=80',
-    category_id: 'movies',
-    tv_archive: 1,
-    tv_archive_duration: 7,
-    direct_source: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4',
-    currentProgram: 'Sintel: Legend of the Mountain Dragon (Remastered)',
-  },
-  {
-    num: 6,
-    name: 'Sci-Fi Prime HD | Tears of Steel Cyberwar',
-    stream_type: 'live',
-    stream_id: 106,
-    stream_icon: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=160&auto=format&fit=crop&q=80',
-    category_id: 'movies',
-    tv_archive: 1,
-    tv_archive_duration: 7,
-    direct_source: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4',
-    currentProgram: 'Tears of Steel: The Amsterdam Resistance',
-  },
-  {
-    num: 7,
-    name: 'ToonVerse 60FPS | Big Buck Bunny & Friends',
-    stream_type: 'live',
-    stream_id: 107,
-    stream_icon: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?w=160&auto=format&fit=crop&q=80',
-    category_id: 'animation',
-    tv_archive: 1,
-    tv_archive_duration: 3,
-    direct_source: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
-    currentProgram: 'Big Buck Bunny: The Forest Odyssey Special',
-  },
-  {
-    num: 8,
-    name: 'Cosmos Nature 4K | Ocean Wonders & Wildlife',
-    stream_type: 'live',
-    stream_id: 108,
-    stream_icon: 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=160&auto=format&fit=crop&q=80',
-    category_id: 'docs',
-    tv_archive: 1,
-    tv_archive_duration: 7,
-    direct_source: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
-    currentProgram: 'Great Coral Reef & Polar Mysteries in Ultra HD',
-  },
-  {
-    num: 9,
-    name: 'Club Ibiza Electronic TV | Festival Mainstage',
-    stream_type: 'live',
-    stream_id: 109,
-    stream_icon: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=160&auto=format&fit=crop&q=80',
-    category_id: 'music',
-    tv_archive: 1,
-    tv_archive_duration: 3,
-    direct_source: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4',
-    currentProgram: 'Midnight Neon Session: Live from Amsterdam Arena',
-  },
-  {
-    num: 10,
-    name: 'Velocity Sports | Speed & Formula Racing',
-    stream_type: 'live',
-    stream_id: 110,
-    stream_icon: 'https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?w=160&auto=format&fit=crop&q=80',
-    category_id: 'sports',
-    tv_archive: 1,
-    tv_archive_duration: 5,
-    direct_source: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/WeAreGoingOnBullrun.mp4',
-    currentProgram: 'Supercar Grand Prix Qualifying & Telemetry',
+    stream_icon: '',
+    category_id: 'test',
+    tv_archive: 0,
+    tv_archive_duration: 0,
+    direct_source: 'https://devstreaming-cdn.apple.com/videos/streaming/examples/bipbop_4x3/bipbop_4x3_variant.m3u8',
+    currentProgram: 'Playback reference',
   },
 ];
 
@@ -440,57 +364,29 @@ export const DEMO_SERIES_SEASONS: Record<number, XtreamSeason[]> = {
 // Generates dynamic real-time EPG program schedules around the current local clock
 export function generateDemoEPG(streamId: number): XtreamEPGProgramme[] {
   const now = new Date();
-  const currentHour = now.getHours();
   const currentDay = now.toISOString().split('T')[0];
+  const slotStart = new Date(now);
+  slotStart.setMinutes(0, 0, 0);
 
-  const channelProgramsMap: Record<number, Array<{ title: string; desc: string; durationMins: number }>> = {
-    101: [
-      { title: 'Artemis Lunar Telemetry Live', desc: 'Real-time telemetry and feed from lunar gateway sensors.', durationMins: 60 },
-      { title: 'ISS Astronaut EVA Space Walk', desc: 'Live external spacewalk coverage from the International Space Station.', durationMins: 90 },
-      { title: 'James Webb Deep Field Discoveries', desc: 'Spectroscopic examination of primordial galaxies.', durationMins: 60 },
-      { title: 'Mars Perseverance Rover Mission Dispatch', desc: 'Jezero Crater core sample analysis and robotic navigation.', durationMins: 60 },
-    ],
-    102: [
-      { title: 'Red Bull Hardline Mountain Bike Finals', desc: 'Downhill mountain biking through Welsh quarry cliffs.', durationMins: 60 },
-      { title: 'Cliff Diving World Series 2026', desc: 'Extreme high-diving from 27-meter platforms in Polignano.', durationMins: 60 },
-      { title: 'Dakar Rally Stage 6 Highlights', desc: 'Desert rally raid action across dunes and rocky passes.', durationMins: 60 },
-      { title: 'World Freestyle Motocross Championship', desc: 'Top riders execute gravity-defying tricks.', durationMins: 60 },
-    ],
-    103: [
-      { title: 'Bloomberg Surveillance Worldwide', desc: 'Leading financial anchor interviews with global economists.', durationMins: 60 },
-      { title: 'Wall Street Open & Futures Analysis', desc: 'Stock market opening bell and sector movements.', durationMins: 60 },
-      { title: 'Tech Trade & Venture Dispatch', desc: 'Silicon Valley AI advancements and venture fund investments.', durationMins: 60 },
-      { title: 'Global Macro Economic Forum', desc: 'Central bank interest rates and currency valuations.', durationMins: 60 },
-    ],
-    104: [
-      { title: 'Euronews Express: Top World Stories', desc: 'Instant 15-minute briefing on primary international developments.', durationMins: 30 },
-      { title: 'European Parliament Debates', desc: 'Live legislative debates from Strasbourg.', durationMins: 60 },
-      { title: 'Global Energy & Climate Report', desc: 'Renewable grid transition and industrial carbon policies.', durationMins: 45 },
-      { title: 'Culture & Cinema Tonight', desc: 'Film festival premieres and European artistic retrospectives.', durationMins: 45 },
-    ],
-  };
+  const labels =
+    streamId === 104
+      ? ['Playback reference', 'Playback reference', 'Playback reference']
+      : ['Live programming', 'Schedule unavailable', 'Schedule unavailable'];
 
-  const programs = channelProgramsMap[streamId] || [
-    { title: 'Prime Broadcast Hour', desc: 'High definition special feature presentation.', durationMins: 60 },
-    { title: 'Featured Live Chronicle', desc: 'Exclusive broadcast coverage and expert panel analysis.', durationMins: 60 },
-    { title: 'Late Night Cinema Showcase', desc: 'Award-winning curated motion picture broadcast.', durationMins: 90 },
-    { title: 'Overnight Panorama', desc: 'Relaxing ambient visuals and global updates.', durationMins: 60 },
-  ];
+  const pad = (n: number) => n.toString().padStart(2, '0');
+  const formatTime = (d: Date) => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
 
-  let accumulatedMinutes = -60; // start 1 hour before current time
-  return programs.map((prog, index) => {
-    const startTime = new Date(now.getTime() + accumulatedMinutes * 60 * 1000);
-    accumulatedMinutes += prog.durationMins;
-    const endTime = new Date(now.getTime() + accumulatedMinutes * 60 * 1000);
-
-    const pad = (n: number) => n.toString().padStart(2, '0');
-    const formatTime = (d: Date) => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
-
+  return labels.map((title, index) => {
+    const startTime = new Date(slotStart.getTime() + index * 60 * 60 * 1000);
+    const endTime = new Date(startTime.getTime() + 60 * 60 * 1000);
     return {
-      id: `${streamId}_prog_${index}`,
+      id: `${streamId}_guide_${index}`,
       channel_id: String(streamId),
-      title: prog.title,
-      description: prog.desc,
+      title,
+      description:
+        streamId === 104
+          ? 'Official Apple HLS sample used to verify player behavior.'
+          : 'Program schedule data is not supplied by this development source.',
       start: `${currentDay} ${formatTime(startTime)}:00`,
       end: `${currentDay} ${formatTime(endTime)}:00`,
       start_timestamp: Math.floor(startTime.getTime() / 1000),
