@@ -78,11 +78,26 @@ export default function App() {
   const mainContentRef = useRef<HTMLDivElement | null>(null);
 
   const focusFirstContentControl = useCallback(() => {
-    const first = mainContentRef.current?.querySelector<HTMLElement>(
+    const root = mainContentRef.current;
+    if (!root) return;
+
+    // On Movies/Series the useful TV handoff target is the first poster, not
+    // the featured/header buttons above the grid. This keeps Right from the
+    // rail aligned with the customer's intent to browse content.
+    if (currentTab === 'movies' || currentTab === 'series') {
+      const firstCard = root.querySelector<HTMLElement>('[data-media-card]');
+      if (firstCard) {
+        firstCard.focus();
+        firstCard.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+        return;
+      }
+    }
+
+    const first = root.querySelector<HTMLElement>(
       '.tv-focus-target, button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), [tabindex="0"]'
     );
     first?.focus();
-  }, []);
+  }, [currentTab]);
 
   const focusNavigationRail = useCallback(() => {
     const first = document.querySelector<HTMLElement>(
