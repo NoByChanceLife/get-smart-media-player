@@ -48,7 +48,10 @@ export const SeriesView: React.FC<SeriesViewProps> = ({
     const columns = Math.max(1, Math.round(seriesGridRef.current!.clientWidth / cards[0].getBoundingClientRect().width));
     let next = index;
     if (e.key === 'ArrowRight') next = Math.min(cards.length - 1, index + 1);
-    else if (e.key === 'ArrowLeft') next = Math.max(0, index - 1);
+    else if (e.key === 'ArrowLeft') {
+      if (index % columns === 0) return;
+      next = Math.max(0, index - 1);
+    }
     else if (e.key === 'ArrowDown') next = Math.min(cards.length - 1, index + columns);
     else if (e.key === 'ArrowUp') next = Math.max(0, index - columns);
     else if (e.key === 'Enter' || e.key === ' ') {
@@ -58,6 +61,7 @@ export const SeriesView: React.FC<SeriesViewProps> = ({
     } else return;
     e.preventDefault();
     cards[next]?.focus();
+    cards[next]?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
   };
 
   const canAccess = parentalControlService.canAccessSection('series');
@@ -158,7 +162,7 @@ export const SeriesView: React.FC<SeriesViewProps> = ({
             placeholder="Search TV series..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-[#0a0f1c] border border-slate-800 rounded-xl pl-9 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 transition"
+            className="w-full bg-[#0a0f1c] border border-slate-800 rounded-xl pl-9 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 transition tv-focus-target"
           />
         </div>
       </div>
@@ -242,7 +246,7 @@ export const SeriesView: React.FC<SeriesViewProps> = ({
 
               <button
                 onClick={() => setSelectedSeries(null)}
-                className="absolute top-4 right-4 z-20 p-2 rounded-xl bg-black/60 text-slate-400 hover:text-white backdrop-blur-md transition"
+                className="absolute top-4 right-4 z-20 p-2 rounded-xl bg-black/60 text-slate-400 hover:text-white backdrop-blur-md transition tv-focus-target"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -274,7 +278,7 @@ export const SeriesView: React.FC<SeriesViewProps> = ({
                     selectedSeries.isFavorite
                       ? 'bg-amber-500/20 border-amber-500/50 text-amber-300'
                       : 'bg-black/60 border-slate-700 text-slate-400 hover:text-white'
-                  }`}
+                  } tv-focus-target`}
                   title="Toggle Favorite Series"
                 >
                   <Star
@@ -326,6 +330,15 @@ export const SeriesView: React.FC<SeriesViewProps> = ({
                 activeSeason.episodes.map((ep) => (
                   <div
                     key={ep.id}
+                    tabIndex={0}
+                    role="button"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        onPlayEpisode(selectedSeries, activeSeasonNum, ep);
+                        setSelectedSeries(null);
+                      }
+                    }}
                     onClick={() => {
                       onPlayEpisode(selectedSeries, activeSeasonNum, ep);
                       setSelectedSeries(null);
