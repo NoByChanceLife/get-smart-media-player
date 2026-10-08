@@ -99,6 +99,13 @@ export default function App() {
     first?.focus();
   }, [currentTab]);
 
+  const focusTopBar = useCallback(() => {
+    const first = document.querySelector<HTMLElement>(
+      '[data-tv-topbar] .tv-focus-target, [data-tv-topbar] button:not([disabled]), [data-tv-topbar] select:not([disabled])'
+    );
+    first?.focus();
+  }, []);
+
   const focusNavigationRail = useCallback(() => {
     const first = document.querySelector<HTMLElement>(
       '[aria-label="Main Navigation"] .tv-focus-target, [aria-label="Main Navigation"] button:not([disabled])'
@@ -361,6 +368,26 @@ export default function App() {
           return;
         }
 
+        if (
+          e.key === 'ArrowUp' &&
+          mainContentRef.current?.contains(target) &&
+          !target.closest('input, textarea, select')
+        ) {
+          const rect = target.getBoundingClientRect();
+          const contentRect = mainContentRef.current.getBoundingClientRect();
+          if (rect.top <= contentRect.top + 180) {
+            e.preventDefault();
+            focusTopBar();
+            return;
+          }
+        }
+
+        if (e.key === 'ArrowDown' && target.closest('[data-tv-topbar]')) {
+          e.preventDefault();
+          focusFirstContentControl();
+          return;
+        }
+
         // From any control in the main content, Left provides a predictable
         // escape path to the application navigation rail.
         if (
@@ -428,6 +455,7 @@ export default function App() {
     pinPromptState.isOpen,
     focusFirstContentControl,
     focusNavigationRail,
+    focusTopBar,
   ]);
 
   return (
