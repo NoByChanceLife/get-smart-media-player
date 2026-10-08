@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   Tv,
   Star,
@@ -40,6 +40,25 @@ export const SeriesView: React.FC<SeriesViewProps> = ({
   const [seasons, setSeasons] = useState<XtreamSeason[]>([]);
   const [activeSeasonNum, setActiveSeasonNum] = useState<number>(1);
   const [loadingSeasons, setLoadingSeasons] = useState<boolean>(false);
+  const seriesGridRef = useRef<HTMLDivElement | null>(null);
+
+  const handlePosterKeyDown = (e: React.KeyboardEvent<HTMLElement>, index: number, series: XtreamSeries) => {
+    const cards = Array.from(seriesGridRef.current?.querySelectorAll<HTMLElement>('[data-media-card]') ?? []);
+    if (!cards.length) return;
+    const columns = Math.max(1, Math.round(seriesGridRef.current!.clientWidth / cards[0].getBoundingClientRect().width));
+    let next = index;
+    if (e.key === 'ArrowRight') next = Math.min(cards.length - 1, index + 1);
+    else if (e.key === 'ArrowLeft') next = Math.max(0, index - 1);
+    else if (e.key === 'ArrowDown') next = Math.min(cards.length - 1, index + columns);
+    else if (e.key === 'ArrowUp') next = Math.max(0, index - columns);
+    else if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      handleOpenSeries(series);
+      return;
+    } else return;
+    e.preventDefault();
+    cards[next]?.focus();
+  };
 
   const canAccess = parentalControlService.canAccessSection('series');
   const parentalSettings = parentalControlService.getSettings();
@@ -145,13 +164,17 @@ export const SeriesView: React.FC<SeriesViewProps> = ({
       </div>
 
       {/* Series Posters Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-        {filteredSeries.map((series) => {
+      <div ref={seriesGridRef} className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">\n        {filteredSeries.map((series, seriesIndex) => {
           const isCatLocked = parentalControlService.isCategoryLocked(series.category_id, 'series');
 
           return (
             <div
               key={series.series_id}
+              data-media-card
+              tabIndex={0}
+              role="button"
+              aria-label={`Open ${series.name}`}
+              onKeyDown={(e) => handlePosterKeyDown(e, seriesIndex, series)}
               onClick={() => handleOpenSeries(series)}
               className="group relative flex flex-col bg-[#0e1422] rounded-2xl border border-slate-800/80 hover:border-cyan-500/50 overflow-hidden cursor-pointer transition-all duration-200 shadow-md tv-focus-target"
             >
