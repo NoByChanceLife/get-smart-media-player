@@ -13,8 +13,8 @@
     "android:add": "cap add android",
     "android:sync": "npm run build && cap sync android",
     "android:open": "cap open android",
-    "android:prepare": "npm run build && sh scripts/sync-android.sh",
-    "android:debug": "npm run android:prepare && cd android && ./gradlew assembleDebug"
+    "android:prepare": "npm run build && node scripts/sync-android.mjs",
+    "android:debug": "npm run android:prepare && cd android && gradlew.bat assembleDebug"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",
