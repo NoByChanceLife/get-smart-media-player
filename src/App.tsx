@@ -486,8 +486,9 @@ export default function App() {
 
   return (
     <div className={`min-h-screen text-slate-100 flex flex-col selection:bg-cyan-500 selection:text-white ${playbackTarget && isBrowsingDuringPlayback ? 'bg-transparent' : 'bg-[#06090f]'}`}>
-      {/* Television Collapsible Left Rail (Desktop / Android TV) */}
-      <TVNavigationRail
+      {/* App navigation belongs only to normal app browsing. The quick guide is
+          intentionally isolated so it cannot stack with the full app shell. */}
+      {(!playbackTarget || isBrowsingDuringPlayback || isFloatingPiP) && <TVNavigationRail
         currentTab={currentTab}
         onSelectTab={setCurrentTab}
         activeProfiles={activeProfiles}
@@ -499,11 +500,11 @@ export default function App() {
         isExpanded={isRailExpanded}
         onToggleExpanded={() => setIsRailExpanded(!isRailExpanded)}
         onFocusContent={focusFirstContentControl}
-      />
+      />}
 
       {/* Main Layout Container */}
       <div
-        className={`flex-1 flex flex-col transition-all duration-300 ${
+        className={`${playbackTarget && !isBrowsingDuringPlayback && !isFloatingPiP ? 'invisible pointer-events-none' : ''} flex-1 flex flex-col transition-all duration-300 ${
           isRailExpanded ? 'md:ml-64' : 'md:ml-[74px]'
         } ${playbackTarget && isBrowsingDuringPlayback ? 'relative z-[55] bg-transparent' : ''}`}
       >
