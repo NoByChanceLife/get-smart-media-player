@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Zap,
   Activity,
@@ -40,6 +40,40 @@ export const StreamingPerformanceModal: React.FC<StreamingPerformanceModalProps>
   );
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [cacheStatus, setCacheStatus] = useState<string | null>(null);
+
+  const modalRef = useRef<HTMLDivElement | null>(null);
+
+  // TV remote / keyboard spatial navigation inside this modal.
+  useEffect(() => {
+    if (!isOpen) return;
+    const root = modalRef.current;
+    if (!root) return;
+    const selector = 'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex="0"]';
+    const controls = () => Array.from(root.querySelectorAll<HTMLElement>(selector)).filter((el) => el.offsetParent !== null);
+    requestAnimationFrame(() => controls()[0]?.focus());
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (!['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(event.key)) return;
+      const items = controls();
+      if (!items.length) return;
+      const current = document.activeElement as HTMLElement;
+      const currentRect = current?.getBoundingClientRect?.();
+      if (!currentRect || !root.contains(current)) { event.preventDefault(); items[0].focus(); return; }
+      const cx = currentRect.left + currentRect.width / 2, cy = currentRect.top + currentRect.height / 2;
+      const candidates = items.filter((el) => el !== current).map((el) => {
+        const r = el.getBoundingClientRect(), x = r.left + r.width / 2, y = r.top + r.height / 2;
+        const dx = x - cx, dy = y - cy;
+        const valid = event.key === 'ArrowLeft' ? dx < -4 : event.key === 'ArrowRight' ? dx > 4 : event.key === 'ArrowUp' ? dy < -4 : dy > 4;
+        if (!valid) return null;
+        const primary = event.key === 'ArrowLeft' || event.key === 'ArrowRight' ? Math.abs(dx) : Math.abs(dy);
+        const cross = event.key === 'ArrowLeft' || event.key === 'ArrowRight' ? Math.abs(dy) : Math.abs(dx);
+        return { el, score: primary + cross * 2.25 };
+      }).filter(Boolean) as {el: HTMLElement; score: number}[];
+      candidates.sort((a,b) => a.score - b.score);
+      if (candidates[0]) { event.preventDefault(); candidates[0].el.focus(); candidates[0].el.scrollIntoView({block:'nearest', inline:'nearest'}); }
+    };
+    root.addEventListener('keydown', onKeyDown);
+    return () => root.removeEventListener('keydown', onKeyDown);
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -123,7 +157,7 @@ export const StreamingPerformanceModal: React.FC<StreamingPerformanceModalProps>
   ];
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-6 bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
+    <div ref={modalRef} className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-6 bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
       <div className="bg-[#070b14] border border-cyan-500/30 rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl flex flex-col max-h-[92vh] text-slate-200">
         {/* Header */}
         <div className="px-6 py-5 border-b border-slate-800/80 flex items-center justify-between bg-[#05080e]/80">
