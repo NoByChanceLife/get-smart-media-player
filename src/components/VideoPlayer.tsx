@@ -35,6 +35,7 @@ interface VideoPlayerProps {
   onSelectLiveStream?: (stream: XtreamLiveStream) => void;
   onOpenPerformanceSettings?: () => void;
   onOpenGuide?: () => void;
+  isVisuallyHidden?: boolean;
 }
 
 export const VideoPlayer: React.FC<VideoPlayerProps> = ({
@@ -46,6 +47,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   onSelectLiveStream,
   onOpenPerformanceSettings,
   onOpenGuide,
+  isVisuallyHidden = false,
 }) => {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -483,8 +485,10 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
           toggleFullscreen();
           break;
         case 'Escape':
+        case 'Backspace':
           if (!document.fullscreenElement) {
-            onClose();
+            e.preventDefault();
+            onOpenGuide?.();
           }
           break;
         case 'ArrowUp':
@@ -558,7 +562,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       ref={containerRef}
       onMouseMove={handleMouseMove}
       onClick={() => resetControlsTimer()}
-      className="fixed inset-0 z-50 bg-black flex items-center justify-center select-none overflow-hidden font-sans"
+      className={`fixed inset-0 z-50 bg-black flex items-center justify-center select-none overflow-hidden font-sans ${isVisuallyHidden ? 'invisible pointer-events-none' : ''}`}
     >
       {/* Video Canvas */}
       <video
