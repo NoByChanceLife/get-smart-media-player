@@ -41,6 +41,41 @@ export const SeriesView: React.FC<SeriesViewProps> = ({
   const [activeSeasonNum, setActiveSeasonNum] = useState<number>(1);
   const [loadingSeasons, setLoadingSeasons] = useState<boolean>(false);
   const seriesGridRef = useRef<HTMLDivElement | null>(null);
+  const seriesViewRef = useRef<HTMLDivElement | null>(null);
+
+  const handleSeriesViewNavigation = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) return;
+    const current = e.target as HTMLElement;
+    if (current.closest('[data-media-card]')) return;
+    const root = seriesViewRef.current;
+    if (!root) return;
+    const items = Array.from(
+      root.querySelectorAll<HTMLElement>('[data-tv-control], button:not([disabled]), input:not([disabled])')
+    ).filter((item, index, all) => item.offsetParent !== null && all.indexOf(item) === index);
+    if (!items.includes(current)) return;
+
+    const rect = current.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    const candidates = items.filter((item) => item !== current).map((item) => {
+      const r = item.getBoundingClientRect();
+      const x = r.left + r.width / 2;
+      const y = r.top + r.height / 2;
+      const dx = x - cx;
+      const dy = y - cy;
+      const valid = e.key === 'ArrowRight' ? dx > 4 : e.key === 'ArrowLeft' ? dx < -4 : e.key === 'ArrowDown' ? dy > 4 : dy < -4;
+      const primary = e.key === 'ArrowLeft' || e.key === 'ArrowRight' ? Math.abs(dx) : Math.abs(dy);
+      const cross = e.key === 'ArrowLeft' || e.key === 'ArrowRight' ? Math.abs(dy) : Math.abs(dx);
+      return { item, valid, score: primary + cross * 2.5 };
+    }).filter((x) => x.valid).sort((a,b) => a.score-b.score);
+    const next = candidates[0]?.item;
+    if (next) {
+      e.preventDefault();
+      e.stopPropagation();
+      next.focus();
+      next.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+    }
+  };
 
   const handlePosterKeyDown = (e: React.KeyboardEvent<HTMLElement>, index: number, series: XtreamSeries) => {
     const cards = Array.from(seriesGridRef.current?.querySelectorAll<HTMLElement>('[data-media-card]') ?? []);
@@ -130,7 +165,7 @@ export const SeriesView: React.FC<SeriesViewProps> = ({
   const activeSeason = seasons.find((s) => s.season_num === activeSeasonNum) || seasons[0];
 
   return (
-    <div className="flex flex-col h-full space-y-6 animate-in fade-in duration-200">
+    <div ref={seriesViewRef} onKeyDownCapture={handleSeriesViewNavigation} className="flex flex-col h-full space-y-6 animate-in fade-in duration-200">
       {/* Categories & Search Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
@@ -141,6 +176,7 @@ export const SeriesView: React.FC<SeriesViewProps> = ({
             return (
               <button
                 key={cat.category_id}
+                data-tv-control
                 onClick={() => onSelectCategory(cat.category_id)}
                 className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition tv-focus-target ${
                   isSelected
@@ -159,6 +195,7 @@ export const SeriesView: React.FC<SeriesViewProps> = ({
           <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
             type="text"
+            data-tv-control
             placeholder="Search TV series..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
