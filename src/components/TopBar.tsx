@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import {
   Tv,
   Film,
@@ -45,6 +45,34 @@ export const TopBar: React.FC<TopBarProps> = ({
   onOpenProfileSwitcher,
   onOpenParentalControls,
 }) => {
+  const topBarRef = useRef<HTMLElement | null>(null);
+
+  const handleTVNavigation = (e: React.KeyboardEvent<HTMLElement>) => {
+    if (!['ArrowLeft', 'ArrowRight', 'ArrowDown'].includes(e.key)) return;
+    const current = e.target as HTMLElement;
+    if (!current.matches('button, select, [tabindex="0"]')) return;
+
+    if (e.key === 'ArrowDown') {
+      // Let App hand focus back to the active page content.
+      return;
+    }
+
+    const items = Array.from(
+      topBarRef.current?.querySelectorAll<HTMLElement>('button:not([disabled]), select:not([disabled]), [tabindex="0"]') ?? []
+    ).filter((item) => item.offsetParent !== null);
+    const index = items.indexOf(current);
+    if (index < 0) return;
+
+    const nextIndex = e.key === 'ArrowRight' ? index + 1 : index - 1;
+    const next = items[nextIndex];
+    if (next) {
+      e.preventDefault();
+      e.stopPropagation();
+      next.focus();
+      next.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    }
+  };
+
   const getTabTitle = (tab: NavTab) => {
     switch (tab) {
       case 'home':
@@ -65,7 +93,7 @@ export const TopBar: React.FC<TopBarProps> = ({
   };
 
   return (
-    <header data-tv-topbar className="sticky top-0 z-40 bg-[#06090f]/90 backdrop-blur-xl border-b border-slate-800/80 px-4 sm:px-6 py-3 transition-colors">
+    <header ref={topBarRef} onKeyDownCapture={handleTVNavigation} data-tv-topbar className="sticky top-0 z-40 bg-[#06090f]/90 backdrop-blur-xl border-b border-slate-800/80 px-4 sm:px-6 py-3 transition-colors">
       <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
         {/* Left Section: Mobile Brand or View Header on Desktop */}
         <div className="flex items-center gap-3">
