@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, copyFileSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, copyFileSync, readFileSync, writeFileSync, rmSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
@@ -24,6 +24,14 @@ mkdirSync(packageDir, { recursive: true });
 copyFileSync(join(root, 'native', 'android', 'GetSmartProviderPlugin.java'), join(packageDir, 'GetSmartProviderPlugin.java'));
 copyFileSync(join(root, 'native', 'android', 'MainActivity.java'), join(packageDir, 'MainActivity.java'));
 copyFileSync(join(root, 'native', 'android', 'AndroidManifest.xml'), join(root, 'android', 'app', 'src', 'main', 'AndroidManifest.xml'));
+
+// Capacitor copy does not guarantee removal of old hashed Vite/PWA assets.
+// Clear the generated web asset directory first so Android cannot package a stale bundle.
+const androidPublicDir = join(root, 'android', 'app', 'src', 'main', 'assets', 'public');
+if (existsSync(androidPublicDir)) {
+  rmSync(androidPublicDir, { recursive: true, force: true });
+  console.log('Cleared stale Android web assets.');
+}
 
 run('npx', ['cap', 'sync', 'android']);
 
