@@ -77,6 +77,7 @@ export default function App() {
   // Playback presentation is separate from playback ownership. Browsing hides
   // the fullscreen surface without destroying the active player session.
   const [isBrowsingDuringPlayback, setIsBrowsingDuringPlayback] = useState(false);
+  const [isWatchingGuideOpen, setIsWatchingGuideOpen] = useState(false);
   const [isLoadingData, setIsLoadingData] = useState(true);
 
   const mainContentRef = useRef<HTMLDivElement | null>(null);
@@ -196,6 +197,7 @@ export default function App() {
     setPlaybackTarget({ type: 'live', stream });
     setIsFloatingPiP(false);
     setIsBrowsingDuringPlayback(false);
+    setIsWatchingGuideOpen(false);
   };
 
   const handlePlayMovie = (movie: XtreamVodStream) => {
@@ -628,17 +630,21 @@ export default function App() {
 
       {/* Lightweight guide shown over a still-running live stream. The full Live TV
           workspace remains separate for deliberate browsing/management. */}
-      {playbackTarget?.type === 'live' && isBrowsingDuringPlayback && !isFloatingPiP && (
+      {playbackTarget?.type === 'live' && isBrowsingDuringPlayback && isWatchingGuideOpen && !isFloatingPiP && (
         <WatchingGuideOverlay
           categories={liveCategories}
           streams={liveStreams}
           currentStream={playbackTarget.stream}
           onPlayStream={handlePlayLiveStream}
-          onClose={() => setIsBrowsingDuringPlayback(false)}
+          onClose={() => {
+            setIsWatchingGuideOpen(false);
+            setIsBrowsingDuringPlayback(false);
+          }}
           onOpenAppNavigation={() => {
-            // Home means browse the actual app Home while the existing media
-            // session keeps playing behind the translucent shell.
+            // Dismiss the temporary Watching Guide and reveal the real Home
+            // surface while the same playback session continues underneath.
             setCurrentTab('home');
+            setIsWatchingGuideOpen(false);
             setIsBrowsingDuringPlayback(true);
             requestAnimationFrame(() => focusNavigationRail());
           }}
@@ -663,6 +669,7 @@ export default function App() {
           onOpenPerformanceSettings={() => setIsPerformanceModalOpen(true)}
           onOpenGuide={() => {
             setCurrentTab('live');
+            setIsWatchingGuideOpen(true);
             setIsBrowsingDuringPlayback(true);
           }}
           isVisuallyHidden={isBrowsingDuringPlayback}
