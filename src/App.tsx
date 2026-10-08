@@ -73,6 +73,9 @@ export default function App() {
   const [playbackTarget, setPlaybackTarget] = useState<PlaybackTarget | null>(null);
   const [secondaryPlaybackTarget, setSecondaryPlaybackTarget] = useState<PlaybackTarget | null>(null);
   const [isFloatingPiP, setIsFloatingPiP] = useState(false);
+  // Playback presentation is separate from playback ownership. Browsing hides
+  // the fullscreen surface without destroying the active player session.
+  const [isBrowsingDuringPlayback, setIsBrowsingDuringPlayback] = useState(false);
   const [isLoadingData, setIsLoadingData] = useState(true);
 
   const mainContentRef = useRef<HTMLDivElement | null>(null);
@@ -191,16 +194,19 @@ export default function App() {
   const handlePlayLiveStream = (stream: XtreamLiveStream) => {
     setPlaybackTarget({ type: 'live', stream });
     setIsFloatingPiP(false);
+    setIsBrowsingDuringPlayback(false);
   };
 
   const handlePlayMovie = (movie: XtreamVodStream) => {
     setPlaybackTarget({ type: 'vod', movie });
     setIsFloatingPiP(false);
+    setIsBrowsingDuringPlayback(false);
   };
 
   const handlePlayEpisode = (series: XtreamSeries, seasonNum: number, episode: XtreamEpisode) => {
     setPlaybackTarget({ type: 'episode', series, seasonNum, episode });
     setIsFloatingPiP(false);
+    setIsBrowsingDuringPlayback(false);
   };
 
   // PIN Unlock prompts for restricted content
@@ -323,8 +329,12 @@ export default function App() {
         return;
       }
 
-      // Dialog dismiss on Escape
-      if (e.key === 'Escape') {
+      // Browser development maps Backspace to the same app-level Back action
+      // as Escape. Do not let the browser navigate its own history.
+      const isAppBack = e.key === 'Escape' || e.key === 'Backspace';
+
+      // Dialog dismiss on app Back
+      if (isAppBack) {
         if (isPerformanceModalOpen) {
           setIsPerformanceModalOpen(false);
           return;
@@ -347,7 +357,13 @@ export default function App() {
         }
       }
 
-      if (!playbackTarget || isFloatingPiP) {
+      if (playbackTarget && isBrowsingDuringPlayback && !isFloatingPiP && isAppBack) {
+        e.preventDefault();
+        setIsBrowsingDuringPlayback(false);
+        return;
+      }
+
+      if (!playbackTarget || isFloatingPiP || isBrowsingDuringPlayback) {
         const target = e.target as HTMLElement;
         const focusIsOnPage =
           target === document.body ||
@@ -453,6 +469,7 @@ export default function App() {
   }, [
     playbackTarget,
     isFloatingPiP,
+    isBrowsingDuringPlayback,
     isSettingsOpen,
     isParentalControlsOpen,
     isProfileSwitcherOpen,
@@ -622,10 +639,10 @@ export default function App() {
           onSelectLiveStream={handlePlayLiveStream}
           onOpenPerformanceSettings={() => setIsPerformanceModalOpen(true)}
           onOpenGuide={() => {
-            setPlaybackTarget(null);
-            setSecondaryPlaybackTarget(null);
             setCurrentTab('live');
+            setIsBrowsingDuringPlayback(true);
           }}
+          isVisuallyHidden={isBrowsingDuringPlayback}
         />
       )}
 
