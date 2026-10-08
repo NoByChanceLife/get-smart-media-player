@@ -625,7 +625,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         </div>
 
         <div className="flex items-center gap-2">
-          {onMinimizeToPiP && (
+          {target.type !== 'live' && onMinimizeToPiP && (
             <button
               onClick={onMinimizeToPiP}
               className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-cyan-600/30 hover:bg-cyan-600/50 border border-cyan-500/40 backdrop-blur-md text-xs font-semibold text-cyan-300 transition active:scale-95"
@@ -647,48 +647,29 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             </button>
           )}
 
-          {/* Stream Health Toggle Button */}
-          <button
-            onClick={() => setShowHealthPanel(!showHealthPanel)}
-            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl backdrop-blur-md text-xs font-semibold transition active:scale-95 tv-focus-target ${
-              showHealthPanel
-                ? 'bg-cyan-600 text-white font-bold shadow-lg shadow-cyan-950/60'
-                : 'bg-white/10 hover:bg-white/20 text-cyan-300'
-            }`}
-            title="Stream Health & Performance Diagnostics (H)"
-          >
-            <Activity className="w-4 h-4 text-cyan-300" />
-            <span className="hidden sm:inline">Stream Health</span>
-            {stats.bufferedSeconds > 0 && (
-              <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-black/40 text-cyan-200">
-                {stats.bufferedSeconds}s
-              </span>
-            )}
-          </button>
-
-          <button
-            onClick={cycleAspectRatio}
-            className="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 backdrop-blur-md text-xs font-medium text-white transition active:scale-95"
-            title="Cycle Aspect Ratio"
-          >
-            <span className="capitalize">{aspectRatio}</span>
-          </button>
-
-          <button
-            onClick={togglePiP}
-            className="p-2 rounded-xl bg-white/10 hover:bg-white/20 backdrop-blur-md text-white transition active:scale-95 hidden sm:flex"
-            title="Native OS Picture in Picture"
-          >
-            <PictureInPicture2 className="w-4 h-4" />
-          </button>
-
-          <button
-            onClick={toggleFullscreen}
-            className="p-2 rounded-xl bg-white/10 hover:bg-white/20 backdrop-blur-md text-white transition active:scale-95"
-            title="Fullscreen (F)"
-          >
-            {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
-          </button>
+          {target.type !== 'live' && (
+            <>
+              <button
+                onClick={() => setShowHealthPanel(!showHealthPanel)}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl backdrop-blur-md text-xs font-semibold transition active:scale-95 tv-focus-target ${
+                  showHealthPanel ? 'bg-cyan-600 text-white' : 'bg-white/10 hover:bg-white/20 text-cyan-300'
+                }`}
+                title="Stream Health & Performance Diagnostics (H)"
+              >
+                <Activity className="w-4 h-4" />
+                <span className="hidden sm:inline">Stream Health</span>
+              </button>
+              <button onClick={cycleAspectRatio} className="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-xs text-white">
+                <span className="capitalize">{aspectRatio}</span>
+              </button>
+              <button onClick={togglePiP} className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white hidden sm:flex">
+                <PictureInPicture2 className="w-4 h-4" />
+              </button>
+              <button onClick={toggleFullscreen} className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white">
+                {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+              </button>
+            </>
+          )}
         </div>
       </div>
 
@@ -704,7 +685,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
       {/* Bottom OSD / Player Controls Bar */}
       <div
-        className={`absolute bottom-0 left-0 right-0 p-4 sm:p-6 bg-gradient-to-t from-black/95 via-black/70 to-transparent transition-opacity duration-300 z-20 ${
+        className={`absolute bottom-0 left-0 right-0 p-4 sm:p-6 bg-gradient-to-t from-black/90 via-black/55 to-transparent transition-opacity duration-300 z-20 ${
           showControls ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
         }`}
       >
@@ -833,17 +814,17 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             </div>
           </div>
 
-          <div className="text-xs text-slate-400 hidden md:flex items-center gap-3">
-            <span>D-Pad / Arrows to Zap</span>
-            <span>·</span>
-            <span className="text-cyan-400 font-semibold">[H] Health</span>
-            <span>·</span>
-            <span>[F] Fullscreen</span>
-            <span>·</span>
-            <span>[M] Mute</span>
-            <span>·</span>
-            <span>[Esc] Exit</span>
-          </div>
+          {target.type === 'live' ? (
+            <div className="hidden sm:flex items-center gap-4 text-[11px] text-white/60">
+              <span><span className="text-white/90 font-semibold">OK</span> Options</span>
+              <span><span className="text-white/90 font-semibold">↑ ↓</span> Channels</span>
+              <span><span className="text-white/90 font-semibold">←</span> Guide</span>
+            </div>
+          ) : (
+            <div className="text-xs text-slate-400 hidden md:flex items-center gap-3">
+              <span>[F] Fullscreen</span><span>·</span><span>[M] Mute</span><span>·</span><span>[Esc] Exit</span>
+            </div>
+          )}
         </div>
       </div>
 
