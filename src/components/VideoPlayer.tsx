@@ -189,23 +189,33 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       }
       const isM3u8 = /\.m3u8(?:$|[?#])/i.test(mediaHintUrl);
 
-      // Never hand a sensitive upstream HTTP URL (or legacy proxy URL containing one)
-      // directly to the media element/HLS.js. Exchange it for an opaque short-lived path.
-      try {
-        if (resolvedUrl.startsWith('/api/xtream/stream?url=')) {
-          const encoded = resolvedUrl.split('?url=')[1] || '';
-          const upstreamUrl = decodeURIComponent(encoded);
-          resolvedUrl = await xtreamService.createStreamTicket(upstreamUrl);
-        } else if (resolvedUrl.startsWith('http://') || resolvedUrl.startsWith('https://')) {
-          resolvedUrl = await xtreamService.createStreamTicket(resolvedUrl);
+      // Diagnostic exception for the public Get Smart MP4 control fixture only.
+      // It contains no credentials/tokens, so play it directly over HTTPS to isolate
+      // the browser/video element from Get Smart's ticket/proxy pipeline.
+      const isPublicPlaybackControl =
+        target.type === 'live' &&
+        String(target.stream.stream_id) === '100' &&
+        resolvedUrl === 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4';
+
+      if (!isPublicPlaybackControl) {
+        // Never hand a sensitive upstream HTTP URL (or legacy proxy URL containing one)
+        // directly to the media element/HLS.js. Exchange it for an opaque short-lived path.
+        try {
+          if (resolvedUrl.startsWith('/api/xtream/stream?url=')) {
+            const encoded = resolvedUrl.split('?url=')[1] || '';
+            const upstreamUrl = decodeURIComponent(encoded);
+            resolvedUrl = await xtreamService.createStreamTicket(upstreamUrl);
+          } else if (resolvedUrl.startsWith('http://') || resolvedUrl.startsWith('https://')) {
+            resolvedUrl = await xtreamService.createStreamTicket(resolvedUrl);
+          }
+        } catch (err: unknown) {
+          if (!isCancelled) {
+            const error = err as Error;
+            setErrorMsg(error.message || 'Unable to prepare stream securely.');
+            setIsLoading(false);
+          }
+          return;
         }
-      } catch (err: unknown) {
-        if (!isCancelled) {
-          const error = err as Error;
-          setErrorMsg(error.message || 'Unable to prepare stream securely.');
-          setIsLoading(false);
-        }
-        return;
       }
 
       if (isCancelled) return;
