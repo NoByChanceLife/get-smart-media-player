@@ -351,7 +351,9 @@ export default function App() {
         if (
           e.key === 'ArrowLeft' &&
           mainContentRef.current?.contains(target) &&
-          !target.closest('input, textarea, select')
+          !target.closest('input, textarea, select') &&
+          !target.matches('[data-media-card]') &&
+          !target.closest('[data-media-card]')
         ) {
           e.preventDefault();
           focusNavigationRail();
