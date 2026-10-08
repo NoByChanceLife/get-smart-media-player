@@ -503,7 +503,7 @@ export default function App() {
       <div
         className={`flex-1 flex flex-col transition-all duration-300 ${
           isRailExpanded ? 'md:ml-64' : 'md:ml-[74px]'
-        } ${playbackTarget && isBrowsingDuringPlayback ? 'relative z-[55] bg-black/28 backdrop-blur-[2px]' : ''}`}
+        } ${playbackTarget && isBrowsingDuringPlayback ? 'relative z-[55] bg-black/10' : ''}`}
       >
         {/* Top Header */}
         <TopBar
@@ -553,6 +553,7 @@ export default function App() {
                   onOpenConnections={handleOpenServerSettings}
                   onPromptPinForStream={handlePromptPinForStream}
                   onPromptPinForMovie={handlePromptPinForMovie}
+                  isPlaybackBackdrop={Boolean(playbackTarget && isBrowsingDuringPlayback)}
                 />
               )}
 
