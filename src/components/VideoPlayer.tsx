@@ -123,6 +123,23 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
   const streamUrl = getStreamUrl();
 
+  // Stable logical identity for the active media item. UI/EPG changes must not
+  // tear down and recreate the same media session.
+  const playbackIdentity =
+    target.type === 'live'
+      ? `live:${target.stream.serverId || 'local'}:${target.stream.stream_id}`
+      : target.type === 'vod'
+      ? `vod:${target.movie.serverId || 'local'}:${target.movie.stream_id}`
+      : `episode:${target.series.serverId || 'local'}:${target.episode.id}`;
+  const playbackTargetRef = useRef(target);
+  const getStreamUrlRef = useRef(getStreamUrl);
+  const playbackTitleRef = useRef(title);
+  const playbackProgramRef = useRef(currentProgramTitle);
+  useEffect(() => { playbackTargetRef.current = target; }, [target]);
+  useEffect(() => { getStreamUrlRef.current = getStreamUrl; }, [getStreamUrl]);
+  useEffect(() => { playbackTitleRef.current = title; }, [title]);
+  useEffect(() => { playbackProgramRef.current = currentProgramTitle; }, [currentProgramTitle]);
+
   // Playback health tracking, auto-adaptation & bounded recovery
   const {
     stats,
@@ -158,21 +175,22 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     setErrorDetail(null);
 
     const initStream = async () => {
-      let resolvedUrl = getStreamUrl();
+      const playbackTarget = playbackTargetRef.current;
+      let resolvedUrl = getStreamUrlRef.current();
 
       // If channel is a Stalker channel requiring dynamic link creation (cmd without direct_source)
       if (
-        target.type === 'live' &&
-        !target.stream.direct_source &&
-        target.stream.custom_sid &&
-        target.stream.serverId
+        playbackTarget.type === 'live' &&
+        !playbackTarget.stream.direct_source &&
+        playbackTarget.stream.custom_sid &&
+        playbackTarget.stream.serverId
       ) {
-        const profile = xtreamService.getActiveProfiles().find((p) => p.id === target.stream.serverId);
+        const profile = xtreamService.getActiveProfiles().find((p) => p.id === playbackTarget.stream.serverId);
         if (profile?.type === 'stalker' && profile.stbConfig) {
           try {
             const dynamicUrl = await resolveStalkerStreamLink(
               profile.stbConfig,
-              target.stream.custom_sid,
+              playbackTarget.stream.custom_sid,
               profile.id
             );
             if (dynamicUrl) {
@@ -206,12 +224,12 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       // It contains no credentials/tokens, so play it directly over HTTPS to isolate
       // the browser/video element from Get Smart's ticket/proxy pipeline.
       const isPublicPlaybackControl =
-        target.type === 'live' &&
-        String(target.stream.stream_id) === '100' &&
+        playbackTarget.type === 'live' &&
+        String(playbackTarget.stream.stream_id) === '100' &&
         resolvedUrl === 'https://archive.org/download/BigBuckBunny_124/Content/big_buck_bunny_720p_surround.mp4';
       const isPublicHlsControl =
-        target.type === 'live' &&
-        ['101', '102', '103', '104'].includes(String(target.stream.stream_id)) &&
+        playbackTarget.type === 'live' &&
+        ['101', '102', '103', '104'].includes(String(playbackTarget.stream.stream_id)) &&
         /^https:\/\//i.test(resolvedUrl) &&
         /\.m3u8(?:$|[?#])/i.test(resolvedUrl);
 
@@ -246,7 +264,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
       if (isM3u8 && Hls.isSupported()) {
         const perfConfig = streamingPerformanceService.getConfig();
-        const hlsConfig = streamingPerformanceService.getHlsConfig(perfConfig.mode, target.type, false);
+        const hlsConfig = streamingPerformanceService.getHlsConfig(perfConfig.mode, playbackTarget.type, false);
         const hls = new Hls(hlsConfig);
 
         hlsRef.current = hls;
@@ -360,20 +378,20 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       // Save to watch history
       xtreamService.addToHistory({
         id:
-          target.type === 'live'
-            ? `live_${target.stream.stream_id}`
-            : target.type === 'vod'
-            ? `vod_${target.movie.stream_id}`
-            : `ep_${target.episode.id}`,
-        type: target.type,
-        title,
-        subtitle: currentProgramTitle,
+          playbackTarget.type === 'live'
+            ? `live_${playbackTarget.stream.stream_id}`
+            : playbackTarget.type === 'vod'
+            ? `vod_${playbackTarget.movie.stream_id}`
+            : `ep_${playbackTarget.episode.id}`,
+        type: playbackTarget.type,
+        title: playbackTitleRef.current,
+        subtitle: playbackProgramRef.current,
         icon:
-          target.type === 'live'
-            ? target.stream.stream_icon
-            : target.type === 'vod'
-            ? target.movie.stream_icon
-            : target.series.cover,
+          playbackTarget.type === 'live'
+            ? playbackTarget.stream.stream_icon
+            : playbackTarget.type === 'vod'
+            ? playbackTarget.movie.stream_icon
+            : playbackTarget.series.cover,
       });
     };
 
@@ -386,7 +404,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         hlsRef.current = null;
       }
     };
-  }, [target, getStreamUrl, title, currentProgramTitle]);
+  }, [playbackIdentity]);
 
   // Video event handlers
   const handleTimeUpdate = () => {
