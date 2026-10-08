@@ -261,23 +261,46 @@ export async function diagnoseXtreamConnection(
 
   const base = xtreamService.normalizeUrl(creds.serverUrl);
 
-  // Step 1: Connecting (Host reachability, DNS, SSL)
-  updateStep('connecting', 'running', 'Verifying server DNS, port, and response time...');
-  const probeResult = await probeUrl(base);
-  if (!probeResult.ok && probeResult.status !== 401 && probeResult.status !== 403 && probeResult.status !== 200) {
-    if (probeResult.errorType === 'DNS_FAILURE') {
+  // Step 1: Connecting. For Xtream, the API endpoint is authoritative.
+  // A provider root URL may legitimately be an HTML landing page, redirect, or blank site.
+  // Probe player_api.php directly so a working Xtream service is never rejected because of '/'.
+  updateStep('connecting', 'running', 'Contacting Xtream API endpoint...');
+  const authUrl = `${base}/player_api.php?username=${encodeURIComponent(creds.username)}&password=${encodeURIComponent(creds.password)}`;
+  const apiProbe = await probeUrl(authUrl);
+
+  if (!apiProbe.ok) {
+    if (apiProbe.errorType === 'DNS_FAILURE') {
       return fail('connecting', 'DNS_FAILURE', 'DNS failure: Server domain name could not be resolved.');
     }
-    if (probeResult.errorType === 'HTTP_HTTPS_ISSUE') {
-      return fail('connecting', 'HTTP_HTTPS_ISSUE', 'HTTP/HTTPS issue: SSL certificate verification failed or port mismatch.');
+    if (apiProbe.errorType === 'HTTP_HTTPS_ISSUE') {
+      return fail('connecting', 'HTTP_HTTPS_ISSUE', 'HTTP/HTTPS issue: SSL/TLS or protocol/port mismatch while contacting player_api.php.');
     }
-    return fail('connecting', 'SERVER_UNREACHABLE', `Server unreachable: Connection failed (${probeResult.errorMessage || 'timeout'}).`);
+    if (apiProbe.status === 401 || apiProbe.status === 403) {
+      return fail('authenticating', 'INVALID_CREDENTIALS', `Xtream API rejected the request (HTTP ${apiProbe.status}).`);
+    }
+    return fail('connecting', 'SERVER_UNREACHABLE', `Xtream API could not be reached: ${apiProbe.errorMessage || `HTTP ${apiProbe.status || 'unknown'}`}`);
   }
-  updateStep('connecting', 'success', `Host reachable (${probeResult.latencyMs}ms)`, probeResult.latencyMs);
+
+  const apiContentType = (apiProbe.contentType || '').toLowerCase();
+  const apiSnippet = (apiProbe.snippet || '').trim().toLowerCase();
+  const apiReturnedHtml =
+    apiContentType.includes('text/html') ||
+    apiSnippet.startsWith('<!doctype html') ||
+    apiSnippet.startsWith('<html') ||
+    apiSnippet.includes('<head>');
+
+  if (apiReturnedHtml) {
+    return fail(
+      'connecting',
+      'UNSUPPORTED_API_RESPONSE',
+      'Server reached, but player_api.php returned HTML instead of Xtream JSON. Verify the exact protocol, host, port, and any provider-specific URL path.'
+    );
+  }
+
+  updateStep('connecting', 'success', `Xtream API reachable (${apiProbe.latencyMs}ms)`, apiProbe.latencyMs);
 
   // Step 2: Authentication
-  updateStep('authenticating', 'running', 'Submitting Xtream Codes credentials...');
-  const authUrl = `${base}/player_api.php?username=${encodeURIComponent(creds.username)}&password=${encodeURIComponent(creds.password)}`;
+  updateStep('authenticating', 'running', 'Validating Xtream account response...');
   let authData: any = null;
 
   try {
@@ -286,7 +309,10 @@ export async function diagnoseXtreamConnection(
     const error = err as Error;
     const msg = error.message;
     if (msg.includes('401') || msg.includes('403')) {
-      return fail('authenticating', 'INVALID_CREDENTIALS', 'Invalid credentials: Username or password rejected by server.');
+      return fail('authenticating', 'INVALID_CREDENTIALS', 'Xtream API rejected the supplied credentials.');
+    }
+    if (/unexpected token|json|html|doctype/i.test(msg)) {
+      return fail('authenticating', 'UNSUPPORTED_API_RESPONSE', 'player_api.php did not return valid Xtream JSON.');
     }
     return fail('authenticating', 'SERVER_UNREACHABLE', `Authentication request failed: ${sanitizeErrorMessage(msg)}`);
   }
