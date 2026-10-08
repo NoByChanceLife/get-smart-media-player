@@ -123,6 +123,10 @@ export const MoviesView: React.FC<MoviesViewProps> = ({
     if (e.key === 'ArrowUp') {
       e.preventDefault();
       e.stopPropagation();
+      // When navigation reaches the top of Movies, align the page itself to
+      // the top before handing focus to the sticky utility bar. This avoids
+      // leaving the hero/header partially clipped below the viewport.
+      window.scrollTo({ top: 0, behavior: 'auto' });
       focusTopBarFromMedia();
     }
   };
