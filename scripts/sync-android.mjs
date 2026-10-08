@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, copyFileSync } from 'node:fs';
+import { existsSync, mkdirSync, copyFileSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
@@ -26,4 +26,16 @@ copyFileSync(join(root, 'native', 'android', 'MainActivity.java'), join(packageD
 copyFileSync(join(root, 'native', 'android', 'AndroidManifest.xml'), join(root, 'android', 'app', 'src', 'main', 'AndroidManifest.xml'));
 
 run('npx', ['cap', 'sync', 'android']);
+
+const appBuildGradle = join(root, 'android', 'app', 'build.gradle');
+const originalBuildGradle = readFileSync(appBuildGradle, 'utf8');
+const compatibleBuildGradle = originalBuildGradle.replace(
+  /getDefaultProguardFile\((['"])proguard-android\.txt\1\)/g,
+  "getDefaultProguardFile('proguard-android-optimize.txt')",
+);
+if (compatibleBuildGradle !== originalBuildGradle) {
+  writeFileSync(appBuildGradle, compatibleBuildGradle, 'utf8');
+  console.log('Updated generated Android ProGuard default for the current Android Gradle toolchain.');
+}
+
 console.log('Get Smart Android shell synchronized.');
