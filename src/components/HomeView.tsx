@@ -37,6 +37,7 @@ interface HomeViewProps {
   onOpenConnections: () => void;
   onPromptPinForStream?: (stream: XtreamLiveStream) => void;
   onPromptPinForMovie?: (movie: XtreamVodStream) => void;
+  isPlaybackBackdrop?: boolean;
 }
 
 export const HomeView: React.FC<HomeViewProps> = ({
@@ -52,6 +53,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
   onOpenConnections,
   onPromptPinForStream,
   onPromptPinForMovie,
+  isPlaybackBackdrop = false,
 }) => {
   const [historyItems] = useState<WatchHistoryItem[]>(() => xtreamService.getHistory());
   const homeRef = useRef<HTMLDivElement | null>(null);
@@ -163,7 +165,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
     null;
 
   return (
-    <div ref={homeRef} onKeyDownCapture={handleTVNavigation} className="space-y-10 pb-12 animate-in fade-in duration-300">
+    <div ref={homeRef} onKeyDownCapture={handleTVNavigation} className={`space-y-10 pb-12 animate-in fade-in duration-300 ${isPlaybackBackdrop ? 'watching-glass-home' : ''}`}>
       {/* Hero Spotlight Banner */}
       {featuredItem && (
         <section className="relative w-full rounded-3xl overflow-hidden bg-gradient-to-t from-[#06090f] via-slate-900/60 to-slate-950/40 border border-slate-800/80 shadow-2xl">
