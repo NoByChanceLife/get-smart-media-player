@@ -588,11 +588,11 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     <div
       ref={containerRef}
       onMouseMove={handleMouseMove}
-      onClick={(e) => {
+      onClick={() => {
+        // Pointer/touch on the playback canvas reveals controls only. Playback
+        // changes require an explicit control, keyboard media key, or Space.
         resetControlsTimer();
-        const el = e.target as HTMLElement;
-        if (el.closest('button, input, select, a, [role="button"]')) return;
-        togglePlay();
+        setShowControls(true);
       }}
       className={`fixed inset-0 z-50 bg-black flex items-center justify-center select-none overflow-hidden font-sans ${isVisuallyHidden ? 'pointer-events-none' : ''}`}
     >
