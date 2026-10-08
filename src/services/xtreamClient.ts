@@ -236,37 +236,49 @@ class XtreamService {
     });
 
     const responseContentType = response.headers.get('content-type') || '';
+    const proxyMarker = response.headers.get('x-get-smart-xtream-proxy') || '';
+    const responseText = await response.text();
+
+    let parsed: any = null;
+    try {
+      parsed = responseText ? JSON.parse(responseText) : null;
+    } catch {
+      // Keep parsed null; the diagnostic below distinguishes our proxy route
+      // from an HTML/intermediary response without exposing the response body.
+    }
 
     if (!response.ok) {
-      let errDetail = `HTTP ${response.status}`;
-      try {
-        const errJson = await response.json();
-        if (errJson?.error) {
-          const diagnosticParts = [
-            errJson.error,
-            errJson.errorType ? `type=${errJson.errorType}` : '',
-            errJson.upstreamStatus ? `upstream=${errJson.upstreamStatus}` : '',
-            errJson.upstreamContentType ? `content-type=${errJson.upstreamContentType}` : '',
-          ].filter(Boolean);
-          errDetail = diagnosticParts.join(' · ');
-        }
-      } catch {
-        if (responseContentType.includes('text/html')) {
-          errDetail = 'Get Smart proxy returned HTML instead of its API response.';
-        }
+      if (parsed?.error) {
+        const diagnosticParts = [
+          parsed.error,
+          parsed.errorType ? `type=${parsed.errorType}` : '',
+          parsed.upstreamStatus ? `upstream=${parsed.upstreamStatus}` : '',
+          parsed.upstreamContentType ? `content-type=${parsed.upstreamContentType}` : '',
+          proxyMarker ? `proxy=${proxyMarker}` : '',
+        ].filter(Boolean);
+        throw new Error(diagnosticParts.join(' · '));
       }
-      throw new Error(errDetail);
-    }
 
-    try {
-      return await response.json();
-    } catch {
+      if (!proxyMarker) {
+        throw new Error(
+          `Get Smart Xtream proxy route was not reached (HTTP ${response.status}, content-type=${responseContentType || 'unknown'}).`
+        );
+      }
+
       throw new Error(
-        responseContentType.includes('text/html')
-          ? 'Get Smart proxy returned HTML instead of Xtream JSON.'
-          : 'Get Smart proxy returned an invalid JSON response.'
+        `Get Smart Xtream proxy returned an unreadable response (HTTP ${response.status}, content-type=${responseContentType || 'unknown'}, proxy=${proxyMarker}).`
       );
     }
+
+    if (!parsed) {
+      throw new Error(
+        proxyMarker
+          ? `Get Smart Xtream proxy returned non-JSON (HTTP ${response.status}, content-type=${responseContentType || 'unknown'}, proxy=${proxyMarker}).`
+          : `Get Smart Xtream proxy route was not reached (HTTP ${response.status}, content-type=${responseContentType || 'unknown'}).`
+      );
+    }
+
+    return parsed as T;
   }
 
   // Authenticate Xtream credentials without logging passwords
