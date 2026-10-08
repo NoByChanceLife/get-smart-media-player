@@ -44,7 +44,10 @@ export const MoviesView: React.FC<MoviesViewProps> = ({
     const columns = Math.max(1, Math.round(movieGridRef.current!.clientWidth / cards[0].getBoundingClientRect().width));
     let next = index;
     if (e.key === 'ArrowRight') next = Math.min(cards.length - 1, index + 1);
-    else if (e.key === 'ArrowLeft') next = Math.max(0, index - 1);
+    else if (e.key === 'ArrowLeft') {
+      if (index % columns === 0) return;
+      next = Math.max(0, index - 1);
+    }
     else if (e.key === 'ArrowDown') next = Math.min(cards.length - 1, index + columns);
     else if (e.key === 'ArrowUp') next = Math.max(0, index - columns);
     else if (e.key === 'Enter' || e.key === ' ') {
@@ -54,6 +57,7 @@ export const MoviesView: React.FC<MoviesViewProps> = ({
     } else return;
     e.preventDefault();
     cards[next]?.focus();
+    cards[next]?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
   };
 
   const canAccess = parentalControlService.canAccessSection('movies');
@@ -198,7 +202,7 @@ export const MoviesView: React.FC<MoviesViewProps> = ({
             placeholder="Search movies..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-[#0a0f1c] border border-slate-800 rounded-xl pl-9 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 transition"
+            className="w-full bg-[#0a0f1c] border border-slate-800 rounded-xl pl-9 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 transition tv-focus-target"
           />
         </div>
       </div>
@@ -285,7 +289,7 @@ export const MoviesView: React.FC<MoviesViewProps> = ({
           <div className="w-full max-w-2xl rounded-3xl bg-[#0c121e] border border-slate-800 shadow-2xl overflow-hidden relative">
             <button
               onClick={() => setSelectedMovie(null)}
-              className="absolute top-4 right-4 z-20 p-2 rounded-xl bg-black/60 text-slate-400 hover:text-white backdrop-blur-md transition"
+              className="absolute top-4 right-4 z-20 p-2 rounded-xl bg-black/60 text-slate-400 hover:text-white backdrop-blur-md transition tv-focus-target"
             >
               <X className="w-5 h-5" />
             </button>
@@ -343,7 +347,7 @@ export const MoviesView: React.FC<MoviesViewProps> = ({
                     selectedMovie.isFavorite
                       ? 'bg-amber-500/20 border-amber-500/50 text-amber-300'
                       : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white'
-                  }`}
+                  } tv-focus-target`}
                   title="Toggle Favorite"
                 >
                   <Star
