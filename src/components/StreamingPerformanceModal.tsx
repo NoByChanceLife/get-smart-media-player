@@ -123,7 +123,7 @@ export const StreamingPerformanceModal: React.FC<StreamingPerformanceModalProps>
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-6 bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
       <div className="bg-[#070b14] border border-cyan-500/30 rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl flex flex-col max-h-[92vh] text-slate-200">
         {/* Header */}
         <div className="px-6 py-5 border-b border-slate-800/80 flex items-center justify-between bg-[#05080e]/80">
