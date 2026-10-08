@@ -62,7 +62,7 @@ export const MoviesView: React.FC<MoviesViewProps> = ({
     if (!items.length) return false;
     const target = items[Math.min(Math.max(preferredIndex, 0), items.length - 1)];
     target.focus();
-    target.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+    target.scrollIntoView({ behavior: 'auto', block: 'nearest', inline: 'nearest' });
     return true;
   };
 
@@ -110,7 +110,7 @@ export const MoviesView: React.FC<MoviesViewProps> = ({
       e.preventDefault();
       e.stopPropagation();
       next.focus();
-      next.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+      next.scrollIntoView({ behavior: 'auto', block: 'nearest', inline: 'nearest' });
       return;
     }
 
@@ -166,7 +166,7 @@ export const MoviesView: React.FC<MoviesViewProps> = ({
           e.preventDefault();
           e.stopPropagation();
           above.focus();
-          above.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+          above.scrollIntoView({ behavior: 'auto', block: 'nearest', inline: 'nearest' });
         }
         return;
       }
@@ -179,7 +179,7 @@ export const MoviesView: React.FC<MoviesViewProps> = ({
     } else return;
     e.preventDefault();
     cards[next]?.focus();
-    cards[next]?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+    cards[next]?.scrollIntoView({ behavior: 'auto', block: 'nearest', inline: 'nearest' });
   };
 
   const canAccess = parentalControlService.canAccessSection('movies');
@@ -322,7 +322,7 @@ export const MoviesView: React.FC<MoviesViewProps> = ({
           <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
             type="text"
-            data-tv-zone="categories"
+            data-tv-zone="search"
             placeholder="Search movies..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
