@@ -8,6 +8,7 @@ interface WatchingGuideOverlayProps {
   currentStream: XtreamLiveStream;
   onPlayStream: (stream: XtreamLiveStream) => void;
   onClose: () => void;
+  onOpenAppNavigation: () => void;
 }
 
 export const WatchingGuideOverlay: React.FC<WatchingGuideOverlayProps> = ({
@@ -16,6 +17,7 @@ export const WatchingGuideOverlay: React.FC<WatchingGuideOverlayProps> = ({
   currentStream,
   onPlayStream,
   onClose,
+  onOpenAppNavigation,
 }) => {
   const [groupId, setGroupId] = useState<string>('all');
   const [focusedStreamId, setFocusedStreamId] = useState<string>(String(currentStream.stream_id));
@@ -69,7 +71,10 @@ export const WatchingGuideOverlay: React.FC<WatchingGuideOverlayProps> = ({
   };
 
   const handleRowKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>, index: number) => {
-    if (event.key === 'ArrowUp') {
+    if (event.key === 'ArrowLeft') {
+      event.preventDefault();
+      onOpenAppNavigation();
+    } else if (event.key === 'ArrowUp') {
       event.preventDefault();
       focusStream(index - 1);
     } else if (event.key === 'ArrowDown') {
