@@ -265,73 +265,56 @@ export async function diagnoseXtreamConnection(
 
   const base = xtreamService.normalizeUrl(creds.serverUrl);
 
-  // Step 1: Connecting. For Xtream, the API endpoint is authoritative.
-  // A provider root URL may legitimately be an HTML landing page, redirect, or blank site.
-  // Probe player_api.php directly so a working Xtream service is never rejected because of '/'.
-  updateStep('connecting', 'running', 'Contacting Xtream API endpoint...');
+  // Steps 1-2: Standard Xtream authentication.
+  // Known-working Xtream clients authenticate directly against player_api.php.
+  // Do not preflight the provider through the generic probe route: the authentication
+  // response itself is the authoritative connectivity + protocol test.
   const authUrl = `${base}/player_api.php?username=${encodeURIComponent(creds.username)}&password=${encodeURIComponent(creds.password)}`;
-  const apiProbe = await probeUrl(authUrl);
 
-  if (!apiProbe.ok) {
-    if (apiProbe.errorType === 'DNS_FAILURE') {
-      return fail('connecting', 'DNS_FAILURE', 'DNS failure: Server domain name could not be resolved.');
-    }
-    if (apiProbe.errorType === 'HTTP_HTTPS_ISSUE') {
-      return fail('connecting', 'HTTP_HTTPS_ISSUE', 'HTTP/HTTPS issue: SSL/TLS or protocol/port mismatch while contacting player_api.php.');
-    }
-    if (apiProbe.status === 401 || apiProbe.status === 403) {
-      return fail('authenticating', 'INVALID_CREDENTIALS', `Xtream API rejected the request (HTTP ${apiProbe.status}).`);
-    }
-    return fail('connecting', 'SERVER_UNREACHABLE', `Xtream API could not be reached: ${apiProbe.errorMessage || `HTTP ${apiProbe.status || 'unknown'}`}`);
-  }
-
-  if (apiProbe.responseKind === 'html') {
-    return fail(
-      'connecting',
-      'UNSUPPORTED_API_RESPONSE',
-      `Xtream endpoint reached (HTTP ${apiProbe.status}, ${apiProbe.latencyMs}ms) but returned HTML instead of JSON.`
-    );
-  }
-
-  if (apiProbe.responseKind && apiProbe.responseKind !== 'json') {
-    return fail(
-      'connecting',
-      'UNSUPPORTED_API_RESPONSE',
-      `Xtream endpoint reached (HTTP ${apiProbe.status}, ${apiProbe.latencyMs}ms) but returned ${apiProbe.responseKind}, not JSON.`
-    );
-  }
-
-  updateStep(
-    'connecting',
-    'success',
-    `Xtream API reachable (HTTP ${apiProbe.status}, ${apiProbe.latencyMs}ms, ${apiProbe.xtreamShape ? 'Xtream JSON detected' : 'JSON detected'})`,
-    apiProbe.latencyMs
-  );
-
-  // Step 2: Authentication
+  updateStep('connecting', 'running', 'Contacting Xtream player_api.php...');
   updateStep('authenticating', 'running', 'Validating Xtream account response...');
+
+  const authStartedAt = Date.now();
   let authData: any = null;
 
   try {
     authData = await xtreamService.fetchViaProxy<any>(authUrl);
   } catch (err: unknown) {
     const error = err as Error;
-    const msg = error.message;
-    if (msg.includes('401') || msg.includes('403')) {
+    const msg = sanitizeErrorMessage(error.message || 'Xtream authentication request failed');
+
+    if (/401|403/.test(msg)) {
       return fail('authenticating', 'INVALID_CREDENTIALS', 'Xtream API rejected the supplied credentials.');
     }
-    if (/unexpected token|json|html|doctype/i.test(msg)) {
-      return fail('authenticating', 'UNSUPPORTED_API_RESPONSE', 'player_api.php did not return valid Xtream JSON.');
+    if (/html|doctype|non-json|invalid json|json response/i.test(msg)) {
+      return fail(
+        'connecting',
+        'UNSUPPORTED_API_RESPONSE',
+        `Xtream player_api.php was reached but did not return Xtream JSON: ${msg}`
+      );
     }
-    return fail('authenticating', 'SERVER_UNREACHABLE', `Authentication request failed: ${sanitizeErrorMessage(msg)}`);
+    if (/dns|enotfound|getaddrinfo/i.test(msg)) {
+      return fail('connecting', 'DNS_FAILURE', `DNS failure while contacting Xtream server: ${msg}`);
+    }
+    if (/ssl|tls|certificate|protocol/i.test(msg)) {
+      return fail('connecting', 'HTTP_HTTPS_ISSUE', `HTTP/HTTPS issue while contacting Xtream server: ${msg}`);
+    }
+    return fail('connecting', 'SERVER_UNREACHABLE', `Xtream authentication request failed: ${msg}`);
   }
 
+  const authLatencyMs = Date.now() - authStartedAt;
+  updateStep('connecting', 'success', `Xtream API reached (${authLatencyMs}ms)`, authLatencyMs);
+
   if (!authData || !authData.user_info) {
-    return fail('authenticating', 'UNSUPPORTED_API_RESPONSE', 'Unsupported API response: player_api.php did not return user_info structure.');
+    return fail(
+      'authenticating',
+      'UNSUPPORTED_API_RESPONSE',
+      'Unsupported API response: player_api.php did not return the standard user_info structure.'
+    );
   }
 
   const u = authData.user_info;
-  if (u.auth === 0 || u.auth === false) {
+  if (u.auth === 0 || u.auth === false || String(u.auth) === '0') {
     return fail('authenticating', 'INVALID_CREDENTIALS', 'Invalid credentials: Authentication refused by Xtream server.');
   }
   updateStep('authenticating', 'success', 'Credentials authenticated successfully');
