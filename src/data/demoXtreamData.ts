@@ -49,7 +49,7 @@ export const DEMO_LIVE_STREAMS: XtreamLiveStream[] = [
     category_id: 'test',
     tv_archive: 0,
     tv_archive_duration: 0,
-    direct_source: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+    direct_source: 'https://archive.org/download/BigBuckBunny_124/Content/big_buck_bunny_720p_surround.mp4',
     currentProgram: 'Direct MP4 playback test',
   },
   {
@@ -189,7 +189,7 @@ export const DEMO_VOD_STREAMS: XtreamVodStream[] = [
     year: '2023',
     plot: 'A gentle giant rabbit decides he has endured enough torment from three bullying woodland rodents and devises a series of clever medieval forest traps.',
     duration: '1h 15m',
-    direct_source: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+    direct_source: 'https://archive.org/download/BigBuckBunny_124/Content/big_buck_bunny_720p_surround.mp4',
   },
   {
     num: 6,
@@ -299,7 +299,7 @@ export const DEMO_SERIES_SEASONS: Record<number, XtreamSeason[]> = {
           episode_num: 3,
           title: 'Episode 3: The Event Boundary',
           container_extension: 'mp4',
-          video_url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+          video_url: 'https://archive.org/download/BigBuckBunny_124/Content/big_buck_bunny_720p_surround.mp4',
           info: {
             plot: 'An unscheduled automated transport arrives from deep void with its crew compartments locked in cryo-stasis.',
             duration: '50m',
