@@ -34,6 +34,7 @@ interface VideoPlayerProps {
   allLiveStreams?: XtreamLiveStream[];
   onSelectLiveStream?: (stream: XtreamLiveStream) => void;
   onOpenPerformanceSettings?: () => void;
+  onOpenGuide?: () => void;
 }
 
 export const VideoPlayer: React.FC<VideoPlayerProps> = ({
@@ -44,6 +45,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   allLiveStreams = [],
   onSelectLiveStream,
   onOpenPerformanceSettings,
+  onOpenGuide,
 }) => {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -478,8 +480,11 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
           if (target.type !== 'live' && videoRef.current) {
             e.preventDefault();
             videoRef.current.currentTime = Math.max(0, videoRef.current.currentTime - 10);
-          } else {
-            setShowChannelDrawer(true);
+          } else if (target.type === 'live') {
+            // TV-first behavior: Left always returns to the guide, whether
+            // playback is healthy, buffering, or failed.
+            e.preventDefault();
+            onOpenGuide?.();
           }
           break;
         case 'ArrowRight':
@@ -495,7 +500,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [target, allLiveStreams, onSelectLiveStream, onClose]);
+  }, [target, allLiveStreams, onSelectLiveStream, onClose, onOpenGuide]);
 
   // Controls auto-hide timer
   const resetControlsTimer = useCallback(() => {
