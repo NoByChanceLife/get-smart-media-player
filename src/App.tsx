@@ -481,7 +481,7 @@ export default function App() {
   ]);
 
   return (
-    <div className="min-h-screen bg-[#06090f] text-slate-100 flex flex-col selection:bg-cyan-500 selection:text-white">
+    <div className={`min-h-screen text-slate-100 flex flex-col selection:bg-cyan-500 selection:text-white ${playbackTarget && isBrowsingDuringPlayback ? 'bg-transparent' : 'bg-[#06090f]'}`}>
       {/* Television Collapsible Left Rail (Desktop / Android TV) */}
       <TVNavigationRail
         currentTab={currentTab}
@@ -501,7 +501,7 @@ export default function App() {
       <div
         className={`flex-1 flex flex-col transition-all duration-300 ${
           isRailExpanded ? 'md:ml-64' : 'md:ml-[74px]'
-        }`}
+        } ${playbackTarget && isBrowsingDuringPlayback ? 'relative z-[55] bg-black/28 backdrop-blur-[2px]' : ''}`}
       >
         {/* Top Header */}
         <TopBar
@@ -523,7 +523,7 @@ export default function App() {
         <main
           ref={mainContentRef}
           tabIndex={-1}
-          className="flex-1 w-full mx-auto p-4 sm:p-6 pb-24 md:pb-8 outline-none focus-visible:outline-none"
+          className={`flex-1 w-full mx-auto p-4 sm:p-6 pb-24 md:pb-8 outline-none focus-visible:outline-none ${playbackTarget && isBrowsingDuringPlayback ? 'bg-transparent' : ''}`}
         >
           {isLoadingData ? (
             <div className="flex flex-col items-center justify-center py-32 text-center">
@@ -636,7 +636,8 @@ export default function App() {
           onPlayStream={handlePlayLiveStream}
           onClose={() => setIsBrowsingDuringPlayback(false)}
           onOpenAppNavigation={() => {
-            setIsBrowsingDuringPlayback(false);
+            // Leave the quick Watching Guide, but remain in persistent browse
+            // mode so the video stays visible behind the normal app shell.
             setCurrentTab('home');
             requestAnimationFrame(() => focusNavigationRail());
           }}
