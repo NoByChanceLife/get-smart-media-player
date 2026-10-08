@@ -660,8 +660,15 @@ export default function App() {
             // Player Back/Close is navigation, not Stop. Keep the session alive
             // and reveal Home over it. Explicit Stop owns session termination.
             setCurrentTab('home');
+            setIsWatchingGuideOpen(false);
             setIsBrowsingDuringPlayback(true);
             requestAnimationFrame(() => focusNavigationRail());
+          }}
+          onStop={() => {
+            setPlaybackTarget(null);
+            setSecondaryPlaybackTarget(null);
+            setIsWatchingGuideOpen(false);
+            setIsBrowsingDuringPlayback(false);
           }}
           onMinimizeToPiP={() => setIsFloatingPiP(true)}
           onLaunchDualPiP={handleLaunchDualPiP}
