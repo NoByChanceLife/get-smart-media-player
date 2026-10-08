@@ -39,37 +39,66 @@ export const MoviesView: React.FC<MoviesViewProps> = ({
   const movieGridRef = useRef<HTMLDivElement | null>(null);
   const movieViewRef = useRef<HTMLDivElement | null>(null);
 
-  const handleMovieViewNavigation = (e: React.KeyboardEvent<HTMLDivElement>) => {
-    if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) return;
+  const focusTopBarFromMedia = () => {
+    const target = document.querySelector<HTMLElement>(
+      '[data-tv-topbar] .tv-focus-target, [data-tv-topbar] button:not([disabled]), [data-tv-topbar] select:not([disabled])'
+    );
+    target?.focus();
+  };
+
+  const focusZoneItem = (zone: string, preferredIndex = 0) => {
+    const root = movieViewRef.current;
+    if (!root) return false;
+    const items = Array.from(
+      root.querySelectorAll<HTMLElement>(`[data-tv-zone="${zone}"]`)
+    ).filter((item) => item.offsetParent !== null);
+    if (!items.length) return false;
+    const target = items[Math.min(Math.max(preferredIndex, 0), items.length - 1)];
+    target.focus();
+    target.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+    return true;
+  };
+
+  const handleMediaViewNavigation = (e: React.KeyboardEvent<HTMLDivElement>) => {
     const current = e.target as HTMLElement;
     if (current.closest('[data-media-card]')) return;
+    const zone = current.dataset.tvZone;
+    if (!zone) return;
+
     const root = movieViewRef.current;
     if (!root) return;
-    const items = Array.from(
-      root.querySelectorAll<HTMLElement>('[data-tv-control], button:not([disabled]), input:not([disabled])')
-    ).filter((item, index, all) => item.offsetParent !== null && all.indexOf(item) === index);
-    if (!items.includes(current)) return;
+    const zoneItems = Array.from(
+      root.querySelectorAll<HTMLElement>(`[data-tv-zone="${zone}"]`)
+    ).filter((item) => item.offsetParent !== null);
+    const index = zoneItems.indexOf(current);
 
-    const rect = current.getBoundingClientRect();
-    const cx = rect.left + rect.width / 2;
-    const cy = rect.top + rect.height / 2;
-    const candidates = items.filter((item) => item !== current).map((item) => {
-      const r = item.getBoundingClientRect();
-      const x = r.left + r.width / 2;
-      const y = r.top + r.height / 2;
-      const dx = x - cx;
-      const dy = y - cy;
-      const valid = e.key === 'ArrowRight' ? dx > 4 : e.key === 'ArrowLeft' ? dx < -4 : e.key === 'ArrowDown' ? dy > 4 : dy < -4;
-      const primary = e.key === 'ArrowLeft' || e.key === 'ArrowRight' ? Math.abs(dx) : Math.abs(dy);
-      const cross = e.key === 'ArrowLeft' || e.key === 'ArrowRight' ? Math.abs(dy) : Math.abs(dx);
-      return { item, valid, score: primary + cross * 2.5 };
-    }).filter((x) => x.valid).sort((a,b) => a.score-b.score);
-    const next = candidates[0]?.item;
-    if (next) {
+    if ((e.key === 'ArrowLeft' || e.key === 'ArrowRight') && zone !== 'search') {
+      const nextIndex = e.key === 'ArrowRight' ? index + 1 : index - 1;
+      if (nextIndex >= 0 && nextIndex < zoneItems.length) {
+        e.preventDefault();
+        e.stopPropagation();
+        zoneItems[nextIndex].focus();
+        zoneItems[nextIndex].scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+      }
+      return;
+    }
+
+    if (e.key === 'ArrowUp') {
       e.preventDefault();
       e.stopPropagation();
-      next.focus();
-      next.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+      if (zone === 'search') focusZoneItem('categories');
+      else if (zone === 'categories') {
+        if (!focusZoneItem('featured')) focusTopBarFromMedia();
+      } else if (zone === 'featured') focusTopBarFromMedia();
+      return;
+    }
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      e.stopPropagation();
+      if (zone === 'featured') focusZoneItem('categories');
+      else if (zone === 'categories') focusZoneItem('search');
+      else if (zone === 'search') focusZoneItem('posters');
     }
   };
 
@@ -87,10 +116,8 @@ export const MoviesView: React.FC<MoviesViewProps> = ({
     else if (e.key === 'ArrowUp') {
       if (index < columns) {
         e.preventDefault();
-        const header = movieViewRef.current?.querySelectorAll<HTMLElement>('[data-tv-control]');
-        const target = header && header.length ? header[Math.min(index, header.length - 1)] : null;
-        target?.focus();
-        target?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+        e.stopPropagation();
+        focusZoneItem('search');
         return;
       }
       next = Math.max(0, index - columns);
@@ -158,7 +185,7 @@ export const MoviesView: React.FC<MoviesViewProps> = ({
   };
 
   return (
-    <div ref={movieViewRef} onKeyDownCapture={handleMovieViewNavigation} className="flex flex-col h-full space-y-6 animate-in fade-in duration-200">
+    <div ref={movieViewRef} onKeyDownCapture={handleMediaViewNavigation} className="flex flex-col h-full space-y-6 animate-in fade-in duration-200">
       {/* Featured Movie Spotlight Banner */}
       {featuredMovie && !searchQuery && selectedCategoryId === 'all' && (
         <div className="relative w-full rounded-3xl overflow-hidden border border-slate-800/80 shadow-2xl group">
@@ -197,7 +224,7 @@ export const MoviesView: React.FC<MoviesViewProps> = ({
 
             <div className="flex items-center gap-3">
               <button
-                data-tv-control onClick={() => handleMoviePlayRequest(featuredMovie)}
+                data-tv-zone="featured" onClick={() => handleMoviePlayRequest(featuredMovie)}
                 className="px-6 py-2.5 rounded-2xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-xs font-bold flex items-center gap-2 shadow-lg shadow-cyan-500/25 active:scale-95 transition tv-focus-target"
               >
                 <Play className="w-4 h-4 fill-slate-950" />
@@ -205,7 +232,7 @@ export const MoviesView: React.FC<MoviesViewProps> = ({
               </button>
 
               <button
-                data-tv-control onClick={() => setSelectedMovie(featuredMovie)}
+                data-tv-zone="featured" onClick={() => setSelectedMovie(featuredMovie)}
                 className="px-4 py-2.5 rounded-2xl bg-slate-900/80 hover:bg-slate-800 text-slate-200 text-xs font-semibold border border-slate-700/80 flex items-center gap-2 backdrop-blur-md transition tv-focus-target"
               >
                 <Info className="w-4 h-4 text-cyan-400" />
@@ -217,7 +244,7 @@ export const MoviesView: React.FC<MoviesViewProps> = ({
       )}
 
       {/* Categories & Search */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+      <div className="flex flex-col gap-3">
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
           {visibleCategories.map((cat) => {
             const isSelected = selectedCategoryId === cat.category_id;
@@ -226,8 +253,7 @@ export const MoviesView: React.FC<MoviesViewProps> = ({
             return (
               <button
                 key={cat.category_id}
-                data-tv-control
-                data-media-navigation
+                data-tv-zone="categories"
                 onClick={() => onSelectCategory(cat.category_id)}
                 className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition tv-focus-target ${
                   isSelected
@@ -242,12 +268,11 @@ export const MoviesView: React.FC<MoviesViewProps> = ({
           })}
         </div>
 
-        <div className="relative w-full md:w-64 shrink-0">
+        <div className="relative w-full max-w-md shrink-0">
           <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
             type="text"
-            data-tv-control
-            data-media-navigation
+            data-tv-zone="categories"
             placeholder="Search movies..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -265,6 +290,7 @@ export const MoviesView: React.FC<MoviesViewProps> = ({
             <div
               key={movie.stream_id}
               data-media-card
+              data-tv-zone="posters"
               tabIndex={0}
               role="button"
               aria-label={`Open ${movie.name}`}
