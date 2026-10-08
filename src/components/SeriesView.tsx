@@ -88,7 +88,17 @@ export const SeriesView: React.FC<SeriesViewProps> = ({
       next = Math.max(0, index - 1);
     }
     else if (e.key === 'ArrowDown') next = Math.min(cards.length - 1, index + columns);
-    else if (e.key === 'ArrowUp') next = Math.max(0, index - columns);
+    else if (e.key === 'ArrowUp') {
+      if (index < columns) {
+        e.preventDefault();
+        const header = seriesViewRef.current?.querySelectorAll<HTMLElement>('[data-tv-control]');
+        const target = header && header.length ? header[Math.min(index, header.length - 1)] : null;
+        target?.focus();
+        target?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+        return;
+      }
+      next = Math.max(0, index - columns);
+    }
     else if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
       handleOpenSeries(series);
@@ -177,6 +187,7 @@ export const SeriesView: React.FC<SeriesViewProps> = ({
               <button
                 key={cat.category_id}
                 data-tv-control
+                data-media-navigation
                 onClick={() => onSelectCategory(cat.category_id)}
                 className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition tv-focus-target ${
                   isSelected
@@ -196,6 +207,7 @@ export const SeriesView: React.FC<SeriesViewProps> = ({
           <input
             type="text"
             data-tv-control
+            data-media-navigation
             placeholder="Search TV series..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -205,7 +217,8 @@ export const SeriesView: React.FC<SeriesViewProps> = ({
       </div>
 
       {/* Series Posters Grid */}
-      <div ref={seriesGridRef} className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">\n        {filteredSeries.map((series, seriesIndex) => {
+      <div ref={seriesGridRef} className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+        {filteredSeries.map((series, seriesIndex) => {
           const isCatLocked = parentalControlService.isCategoryLocked(series.category_id, 'series');
 
           return (
