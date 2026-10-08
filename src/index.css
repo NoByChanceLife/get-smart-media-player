@@ -31,6 +31,7 @@
   outline: none;
 }
 
+.tv-focus-target:focus,
 .tv-focus-target:focus-visible,
 .tv-focus-target.tv-focused {
   transform: scale(1.025);
