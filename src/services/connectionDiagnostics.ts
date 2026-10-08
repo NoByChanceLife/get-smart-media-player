@@ -94,6 +94,8 @@ async function probeUrl(
   snippet?: string;
   errorType?: string;
   errorMessage?: string;
+  responseKind?: string;
+  xtreamShape?: boolean;
 }> {
   try {
     const res = await fetch('/api/xtream/probe', {
@@ -120,6 +122,8 @@ async function probeUrl(
       snippet: data.snippet,
       errorType: data.errorType,
       errorMessage: sanitizeErrorMessage(data.errorMessage),
+      responseKind: data.responseKind,
+      xtreamShape: data.xtreamShape,
     };
   } catch (err: unknown) {
     const error = err as Error;
@@ -281,23 +285,28 @@ export async function diagnoseXtreamConnection(
     return fail('connecting', 'SERVER_UNREACHABLE', `Xtream API could not be reached: ${apiProbe.errorMessage || `HTTP ${apiProbe.status || 'unknown'}`}`);
   }
 
-  const apiContentType = (apiProbe.contentType || '').toLowerCase();
-  const apiSnippet = (apiProbe.snippet || '').trim().toLowerCase();
-  const apiReturnedHtml =
-    apiContentType.includes('text/html') ||
-    apiSnippet.startsWith('<!doctype html') ||
-    apiSnippet.startsWith('<html') ||
-    apiSnippet.includes('<head>');
-
-  if (apiReturnedHtml) {
+  if (apiProbe.responseKind === 'html') {
     return fail(
       'connecting',
       'UNSUPPORTED_API_RESPONSE',
-      'Server reached, but player_api.php returned HTML instead of Xtream JSON. Verify the exact protocol, host, port, and any provider-specific URL path.'
+      `Xtream endpoint reached (HTTP ${apiProbe.status}, ${apiProbe.latencyMs}ms) but returned HTML instead of JSON.`
     );
   }
 
-  updateStep('connecting', 'success', `Xtream API reachable (${apiProbe.latencyMs}ms)`, apiProbe.latencyMs);
+  if (apiProbe.responseKind && apiProbe.responseKind !== 'json') {
+    return fail(
+      'connecting',
+      'UNSUPPORTED_API_RESPONSE',
+      `Xtream endpoint reached (HTTP ${apiProbe.status}, ${apiProbe.latencyMs}ms) but returned ${apiProbe.responseKind}, not JSON.`
+    );
+  }
+
+  updateStep(
+    'connecting',
+    'success',
+    `Xtream API reachable (HTTP ${apiProbe.status}, ${apiProbe.latencyMs}ms, ${apiProbe.xtreamShape ? 'Xtream JSON detected' : 'JSON detected'})`,
+    apiProbe.latencyMs
+  );
 
   // Step 2: Authentication
   updateStep('authenticating', 'running', 'Validating Xtream account response...');
