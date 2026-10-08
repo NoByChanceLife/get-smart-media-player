@@ -41,6 +41,18 @@ export const DEMO_LIVE_CATEGORIES: XtreamCategory[] = [
 
 export const DEMO_LIVE_STREAMS: XtreamLiveStream[] = [
   {
+    num: 0,
+    name: 'Get Smart Playback Control',
+    stream_type: 'live',
+    stream_id: 100,
+    stream_icon: '',
+    category_id: 'test',
+    tv_archive: 0,
+    tv_archive_duration: 0,
+    direct_source: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+    currentProgram: 'Direct MP4 playback test',
+  },
+  {
     num: 1,
     name: 'Bloomberg TV US',
     stream_type: 'live',
