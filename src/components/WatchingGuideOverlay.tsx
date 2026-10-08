@@ -72,10 +72,7 @@ export const WatchingGuideOverlay: React.FC<WatchingGuideOverlayProps> = ({
   };
 
   const handleRowKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>, index: number) => {
-    if (event.key === 'ArrowLeft') {
-      event.preventDefault();
-      onOpenAppNavigation();
-    } else if (event.key === 'ArrowUp') {
+    if (event.key === 'ArrowUp') {
       event.preventDefault();
       focusStream(index - 1);
     } else if (event.key === 'ArrowDown') {
@@ -83,6 +80,7 @@ export const WatchingGuideOverlay: React.FC<WatchingGuideOverlayProps> = ({
       focusStream(index + 1);
     } else if (event.key === 'ArrowLeft') {
       event.preventDefault();
+      event.stopPropagation();
       const activeGroup = groupRefs.current[groupId] || groupRefs.current.all;
       activeGroup?.focus();
       activeGroup?.scrollIntoView({ block: 'nearest' });
@@ -96,7 +94,10 @@ export const WatchingGuideOverlay: React.FC<WatchingGuideOverlayProps> = ({
   };
 
   const handleGroupKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>, index: number) => {
-    const groupButtons = groups.map((group) => groupRefs.current[group.id]).filter((button): button is HTMLButtonElement => Boolean(button));
+    const groupButtons = groups
+      .map((group) => groupRefs.current[group.id])
+      .filter((button): button is HTMLButtonElement => Boolean(button));
+
     if (event.key === 'ArrowUp') {
       event.preventDefault();
       groupButtons[Math.max(0, index - 1)]?.focus();
@@ -105,8 +106,15 @@ export const WatchingGuideOverlay: React.FC<WatchingGuideOverlayProps> = ({
       groupButtons[Math.min(groupButtons.length - 1, index + 1)]?.focus();
     } else if (event.key === 'ArrowRight') {
       event.preventDefault();
-      const currentIndex = Math.max(0, visibleStreams.findIndex((stream) => String(stream.stream_id) === focusedStreamId));
+      const currentIndex = Math.max(
+        0,
+        visibleStreams.findIndex((stream) => String(stream.stream_id) === focusedStreamId)
+      );
       focusStream(currentIndex);
+    } else if (event.key === 'ArrowLeft') {
+      event.preventDefault();
+      event.stopPropagation();
+      onOpenAppNavigation();
     } else if (event.key === 'Escape' || event.key === 'Backspace') {
       event.preventDefault();
       onClose();
