@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Clock, Layers, Lock, Search, ShieldAlert, Star, Tv } from 'lucide-react';
+import { Clock, Layers, Lock, Play, Search, ShieldAlert, Star, Tv } from 'lucide-react';
 import { XtreamCategory, XtreamEPGProgramme, XtreamLiveStream } from '../types/xtream';
 import { parentalControlService } from '../services/parentalControlService';
 import { xtreamService } from '../services/xtreamClient';
@@ -248,7 +248,7 @@ export const LiveTVView: React.FC<LiveTVViewProps> = ({
       }
     } else if (e.key === 'ArrowRight') {
       e.preventDefault();
-      focusLiveCell(rowIndex, Math.min(3, column + 1));
+      focusLiveCell(rowIndex, Math.min(5, column + 1));
     } else if (e.key === 'ArrowLeft') {
       e.preventDefault();
       if (column === 0) focusGroup(activeGroupIndex());
@@ -304,31 +304,39 @@ export const LiveTVView: React.FC<LiveTVViewProps> = ({
         </aside>
 
         <div className="flex-1 min-w-0 flex flex-col">
-          <div className="live-feature shrink-0 hidden xl:flex min-h-[126px] border-b border-white/[0.06] relative overflow-hidden">
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_15%,rgba(37,99,235,0.13),transparent_38%),linear-gradient(105deg,#09101b_0%,#080d16_58%,#05080e_100%)]" />
-            <div className="relative z-10 flex w-full items-center gap-5 px-6 py-4">
-              <div className="w-14 h-14 shrink-0 rounded-xl border border-white/10 bg-white/[0.035] flex items-center justify-center overflow-hidden p-2">
-                {selectedStream?.stream_icon ? (
-                  <img src={selectedStream.stream_icon} alt="" className="max-w-full max-h-full object-contain" />
-                ) : (
-                  <Tv className="w-6 h-6 text-slate-500" />
-                )}
-              </div>
-              <div className="min-w-0 max-w-3xl">
-                <div className="text-[10px] uppercase tracking-[0.18em] text-slate-500 font-semibold mb-1">
-                  {quickFilter === 'category' ? (visibleCategories.find((cat) => cat.category_id === selectedCategoryId)?.category_name || 'All Channels') : quickFilter === 'favorites' ? 'Favorites' : 'Recently Watched'}
+          <div className="live-feature shrink-0 hidden xl:flex min-h-[138px] border-b border-slate-800/80 relative overflow-hidden">
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_82%_30%,rgba(14,165,233,0.16),transparent_34%),linear-gradient(100deg,#08111f_0%,#0a1220_58%,#060a11_100%)]" />
+            <div className="relative z-10 flex w-full items-center justify-between gap-8 px-6 py-4">
+              <div className="flex min-w-0 items-center gap-4">
+                <div className="w-16 h-16 shrink-0 rounded-2xl border border-slate-700/70 bg-[#0a1423] shadow-xl flex items-center justify-center overflow-hidden p-2">
+                  {selectedStream?.stream_icon ? (
+                    <img src={selectedStream.stream_icon} alt="" className="max-w-full max-h-full object-contain" />
+                  ) : (
+                    <Tv className="w-7 h-7 text-cyan-400" />
+                  )}
                 </div>
-                <h2 className="text-xl 2xl:text-2xl font-semibold text-white truncate">{selectedNow?.title || selectedStream?.currentProgram || selectedStream?.name || 'Live TV'}</h2>
-                <div className="mt-1 flex items-center gap-2 text-xs text-slate-400">
-                  <span className="text-slate-200">{selectedStream?.name || 'Select a channel'}</span>
-                  {selectedNow && <span>{timeLabel(selectedNow.start)}–{timeLabel(selectedNow.end)}</span>}
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.18em] text-cyan-400 font-bold mb-1">
+                    <span>Live TV</span><span className="w-1 h-1 rounded-full bg-slate-600" /><span>{quickFilter === 'category' ? (visibleCategories.find((cat) => cat.category_id === selectedCategoryId)?.category_name || 'All Channels') : quickFilter === 'favorites' ? 'Favorites' : 'Recently Watched'}</span>
+                  </div>
+                  <h2 className="text-xl 2xl:text-2xl font-bold text-white font-heading truncate">{selectedNow?.title || selectedStream?.currentProgram || selectedStream?.name || 'Live TV'}</h2>
+                  <div className="mt-1 text-xs text-slate-300 flex items-center gap-2">
+                    <span className="font-semibold">{selectedStream?.name || 'Select a channel'}</span>
+                    {selectedNow && <span className="text-slate-500 font-mono">{timeLabel(selectedNow.start)}–{timeLabel(selectedNow.end)}</span>}
+                    {selectedStream && <span className="px-1.5 py-0.5 rounded bg-rose-500/15 border border-rose-500/30 text-[9px] font-black text-rose-400 uppercase">Live</span>}
+                  </div>
+                  <p className="mt-2 max-w-2xl text-[11px] leading-relaxed text-slate-400 line-clamp-2">{selectedNow?.description || 'Browse the guide, choose a channel, and keep your place while exploring what is on now and next.'}</p>
                 </div>
-                {selectedNow?.description && <p className="mt-2 text-[11px] leading-relaxed text-slate-500 line-clamp-1">{selectedNow.description}</p>}
               </div>
+              {selectedStream && (
+                <button onClick={() => play(selectedStream)} className="tv-focus-target shrink-0 flex items-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-500 border border-blue-400/40 px-4 py-2.5 text-xs font-bold text-white shadow-lg shadow-blue-950/40">
+                  <Play className="w-4 h-4 fill-current" /> Watch Live
+                </button>
+              )}
             </div>
           </div>
 
-          <header className="h-12 shrink-0 flex items-center gap-3 px-3 sm:px-4 border-b border-white/[0.06] bg-[#070b12]">
+          <header className="h-14 shrink-0 flex items-center gap-3 px-3 sm:px-4 border-b border-slate-800/80 bg-[#070b13]">
             <select
               value={quickFilter === 'category' ? selectedCategoryId : quickFilter}
               onChange={(e) => {
@@ -358,13 +366,14 @@ export const LiveTVView: React.FC<LiveTVViewProps> = ({
             <span className="hidden sm:block text-[11px] text-slate-500 tabular-nums">{filteredStreams.length.toLocaleString()} channels</span>
           </header>
 
-          <div className="h-9 shrink-0 flex border-b border-white/[0.06] bg-[#060a10] text-[10px] uppercase tracking-[0.14em] text-slate-600">
+          <div className="h-10 shrink-0 flex border-b border-slate-800 bg-[#060a11] text-[10px] uppercase tracking-wider text-slate-500">
             <div className="w-48 sm:w-56 shrink-0 px-3 flex items-center border-r border-slate-800">Channel</div>
             <div className="flex-1 grid grid-cols-3">
               <div className="px-3 flex items-center gap-2"><span className="text-cyan-400">Now</span><span className="h-px flex-1 bg-cyan-900/50" /></div>
               <div className="px-3 flex items-center border-l border-slate-800/60">Next</div>
               <div className="px-3 flex items-center border-l border-slate-800/60">Later</div>
             </div>
+            <div className="w-16 shrink-0 border-l border-slate-800/60" />
           </div>
 
           <div ref={scrollerRef} onScroll={(e) => setScrollTop(e.currentTarget.scrollTop)} className="flex-1 min-h-0 overflow-y-auto custom-scrollbar relative" role="grid" aria-label="Live channels and program guide">
@@ -374,7 +383,7 @@ export const LiveTVView: React.FC<LiveTVViewProps> = ({
                 const programs = epg[String(stream.stream_id)] || [];
                 const selected = selectedStreamId === String(stream.stream_id);
                 return (
-                  <div key={stream.stream_id} style={{ position: 'absolute', top: index * ROW_HEIGHT, left: 0, right: 0, height: ROW_HEIGHT }} className={`live-guide-row flex border-b border-white/[0.045] ${selected ? 'live-guide-row-selected' : 'bg-[#070b12] hover:bg-white/[0.025]'}`}>
+                  <div key={stream.stream_id} style={{ position: 'absolute', top: index * ROW_HEIGHT, left: 0, right: 0, height: ROW_HEIGHT }} className={`live-guide-row flex border-b border-slate-800/60 ${selected ? 'live-guide-row-selected' : 'bg-[#070b12] hover:bg-[#0b121e]'}`}>
                     <button
                       data-live-row={index}
                       data-live-col={0}
@@ -393,7 +402,7 @@ export const LiveTVView: React.FC<LiveTVViewProps> = ({
                       <div className="w-8 h-8 shrink-0 rounded-md bg-slate-900 flex items-center justify-center overflow-hidden p-1">
                         {stream.stream_icon ? <img src={stream.stream_icon} alt="" className="max-w-full max-h-full object-contain" loading="lazy" /> : <Tv className="w-4 h-4 text-slate-500" />}
                       </div>
-                      <span className={`text-[11px] font-semibold truncate ${selected ? 'text-white' : 'text-slate-200'}`}>{stream.name}</span>
+                      <span className={`text-[11px] font-semibold truncate ${selected ? 'text-cyan-300' : 'text-slate-100'}`}>{stream.name}</span>
                     </button>
 
                     <div className="flex-1 min-w-0 grid grid-cols-3">
@@ -407,21 +416,21 @@ export const LiveTVView: React.FC<LiveTVViewProps> = ({
                             onFocus={() => setSelectedStreamId(String(stream.stream_id))}
                             onKeyDown={(e) => {
                               handleCellKeyDown(e, index, programIndex + 1);
-                              if (e.key === 'Enter' || e.key === ' ') {
+                              if ((e.key === 'Enter' || e.key === ' ') && programIndex === 0) {
                                 e.preventDefault();
                                 play(stream);
                               }
                             }}
                             onClick={() => {
                               setSelectedStreamId(String(stream.stream_id));
-                              play(stream);
+                              if (programIndex === 0) play(stream);
                             }}
-                            className={`min-w-0 px-3 text-left border-l border-white/[0.045] tv-focus-target ${programIndex === 0 ? 'bg-white/[0.015]' : ''}`}
+                            className={`min-w-0 px-3 text-left border-l border-slate-800/50 tv-focus-target ${programIndex === 0 ? 'bg-cyan-950/10' : ''}`}
                             title={program?.description || program?.title || stream.currentProgram || stream.name}
                           >
                             <div className="flex items-center gap-2 min-w-0">
                               <span className="text-[11px] font-medium text-slate-200 truncate">{program?.title || (programIndex === 0 ? stream.currentProgram || 'Live' : 'No guide data')}</span>
-                              {programIndex === 0 && <span className="w-1.5 h-1.5 rounded-full bg-rose-400 shrink-0" aria-label="Live" />}
+                              {programIndex === 0 && <span className="text-[8px] font-bold text-rose-400 uppercase shrink-0">Live</span>}
                             </div>
                             {program && <div className="text-[9px] text-slate-600 font-mono mt-0.5">{timeLabel(program.start)}–{timeLabel(program.end)}</div>}
                           </button>
@@ -429,7 +438,14 @@ export const LiveTVView: React.FC<LiveTVViewProps> = ({
                       })}
                     </div>
 
->
+                    <div className="w-16 shrink-0 flex items-center justify-center gap-1 border-l border-slate-800/60">
+                      <button data-live-row={index} data-live-col={4} onFocus={() => setSelectedStreamId(String(stream.stream_id))} onKeyDown={(e) => handleCellKeyDown(e, index, 4)} onClick={() => onToggleFavorite(stream.stream_id)} className="p-1.5 rounded-md text-slate-500 hover:text-amber-400 tv-focus-target" aria-label={`${stream.isFavorite ? 'Remove' : 'Add'} ${stream.name} favorite`}>
+                        <Star className={`w-3.5 h-3.5 ${stream.isFavorite ? 'fill-amber-400 text-amber-400' : ''}`} />
+                      </button>
+                      <button data-live-row={index} data-live-col={5} onFocus={() => setSelectedStreamId(String(stream.stream_id))} onKeyDown={(e) => { handleCellKeyDown(e, index, 5); if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); play(stream); } }} onClick={() => play(stream)} className="p-1.5 rounded-md bg-cyan-500 text-slate-950 tv-focus-target" aria-label={`Watch ${stream.name}`}>
+                        <Play className="w-3.5 h-3.5 fill-current" />
+                      </button>
+                    </div>
                   </div>
                 );
               })}
