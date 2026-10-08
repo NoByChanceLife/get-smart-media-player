@@ -273,7 +273,7 @@ app.all('/api/xtream/probe', async (req: Request, res: Response) => {
 // reflected back to the browser or logs.
 
 
-app.all('/api/xtream/proxy', async (req: Request, res: Response) => {
+app.all(['/api/provider-api', '/api/xtream/proxy'], async (req: Request, res: Response) => {
   // Boundary marker: proves the response came through Get Smart's Xtream proxy route.
   res.setHeader('X-Get-Smart-Xtream-Proxy', 'v3');
   res.setHeader('Cache-Control', 'no-store');
