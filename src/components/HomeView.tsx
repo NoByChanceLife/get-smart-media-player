@@ -99,6 +99,20 @@ export const HomeView: React.FC<HomeViewProps> = ({
       e.stopPropagation();
       next.focus();
       next.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+      return;
+    }
+
+    // Up from the top Home row enters the persistent utility row instead of
+    // falling back to browser scrolling.
+    if (e.key === 'ArrowUp') {
+      const topBarItem = document.querySelector<HTMLElement>(
+        '[data-tv-topbar] .tv-focus-target, [data-tv-topbar] button:not([disabled]), [data-tv-topbar] select:not([disabled])'
+      );
+      if (topBarItem) {
+        e.preventDefault();
+        e.stopPropagation();
+        topBarItem.focus();
+      }
     }
   };
 
