@@ -69,6 +69,15 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const [showHealthPanel, setShowHealthPanel] = useState<boolean>(false);
 
   const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  // Keep callbacks used by the global media-key listener stable. Recreating the
+  // listener must never participate in stream initialization or HLS teardown.
+  const isVisuallyHiddenRef = useRef(isVisuallyHidden);
+  const onCloseRef = useRef(onClose);
+  const onOpenGuideRef = useRef(onOpenGuide);
+
+  useEffect(() => { isVisuallyHiddenRef.current = isVisuallyHidden; }, [isVisuallyHidden]);
+  useEffect(() => { onCloseRef.current = onClose; }, [onClose]);
+  useEffect(() => { onOpenGuideRef.current = onOpenGuide; }, [onOpenGuide]);
 
   // Derive title and current info
   const title =
@@ -459,11 +468,10 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
   // Keyboard navigation & remote control
   useEffect(() => {
-    // The mounted player keeps playback alive while browsing, but it must not
-    // own keyboard/D-pad navigation while its fullscreen surface is hidden.
-    if (isVisuallyHidden) return;
-
     const handleKeyDown = (e: KeyboardEvent) => {
+      // The mounted player keeps playback alive while browsing, but must not
+      // own keyboard/D-pad navigation while its fullscreen surface is hidden.
+      if (isVisuallyHiddenRef.current) return;
       resetControlsTimer();
       switch (e.key) {
         case 'Enter':
@@ -489,7 +497,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         case 'X':
         case 'MediaStop':
           e.preventDefault();
-          onClose();
+          onCloseRef.current();
           break;
         case 'm':
         case 'M':
@@ -507,7 +515,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         case 'Backspace':
           if (!document.fullscreenElement) {
             e.preventDefault();
-            onOpenGuide?.();
+            onOpenGuideRef.current?.();
           }
           break;
         case 'ArrowUp':
@@ -550,7 +558,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [target, allLiveStreams, onSelectLiveStream, onClose, onOpenGuide, isVisuallyHidden]);
+  }, [target, allLiveStreams, onSelectLiveStream]);
 
   // Controls auto-hide timer
   const resetControlsTimer = useCallback(() => {
