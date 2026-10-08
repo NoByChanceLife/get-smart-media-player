@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   Film,
   Star,
@@ -36,6 +36,25 @@ export const MoviesView: React.FC<MoviesViewProps> = ({
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedMovie, setSelectedMovie] = useState<XtreamVodStream | null>(null);
+  const movieGridRef = useRef<HTMLDivElement | null>(null);
+
+  const handlePosterKeyDown = (e: React.KeyboardEvent<HTMLElement>, index: number, movie: XtreamVodStream) => {
+    const cards = Array.from(movieGridRef.current?.querySelectorAll<HTMLElement>('[data-media-card]') ?? []);
+    if (!cards.length) return;
+    const columns = Math.max(1, Math.round(movieGridRef.current!.clientWidth / cards[0].getBoundingClientRect().width));
+    let next = index;
+    if (e.key === 'ArrowRight') next = Math.min(cards.length - 1, index + 1);
+    else if (e.key === 'ArrowLeft') next = Math.max(0, index - 1);
+    else if (e.key === 'ArrowDown') next = Math.min(cards.length - 1, index + columns);
+    else if (e.key === 'ArrowUp') next = Math.max(0, index - columns);
+    else if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      setSelectedMovie(movie);
+      return;
+    } else return;
+    e.preventDefault();
+    cards[next]?.focus();
+  };
 
   const canAccess = parentalControlService.canAccessSection('movies');
   const parentalSettings = parentalControlService.getSettings();
@@ -185,13 +204,17 @@ export const MoviesView: React.FC<MoviesViewProps> = ({
       </div>
 
       {/* Movies Poster Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-        {filteredMovies.map((movie) => {
+      <div ref={movieGridRef} className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">\n        {filteredMovies.map((movie, movieIndex) => {
           const isLocked = parentalControlService.isMovieLocked(movie);
 
           return (
             <div
               key={movie.stream_id}
+              data-media-card
+              tabIndex={0}
+              role="button"
+              aria-label={`Open ${movie.name}`}
+              onKeyDown={(e) => handlePosterKeyDown(e, movieIndex, movie)}
               onClick={() => setSelectedMovie(movie)}
               className="group relative flex flex-col bg-[#0e1422] rounded-2xl border border-slate-800/80 hover:border-cyan-500/50 overflow-hidden cursor-pointer transition-all duration-200 shadow-md tv-focus-target"
             >
