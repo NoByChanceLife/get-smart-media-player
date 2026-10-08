@@ -635,6 +635,11 @@ export default function App() {
           currentStream={playbackTarget.stream}
           onPlayStream={handlePlayLiveStream}
           onClose={() => setIsBrowsingDuringPlayback(false)}
+          onOpenAppNavigation={() => {
+            setIsBrowsingDuringPlayback(false);
+            setCurrentTab('home');
+            requestAnimationFrame(() => focusNavigationRail());
+          }}
         />
       )}
 
