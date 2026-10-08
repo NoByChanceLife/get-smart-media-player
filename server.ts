@@ -218,14 +218,28 @@ app.all('/api/xtream/probe', async (req: Request, res: Response) => {
     const contentType = probeResponse.headers.get('content-type') || '';
     const contentLength = probeResponse.headers.get('content-length') || null;
 
-    let responseSnippet = '';
+    let responseKind: 'json' | 'html' | 'text' | 'media' | 'empty' = 'empty';
+    let xtreamShape = false;
     try {
-      if (probeResponse.ok && !contentType.startsWith('video/') && !contentType.startsWith('audio/')) {
+      if (contentType.startsWith('video/') || contentType.startsWith('audio/')) {
+        responseKind = 'media';
+      } else {
         const text = await probeResponse.text();
-        responseSnippet = text.slice(0, 1000);
+        const trimmed = text.trim();
+        if (contentType.toLowerCase().includes('text/html') || /^<!doctype html/i.test(trimmed) || /^<html/i.test(trimmed)) {
+          responseKind = 'html';
+        } else if (trimmed) {
+          try {
+            const parsed = JSON.parse(trimmed);
+            responseKind = 'json';
+            xtreamShape = !!(parsed && typeof parsed === 'object' && ('user_info' in parsed || 'server_info' in parsed));
+          } catch {
+            responseKind = 'text';
+          }
+        }
       }
     } catch {
-      // Ignore text read error
+      responseKind = 'text';
     }
 
     return res.json({
@@ -235,7 +249,8 @@ app.all('/api/xtream/probe', async (req: Request, res: Response) => {
       contentType,
       contentLength,
       latencyMs,
-      snippet: responseSnippet,
+      responseKind,
+      xtreamShape,
     });
   } catch (err: unknown) {
     const error = err as Error;
