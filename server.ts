@@ -242,6 +242,55 @@ app.all('/api/xtream/probe', async (req: Request, res: Response) => {
  * Accepts credentials and upstream parameters via POST body or headers.
  * SSRF protected with redirect checking and safe error logging.
  */
+// Safe diagnostic probe used by connectionDiagnostics. It never returns the
+// upstream body, so Xtream credentials contained in the target URL are not
+// reflected back to the browser or logs.
+app.post('/api/xtream/probe', async (req: Request, res: Response) => {
+  const targetUrl = req.body?.url as string;
+  if (!targetUrl) return res.status(400).json({ ok: false, errorType: 'MISSING_URL', errorMessage: 'Missing target URL.' });
+
+  const startedAt = Date.now();
+  try {
+    const customUserAgent =
+      (req.body?.user_agent as string) ||
+      'GetSmartMediaPlayer/2.0 (Linux; Android 12; OTT Player)';
+    const upstreamResponse = await safeFetch(targetUrl, {
+      method: 'GET',
+      headers: { 'User-Agent': customUserAgent, 'Accept': '*/*', 'Connection': 'keep-alive' },
+      timeoutMs: 25000,
+      maxRedirects: 5,
+    });
+
+    const contentType = upstreamResponse.headers.get('content-type') || '';
+    const bodyText = await upstreamResponse.text();
+    const trimmed = bodyText.trim();
+    const looksHtml =
+      contentType.toLowerCase().includes('text/html') ||
+      /^<!doctype html/i.test(trimmed) ||
+      /^<html/i.test(trimmed);
+
+    return res.status(200).json({
+      ok: upstreamResponse.ok,
+      status: upstreamResponse.status,
+      contentType,
+      latencyMs: Date.now() - startedAt,
+      // Never echo the provider response. Classification is enough for diagnostics.
+      snippet: looksHtml ? '<html response>' : trimmed.startsWith('{') || trimmed.startsWith('[') ? '<json response>' : '<non-json response>',
+      responseKind: looksHtml ? 'html' : trimmed.startsWith('{') || trimmed.startsWith('[') ? 'json' : 'other',
+    });
+  } catch (err: unknown) {
+    const classified = classifyNetworkError(err as Error);
+    return res.status(200).json({
+      ok: false,
+      status: 0,
+      contentType: '',
+      latencyMs: Date.now() - startedAt,
+      errorType: classified.type,
+      errorMessage: classified.message,
+    });
+  }
+});
+
 app.all('/api/xtream/proxy', async (req: Request, res: Response) => {
   const targetUrl = (req.body?.url as string) || (req.query.url as string);
   if (!targetUrl) {
