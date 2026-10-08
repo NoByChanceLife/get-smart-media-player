@@ -76,8 +76,11 @@ export default function App() {
   const [isFloatingPiP, setIsFloatingPiP] = useState(false);
   // Playback presentation is separate from playback ownership. Browsing hides
   // the fullscreen surface without destroying the active player session.
-  const [isBrowsingDuringPlayback, setIsBrowsingDuringPlayback] = useState(false);
-  const [isWatchingGuideOpen, setIsWatchingGuideOpen] = useState(false);
+  // Exactly one playback presentation mode can be active at a time.
+  // watching = full video, guide = lightweight guide only, browsing = app shell over video.
+  const [playbackPresentation, setPlaybackPresentation] = useState<'watching' | 'guide' | 'browsing'>('watching');
+  const isBrowsingDuringPlayback = playbackPresentation === 'browsing';
+  const isWatchingGuideOpen = playbackPresentation === 'guide';
   const [isLoadingData, setIsLoadingData] = useState(true);
 
   const mainContentRef = useRef<HTMLDivElement | null>(null);
@@ -196,20 +199,19 @@ export default function App() {
   const handlePlayLiveStream = (stream: XtreamLiveStream) => {
     setPlaybackTarget({ type: 'live', stream });
     setIsFloatingPiP(false);
-    setIsBrowsingDuringPlayback(false);
-    setIsWatchingGuideOpen(false);
+    setPlaybackPresentation('watching');
   };
 
   const handlePlayMovie = (movie: XtreamVodStream) => {
     setPlaybackTarget({ type: 'vod', movie });
     setIsFloatingPiP(false);
-    setIsBrowsingDuringPlayback(false);
+    setPlaybackPresentation('watching');
   };
 
   const handlePlayEpisode = (series: XtreamSeries, seasonNum: number, episode: XtreamEpisode) => {
     setPlaybackTarget({ type: 'episode', series, seasonNum, episode });
     setIsFloatingPiP(false);
-    setIsBrowsingDuringPlayback(false);
+    setPlaybackPresentation('watching');
   };
 
   // PIN Unlock prompts for restricted content
@@ -362,7 +364,7 @@ export default function App() {
 
       if (playbackTarget && isBrowsingDuringPlayback && !isFloatingPiP && isAppBack) {
         e.preventDefault();
-        setIsBrowsingDuringPlayback(false);
+        setPlaybackPresentation('watching');
         return;
       }
 
@@ -472,7 +474,7 @@ export default function App() {
   }, [
     playbackTarget,
     isFloatingPiP,
-    isBrowsingDuringPlayback,
+    playbackPresentation,
     isSettingsOpen,
     isParentalControlsOpen,
     isProfileSwitcherOpen,
@@ -631,22 +633,20 @@ export default function App() {
 
       {/* Lightweight guide shown over a still-running live stream. The full Live TV
           workspace remains separate for deliberate browsing/management. */}
-      {playbackTarget?.type === 'live' && isBrowsingDuringPlayback && isWatchingGuideOpen && !isFloatingPiP && (
+      {playbackTarget?.type === 'live' && isWatchingGuideOpen && !isFloatingPiP && (
         <WatchingGuideOverlay
           categories={liveCategories}
           streams={liveStreams}
           currentStream={playbackTarget.stream}
           onPlayStream={handlePlayLiveStream}
           onClose={() => {
-            setIsWatchingGuideOpen(false);
-            setIsBrowsingDuringPlayback(false);
+            setPlaybackPresentation('watching');
           }}
           onOpenAppNavigation={() => {
             // Dismiss the temporary Watching Guide and reveal the real Home
             // surface while the same playback session continues underneath.
             setCurrentTab('home');
-            setIsWatchingGuideOpen(false);
-            setIsBrowsingDuringPlayback(true);
+            setPlaybackPresentation('browsing');
             requestAnimationFrame(() => focusNavigationRail());
           }}
         />
@@ -660,15 +660,13 @@ export default function App() {
             // Player Back/Close is navigation, not Stop. Keep the session alive
             // and reveal Home over it. Explicit Stop owns session termination.
             setCurrentTab('home');
-            setIsWatchingGuideOpen(false);
-            setIsBrowsingDuringPlayback(true);
+            setPlaybackPresentation('browsing');
             requestAnimationFrame(() => focusNavigationRail());
           }}
           onStop={() => {
             setPlaybackTarget(null);
             setSecondaryPlaybackTarget(null);
-            setIsWatchingGuideOpen(false);
-            setIsBrowsingDuringPlayback(false);
+            setPlaybackPresentation('watching');
           }}
           onMinimizeToPiP={() => setIsFloatingPiP(true)}
           onLaunchDualPiP={handleLaunchDualPiP}
@@ -677,10 +675,9 @@ export default function App() {
           onOpenPerformanceSettings={() => setIsPerformanceModalOpen(true)}
           onOpenGuide={() => {
             setCurrentTab('live');
-            setIsWatchingGuideOpen(true);
-            setIsBrowsingDuringPlayback(true);
+            setPlaybackPresentation('guide');
           }}
-          isVisuallyHidden={isBrowsingDuringPlayback}
+          isVisuallyHidden={playbackPresentation !== 'watching'}
         />
       )}
 
