@@ -77,3 +77,19 @@ export function getProviderTransport(): ProviderTransport {
 export function setProviderTransport(transport: ProviderTransport): void {
   activeTransport = transport;
 }
+
+/**
+ * Called once during app startup. Dynamic import keeps the web/PWA build on the
+ * web adapter while allowing the packaged Android app to originate provider
+ * requests natively.
+ */
+export async function initializeProviderTransport(): Promise<void> {
+  try {
+    const android = await import('./androidProviderTransport');
+    if (android.isNativeAndroidRuntime()) {
+      setProviderTransport(new android.AndroidProviderTransport());
+    }
+  } catch {
+    // Web/PWA remains functional when the native bridge is unavailable.
+  }
+}
