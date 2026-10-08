@@ -123,9 +123,15 @@ export const MoviesView: React.FC<MoviesViewProps> = ({
     if (e.key === 'ArrowUp') {
       e.preventDefault();
       e.stopPropagation();
-      // When navigation reaches the top of Movies, align the page itself to
-      // the top before handing focus to the sticky utility bar. This avoids
-      // leaving the hero/header partially clipped below the viewport.
+      // The featured Watch Movie action is the intentional first stop at the
+      // top of Movies. Only move into the global utility bar after the user
+      // presses Up again from the featured controls.
+      const featured = root.querySelector<HTMLElement>('[data-tv-zone="featured"]');
+      if (featured && current.dataset.tvZone !== 'featured') {
+        window.scrollTo({ top: 0, behavior: 'auto' });
+        featured.focus();
+        return;
+      }
       window.scrollTo({ top: 0, behavior: 'auto' });
       focusTopBarFromMedia();
     }
