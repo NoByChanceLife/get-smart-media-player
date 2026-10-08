@@ -159,6 +159,17 @@ function classifyNetworkError(err: Error): { type: string; message: string } {
   return { type: 'SERVER_UNREACHABLE', message: 'Failed to establish connection to IPTV server.' };
 }
 
+// Deployment marker: lets the frontend prove which Get Smart backend is
+// actually answering before provider diagnostics are trusted.
+app.get('/api/build-info', (_req: Request, res: Response) => {
+  res.setHeader('Cache-Control', 'no-store');
+  return res.json({
+    app: 'get-smart-media-player',
+    apiMarker: 'gsm-api-2026-10-08-b1',
+    xtreamProbe: 'v2',
+  });
+});
+
 /**
  * Diagnostic Probe Endpoint for Connection Testing
  * Accepts target URL and credentials via POST body or headers (fallback to query)
