@@ -40,6 +40,7 @@ export const LiveTVView: React.FC<LiveTVViewProps> = ({
   const [scrollTop, setScrollTop] = useState(0);
   const [viewportHeight, setViewportHeight] = useState(560);
   const scrollerRef = useRef<HTMLDivElement | null>(null);
+  const groupsRef = useRef<HTMLDivElement | null>(null);
   const canAccess = parentalControlService.canAccessSection('live');
   const parentalSettings = parentalControlService.getSettings();
 
@@ -157,8 +158,45 @@ export const LiveTVView: React.FC<LiveTVViewProps> = ({
   };
 
   const focusRow = (index: number) => {
-    const target = document.querySelector<HTMLElement>(`[data-live-row="${index}"]`);
-    target?.focus();
+    const safeIndex = Math.min(filteredStreams.length - 1, Math.max(0, index));
+    if (safeIndex < 0) return;
+
+    const top = safeIndex * ROW_HEIGHT;
+    const bottom = top + ROW_HEIGHT;
+    const scroller = scrollerRef.current;
+    if (scroller) {
+      if (top < scroller.scrollTop) scroller.scrollTop = top;
+      else if (bottom > scroller.scrollTop + scroller.clientHeight) {
+        scroller.scrollTop = Math.max(0, bottom - scroller.clientHeight);
+      }
+    }
+
+    requestAnimationFrame(() => {
+      document.querySelector<HTMLElement>(`[data-live-row="${safeIndex}"]`)?.focus();
+    });
+  };
+
+  const focusGroup = (index: number) => {
+    const groups = Array.from(
+      groupsRef.current?.querySelectorAll<HTMLButtonElement>('button.live-group') ?? []
+    );
+    if (!groups.length) return;
+    groups[Math.min(groups.length - 1, Math.max(0, index))]?.focus();
+  };
+
+  const handleGroupKeyDown = (e: React.KeyboardEvent<HTMLButtonElement>, index: number) => {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      focusGroup(index + 1);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      focusGroup(index - 1);
+    } else if (e.key === 'ArrowRight') {
+      e.preventDefault();
+      focusRow(
+        Math.max(0, filteredStreams.findIndex((stream) => String(stream.stream_id) === selectedStreamId))
+      );
+    }
   };
 
   return (
@@ -169,19 +207,19 @@ export const LiveTVView: React.FC<LiveTVViewProps> = ({
             <Layers className="w-4 h-4 text-cyan-400" />
             <span className="text-xs font-bold uppercase tracking-wider text-slate-200">Groups</span>
           </div>
-          <div className="p-2 space-y-1 overflow-y-auto custom-scrollbar">
-            <button onClick={() => selectGroup('all')} className={`live-group ${quickFilter === 'category' && selectedCategoryId === 'all' ? 'live-group-active' : ''}`}>
+          <div ref={groupsRef} className="p-2 space-y-1 overflow-y-auto custom-scrollbar">
+            <button onKeyDown={(e) => handleGroupKeyDown(e, 0)} onClick={() => selectGroup('all')} className={`live-group ${quickFilter === 'category' && selectedCategoryId === 'all' ? 'live-group-active' : ''}`}>
               <Tv className="w-4 h-4" /><span>All Channels</span><small>{streams.length}</small>
             </button>
-            <button onClick={() => setQuickFilter('favorites')} className={`live-group ${quickFilter === 'favorites' ? 'live-group-active' : ''}`}>
+            <button onKeyDown={(e) => handleGroupKeyDown(e, 1)} onClick={() => setQuickFilter('favorites')} className={`live-group ${quickFilter === 'favorites' ? 'live-group-active' : ''}`}>
               <Star className="w-4 h-4" /><span>Favorites</span>
             </button>
-            <button onClick={() => setQuickFilter('recent')} className={`live-group ${quickFilter === 'recent' ? 'live-group-active' : ''}`}>
+            <button onKeyDown={(e) => handleGroupKeyDown(e, 2)} onClick={() => setQuickFilter('recent')} className={`live-group ${quickFilter === 'recent' ? 'live-group-active' : ''}`}>
               <Clock className="w-4 h-4" /><span>Recently Watched</span>
             </button>
             <div className="px-2 pt-3 pb-1 text-[10px] uppercase tracking-widest text-slate-600">Provider groups</div>
-            {visibleCategories.filter((cat) => cat.category_id !== 'all').map((cat) => (
-              <button key={cat.category_id} onClick={() => selectGroup(cat.category_id)} className={`live-group ${quickFilter === 'category' && selectedCategoryId === cat.category_id ? 'live-group-active' : ''}`}>
+            {visibleCategories.filter((cat) => cat.category_id !== 'all').map((cat, categoryIndex) => (
+              <button key={cat.category_id} onKeyDown={(e) => handleGroupKeyDown(e, categoryIndex + 3)} onClick={() => selectGroup(cat.category_id)} className={`live-group ${quickFilter === 'category' && selectedCategoryId === cat.category_id ? 'live-group-active' : ''}`}>
                 {parentalControlService.isCategoryLocked(cat.category_id, 'live') ? <Lock className="w-3.5 h-3.5 text-rose-400" /> : <span className="w-1.5 h-1.5 rounded-full bg-cyan-500" />}
                 <span>{cat.category_name}</span>
               </button>
@@ -234,8 +272,25 @@ export const LiveTVView: React.FC<LiveTVViewProps> = ({
                       onFocus={() => setSelectedStreamId(String(stream.stream_id))}
                       onClick={() => setSelectedStreamId(String(stream.stream_id))}
                       onKeyDown={(e) => {
-                        if (e.key === 'ArrowDown') { e.preventDefault(); focusRow(Math.min(filteredStreams.length - 1, index + 1)); }
-                        if (e.key === 'ArrowUp') { e.preventDefault(); focusRow(Math.max(0, index - 1)); }
+                        if (e.key === 'ArrowDown') { e.preventDefault(); focusRow(index + 1); }
+                        if (e.key === 'ArrowUp') { e.preventDefault(); focusRow(index - 1); }
+                        if (e.key === 'ArrowLeft') {
+                          e.preventDefault();
+                          const activeGroupIndex =
+                            quickFilter === 'favorites'
+                              ? 1
+                              : quickFilter === 'recent'
+                              ? 2
+                              : selectedCategoryId === 'all'
+                              ? 0
+                              : Math.max(
+                                  3,
+                                  visibleCategories
+                                    .filter((cat) => cat.category_id !== 'all')
+                                    .findIndex((cat) => cat.category_id === selectedCategoryId) + 3
+                                );
+                          focusGroup(activeGroupIndex);
+                        }
                         if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); play(stream); }
                       }}
                       className="w-48 sm:w-56 shrink-0 px-2 flex items-center gap-2 border-r border-slate-800 text-left tv-focus-target"
