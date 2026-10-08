@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   Play,
   Tv,
@@ -54,6 +54,53 @@ export const HomeView: React.FC<HomeViewProps> = ({
   onPromptPinForMovie,
 }) => {
   const [historyItems] = useState<WatchHistoryItem[]>(() => xtreamService.getHistory());
+  const homeRef = useRef<HTMLDivElement | null>(null);
+
+  const handleTVNavigation = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) return;
+    const current = e.target as HTMLElement;
+    if (!current.matches('[data-tv-item]')) return;
+
+    const root = homeRef.current;
+    if (!root) return;
+    const items = Array.from(root.querySelectorAll<HTMLElement>('[data-tv-item]'))
+      .filter((item) => item.offsetParent !== null);
+    const currentRect = current.getBoundingClientRect();
+    const cx = currentRect.left + currentRect.width / 2;
+    const cy = currentRect.top + currentRect.height / 2;
+
+    const candidates = items
+      .filter((item) => item !== current)
+      .map((item) => {
+        const rect = item.getBoundingClientRect();
+        const x = rect.left + rect.width / 2;
+        const y = rect.top + rect.height / 2;
+        const dx = x - cx;
+        const dy = y - cy;
+        const valid =
+          (e.key === 'ArrowRight' && dx > 8) ||
+          (e.key === 'ArrowLeft' && dx < -8) ||
+          (e.key === 'ArrowDown' && dy > 8) ||
+          (e.key === 'ArrowUp' && dy < -8);
+        if (!valid) return null;
+
+        // Favor the intended axis heavily so Up/Down changes rows and
+        // Left/Right stays within the current row whenever possible.
+        const primary = e.key === 'ArrowLeft' || e.key === 'ArrowRight' ? Math.abs(dx) : Math.abs(dy);
+        const cross = e.key === 'ArrowLeft' || e.key === 'ArrowRight' ? Math.abs(dy) : Math.abs(dx);
+        return { item, score: primary + cross * 3 };
+      })
+      .filter((candidate): candidate is { item: HTMLElement; score: number } => Boolean(candidate))
+      .sort((a, b) => a.score - b.score);
+
+    const next = candidates[0]?.item;
+    if (next) {
+      e.preventDefault();
+      e.stopPropagation();
+      next.focus();
+      next.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+    }
+  };
 
   // Filter content with parental controls
   const visibleLive = liveStreams.filter((s) => !parentalControlService.isChannelHidden(s));
@@ -92,7 +139,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
     null;
 
   return (
-    <div className="space-y-10 pb-12 animate-in fade-in duration-300">
+    <div ref={homeRef} onKeyDownCapture={handleTVNavigation} className="space-y-10 pb-12 animate-in fade-in duration-300">
       {/* Hero Spotlight Banner */}
       {featuredItem && (
         <section className="relative w-full rounded-3xl overflow-hidden bg-gradient-to-t from-[#06090f] via-slate-900/60 to-slate-950/40 border border-slate-800/80 shadow-2xl">
@@ -133,7 +180,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                     onPlayLive(featuredItem);
                   }
                 }}
-                className="px-6 py-3 rounded-2xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-sm flex items-center gap-2.5 shadow-xl shadow-cyan-500/30 transition-all tv-focus-target active:scale-95"
+                data-tv-item tabIndex={0} className="px-6 py-3 rounded-2xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-sm flex items-center gap-2.5 shadow-xl shadow-cyan-500/30 transition-all tv-focus-target active:scale-95"
               >
                 <Play className="w-4 h-4 fill-slate-950" />
                 <span>Watch Live Now</span>
@@ -141,7 +188,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
 
               <button
                 onClick={() => onNavigateTab('live')}
-                className="px-5 py-3 rounded-2xl bg-slate-900/80 hover:bg-slate-800 text-slate-200 font-semibold text-sm border border-slate-700/80 backdrop-blur-md transition-all tv-focus-target active:scale-95 flex items-center gap-2"
+                data-tv-item tabIndex={0} className="px-5 py-3 rounded-2xl bg-slate-900/80 hover:bg-slate-800 text-slate-200 font-semibold text-sm border border-slate-700/80 backdrop-blur-md transition-all tv-focus-target active:scale-95 flex items-center gap-2"
               >
                 <Tv className="w-4 h-4 text-cyan-400" />
                 <span>Browse All Channels</span>
@@ -175,7 +222,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
               <div
                 key={item.id}
                 onClick={() => onPlayHistoryItem(item)}
-                className="group relative bg-[#0e1422] rounded-2xl border border-slate-800/80 hover:border-cyan-500/50 p-3 transition-all duration-200 cursor-pointer shadow-lg hover:shadow-cyan-950/40 tv-focus-target"
+                data-tv-item tabIndex={0} className="group relative bg-[#0e1422] rounded-2xl border border-slate-800/80 hover:border-cyan-500/50 p-3 transition-all duration-200 cursor-pointer shadow-lg hover:shadow-cyan-950/40 tv-focus-target"
               >
                 <div className="relative aspect-video rounded-xl bg-slate-900 overflow-hidden mb-2.5 flex items-center justify-center">
                   {item.icon ? (
@@ -253,7 +300,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                     onPlayLive(stream);
                   }
                 }}
-                className="group relative bg-[#0e1422] rounded-2xl border border-slate-800/80 hover:border-amber-400/50 p-3.5 flex flex-col items-center text-center transition-all cursor-pointer shadow-md tv-focus-target"
+                data-tv-item tabIndex={0} className="group relative bg-[#0e1422] rounded-2xl border border-slate-800/80 hover:border-amber-400/50 p-3.5 flex flex-col items-center text-center transition-all cursor-pointer shadow-md tv-focus-target"
               >
                 <div className="w-14 h-14 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center p-2 mb-2 group-hover:border-amber-400/40 transition">
                   {stream.stream_icon ? (
@@ -309,7 +356,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                     onPlayLive(stream);
                   }
                 }}
-                className="group flex items-center gap-3.5 p-3 rounded-2xl bg-[#0e1422] border border-slate-800/80 hover:border-cyan-500/50 cursor-pointer transition shadow-md tv-focus-target"
+                data-tv-item tabIndex={0} className="group flex items-center gap-3.5 p-3 rounded-2xl bg-[#0e1422] border border-slate-800/80 hover:border-cyan-500/50 cursor-pointer transition shadow-md tv-focus-target"
               >
                 <div className="w-12 h-12 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center p-1.5 shrink-0">
                   {stream.stream_icon ? (
@@ -373,7 +420,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                       onPlayMovie(movie);
                     }
                   }}
-                  className="group relative bg-[#0e1422] rounded-2xl border border-slate-800/80 hover:border-cyan-500/50 overflow-hidden cursor-pointer transition shadow-md tv-focus-target"
+                  data-tv-item tabIndex={0} className="group relative bg-[#0e1422] rounded-2xl border border-slate-800/80 hover:border-cyan-500/50 overflow-hidden cursor-pointer transition shadow-md tv-focus-target"
                 >
                   <div className="relative aspect-[2/3] bg-slate-900 overflow-hidden">
                     {movie.stream_icon ? (
@@ -444,7 +491,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
               <div
                 key={series.series_id}
                 onClick={() => onNavigateTab('series')}
-                className="group relative bg-[#0e1422] rounded-2xl border border-slate-800/80 hover:border-cyan-500/50 overflow-hidden cursor-pointer transition shadow-md tv-focus-target"
+                data-tv-item tabIndex={0} className="group relative bg-[#0e1422] rounded-2xl border border-slate-800/80 hover:border-cyan-500/50 overflow-hidden cursor-pointer transition shadow-md tv-focus-target"
               >
                 <div className="relative aspect-[2/3] bg-slate-900 overflow-hidden">
                   {series.cover ? (
@@ -506,7 +553,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
 
         <button
           onClick={onOpenConnections}
-          className="px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-xs font-bold text-cyan-300 hover:text-cyan-200 transition tv-focus-target active:scale-95 flex items-center gap-2 shrink-0"
+          data-tv-item tabIndex={0} className="px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-xs font-bold text-cyan-300 hover:text-cyan-200 transition tv-focus-target active:scale-95 flex items-center gap-2 shrink-0"
         >
           <span>Manage Connections</span>
           <ChevronRight className="w-4 h-4" />
