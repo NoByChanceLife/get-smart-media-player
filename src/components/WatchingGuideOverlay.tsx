@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, Layers, Star, Tv } from 'lucide-react';
+import { ArrowLeft, Home, Layers, Star, Tv } from 'lucide-react';
 import { XtreamCategory, XtreamLiveStream } from '../types/xtream';
 
 interface WatchingGuideOverlayProps {
@@ -153,7 +153,7 @@ export const WatchingGuideOverlay: React.FC<WatchingGuideOverlayProps> = ({
         <section className="w-full max-h-[72vh] border-t border-white/10 bg-gradient-to-r from-[#050912]/94 via-[#07101b]/84 to-black/35 backdrop-blur-md shadow-[0_-24px_80px_rgba(0,0,0,0.45)]">
           <div className="h-14 px-6 flex items-center justify-between border-b border-white/10">
             <div className="min-w-0">
-              <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-cyan-400">Live TV</div>
+              <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-cyan-400"><span>Live TV</span><span className="text-slate-600">•</span><span className="text-slate-400">Watching</span></div>
               <div className="text-sm font-semibold text-white truncate">
                 {currentStream.name}
                 <span className="ml-3 text-xs font-normal text-slate-400">
@@ -161,6 +161,13 @@ export const WatchingGuideOverlay: React.FC<WatchingGuideOverlayProps> = ({
                 </span>
               </div>
             </div>
+            <div className="flex items-center gap-2">
+            <button
+              onClick={onOpenAppNavigation}
+              className="tv-focus-target flex items-center gap-2 rounded-xl border border-white/15 bg-black/30 px-3 py-2 text-xs font-semibold text-white hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-cyan-400/95"
+            >
+              <Home className="w-3.5 h-3.5" /> Home
+            </button>
             <button
               ref={closeButtonRef}
               onClick={onClose}
@@ -175,6 +182,7 @@ export const WatchingGuideOverlay: React.FC<WatchingGuideOverlayProps> = ({
             >
               <ArrowLeft className="w-3.5 h-3.5" /> Back to Video
             </button>
+            </div>
           </div>
 
           <div className="flex h-[min(58vh,520px)] min-h-[330px]">
