@@ -9,6 +9,7 @@ import { SeriesView } from './components/SeriesView';
 import { FavoritesView } from './components/FavoritesView';
 import { GlobalSearchView } from './components/GlobalSearchView';
 import { VideoPlayer } from './components/VideoPlayer';
+import { WatchingGuideOverlay } from './components/WatchingGuideOverlay';
 import { FloatingPiPPlayer } from './components/FloatingPiPPlayer';
 import { ServerSettingsModal } from './components/ServerSettingsModal';
 import { ParentalControlsModal } from './components/ParentalControlsModal';
@@ -624,6 +625,18 @@ export default function App() {
           )}
         </main>
       </div>
+
+      {/* Lightweight guide shown over a still-running live stream. The full Live TV
+          workspace remains separate for deliberate browsing/management. */}
+      {playbackTarget?.type === 'live' && isBrowsingDuringPlayback && !isFloatingPiP && (
+        <WatchingGuideOverlay
+          categories={liveCategories}
+          streams={liveStreams}
+          currentStream={playbackTarget.stream}
+          onPlayStream={handlePlayLiveStream}
+          onClose={() => setIsBrowsingDuringPlayback(false)}
+        />
+      )}
 
       {/* Fullscreen Video Player Modal */}
       {playbackTarget && !isFloatingPiP && (
