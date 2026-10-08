@@ -23,6 +23,7 @@ import {
 } from '../data/demoXtreamData';
 import { parseM3uContent, ParsedM3uResult } from './m3uParser';
 import { fetchStalkerChannels, resolveStalkerStreamLink } from './stalkerClient';
+import { getProviderTransport } from './providerTransport';
 
 const PROFILES_STORAGE_KEY = 'getsmart_xtream_profiles_v2';
 const LEGACY_PROFILES_STORAGE_KEY = 'streampulse_xtream_profiles_v2';
@@ -219,69 +220,15 @@ class XtreamService {
     this.serverFilter = filter;
   }
 
-  // Proxy request helper using POST body and headers (protects credentials from query strings)
+  // Provider protocol calls go through a transport boundary so the same Xtream
+  // logic can run over the web backend today and native Android networking later.
   public async fetchViaProxy<T>(url: string, mac?: string, token?: string): Promise<T> {
-    const response = await fetch('/provider-api', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(mac ? { 'X-Target-Mac': mac } : {}),
-        ...(token ? { 'X-Target-Token': token } : {}),
-      },
-      body: JSON.stringify({
-        url,
-        mac,
-        token,
-        // Compatibility profile observed in the user-supplied known-working
-        // MegaPlusXC/XCIPTV Android artifact (OkHttp 3.12.11).
-        user_agent: mac ? undefined : 'okhttp/3.12.11',
-      }),
+    return getProviderTransport().requestJson<T>({
+      url,
+      mac,
+      token,
+      userAgent: mac ? undefined : 'okhttp/3.12.11',
     });
-
-    const responseContentType = response.headers.get('content-type') || '';
-    const proxyMarker = response.headers.get('x-get-smart-xtream-proxy') || '';
-    const responseText = await response.text();
-
-    let parsed: any = null;
-    try {
-      parsed = responseText ? JSON.parse(responseText) : null;
-    } catch {
-      // Keep parsed null; the diagnostic below distinguishes our proxy route
-      // from an HTML/intermediary response without exposing the response body.
-    }
-
-    if (!response.ok) {
-      if (parsed?.error) {
-        const diagnosticParts = [
-          parsed.error,
-          parsed.errorType ? `type=${parsed.errorType}` : '',
-          parsed.upstreamStatus ? `upstream=${parsed.upstreamStatus}` : '',
-          parsed.upstreamContentType ? `content-type=${parsed.upstreamContentType}` : '',
-          proxyMarker ? `proxy=${proxyMarker}` : '',
-        ].filter(Boolean);
-        throw new Error(diagnosticParts.join(' · '));
-      }
-
-      if (!proxyMarker) {
-        throw new Error(
-          `Get Smart Xtream proxy route was not reached (HTTP ${response.status}, content-type=${responseContentType || 'unknown'}).`
-        );
-      }
-
-      throw new Error(
-        `Get Smart Xtream proxy returned an unreadable response (HTTP ${response.status}, content-type=${responseContentType || 'unknown'}, proxy=${proxyMarker}).`
-      );
-    }
-
-    if (!parsed) {
-      throw new Error(
-        proxyMarker
-          ? `Get Smart Xtream proxy returned non-JSON (HTTP ${response.status}, content-type=${responseContentType || 'unknown'}, proxy=${proxyMarker}).`
-          : `Get Smart Xtream proxy route was not reached (HTTP ${response.status}, content-type=${responseContentType || 'unknown'}).`
-      );
-    }
-
-    return parsed as T;
   }
 
   // Authenticate Xtream credentials without logging passwords
