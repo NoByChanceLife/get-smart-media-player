@@ -594,7 +594,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         if (el.closest('button, input, select, a, [role="button"]')) return;
         togglePlay();
       }}
-      className={`fixed inset-0 z-50 bg-black flex items-center justify-center select-none overflow-hidden font-sans ${isVisuallyHidden ? 'invisible pointer-events-none' : ''}`}
+      className={`fixed inset-0 z-50 bg-black flex items-center justify-center select-none overflow-hidden font-sans ${isVisuallyHidden ? 'pointer-events-none' : ''}`}
     >
       {/* Video Canvas */}
       <video
@@ -617,7 +617,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         }`}
       />
 
-      {errorMsg && errorDetail && (
+      {!isVisuallyHidden && errorMsg && errorDetail && (
         <div className="absolute left-1/2 top-1/2 z-[70] w-[min(90vw,680px)] -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-red-400/30 bg-black/85 p-5 text-center shadow-2xl">
           <p className="text-base font-semibold text-white">{errorMsg}</p>
           <p className="mt-2 font-mono text-sm text-red-200">{errorDetail}</p>
@@ -625,7 +625,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       )}
 
       {/* Loading Overlay */}
-      {isLoading && (
+      {!isVisuallyHidden && isLoading && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm pointer-events-none">
           <div className="w-14 h-14 border-4 border-cyan-500/20 border-t-cyan-400 rounded-full animate-spin mb-4" />
           <p className="text-white text-sm font-semibold tracking-wide">Buffering Stream...</p>
@@ -634,7 +634,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       )}
 
       {/* Non-blocking stream status. A dead stream must not hide the TV OSD/options. */}
-      {errorMsg && (
+      {!isVisuallyHidden && errorMsg && (
         <div className="absolute inset-0 flex items-center justify-center p-6 text-center z-10 pointer-events-none">
           <div className="pointer-events-auto max-w-lg rounded-2xl border border-white/10 bg-black/60 backdrop-blur-xl px-5 py-4 shadow-2xl">
             <div className="flex items-center justify-center gap-2 text-rose-300 mb-1.5">
