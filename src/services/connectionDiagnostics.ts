@@ -283,8 +283,21 @@ export async function diagnoseXtreamConnection(
     const error = err as Error;
     const msg = sanitizeErrorMessage(error.message || 'Xtream authentication request failed');
 
-    if (/401|403/.test(msg)) {
-      return fail('authenticating', 'INVALID_CREDENTIALS', 'Xtream API rejected the supplied credentials.');
+    // Do not collapse HTTP 403 into "bad credentials". A provider can return
+    // 403 because of client/network/IP policy before Xtream authentication runs.
+    if (/403/.test(msg)) {
+      return fail(
+        'connecting',
+        'ACCESS_FORBIDDEN',
+        `Xtream server returned HTTP 403 before account verification. This is an access/client/network rejection, not proof that the username or password is wrong. ${msg}`
+      );
+    }
+    if (/401/.test(msg)) {
+      return fail(
+        'authenticating',
+        'INVALID_CREDENTIALS',
+        `Xtream server returned HTTP 401 during authentication. ${msg}`
+      );
     }
     if (/html|doctype|non-json|invalid json|json response/i.test(msg)) {
       return fail(
