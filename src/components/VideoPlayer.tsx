@@ -459,6 +459,10 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
   // Keyboard navigation & remote control
   useEffect(() => {
+    // The mounted player keeps playback alive while browsing, but it must not
+    // own keyboard/D-pad navigation while its fullscreen surface is hidden.
+    if (isVisuallyHidden) return;
+
     const handleKeyDown = (e: KeyboardEvent) => {
       resetControlsTimer();
       switch (e.key) {
@@ -469,8 +473,23 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
           setShowControls(true);
           break;
         case ' ':
+        case 'MediaPlayPause':
           e.preventDefault();
           togglePlay();
+          break;
+        case 'MediaPlay':
+          e.preventDefault();
+          videoRef.current?.play().catch(() => undefined);
+          break;
+        case 'MediaPause':
+          e.preventDefault();
+          videoRef.current?.pause();
+          break;
+        case 'x':
+        case 'X':
+        case 'MediaStop':
+          e.preventDefault();
+          onClose();
           break;
         case 'm':
         case 'M':
@@ -531,7 +550,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [target, allLiveStreams, onSelectLiveStream, onClose, onOpenGuide]);
+  }, [target, allLiveStreams, onSelectLiveStream, onClose, onOpenGuide, isVisuallyHidden]);
 
   // Controls auto-hide timer
   const resetControlsTimer = useCallback(() => {
@@ -561,7 +580,12 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     <div
       ref={containerRef}
       onMouseMove={handleMouseMove}
-      onClick={() => resetControlsTimer()}
+      onClick={(e) => {
+        resetControlsTimer();
+        const el = e.target as HTMLElement;
+        if (el.closest('button, input, select, a, [role="button"]')) return;
+        togglePlay();
+      }}
       className={`fixed inset-0 z-50 bg-black flex items-center justify-center select-none overflow-hidden font-sans ${isVisuallyHidden ? 'invisible pointer-events-none' : ''}`}
     >
       {/* Video Canvas */}
