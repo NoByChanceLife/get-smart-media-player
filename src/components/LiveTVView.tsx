@@ -41,6 +41,7 @@ export const LiveTVView: React.FC<LiveTVViewProps> = ({
   const [viewportHeight, setViewportHeight] = useState(560);
   const scrollerRef = useRef<HTMLDivElement | null>(null);
   const groupsRef = useRef<HTMLDivElement | null>(null);
+  const workspaceRef = useRef<HTMLElement | null>(null);
   const canAccess = parentalControlService.canAccessSection('live');
   const parentalSettings = parentalControlService.getSettings();
 
@@ -181,7 +182,74 @@ export const LiveTVView: React.FC<LiveTVViewProps> = ({
       groupsRef.current?.querySelectorAll<HTMLButtonElement>('button.live-group') ?? []
     );
     if (!groups.length) return;
-    groups[Math.min(groups.length - 1, Math.max(0, index))]?.focus();
+    const target = groups[Math.min(groups.length - 1, Math.max(0, index))];
+    target?.focus();
+    target?.scrollIntoView({ behavior: 'auto', block: 'nearest', inline: 'nearest' });
+  };
+
+  const focusAppRail = () => {
+    const activeRailItem =
+      document.querySelector<HTMLElement>('[data-tv-nav-item][aria-current="page"]') ||
+      document.querySelector<HTMLElement>('[data-tv-nav-item]');
+    activeRailItem?.focus();
+  };
+
+  const activeGroupIndex = () =>
+    quickFilter === 'favorites'
+      ? 1
+      : quickFilter === 'recent'
+      ? 2
+      : selectedCategoryId === 'all'
+      ? 0
+      : Math.max(
+          3,
+          visibleCategories
+            .filter((cat) => cat.category_id !== 'all')
+            .findIndex((cat) => cat.category_id === selectedCategoryId) + 3
+        );
+
+  const focusLiveCell = (rowIndex: number, column: number) => {
+    const safeRow = Math.min(filteredStreams.length - 1, Math.max(0, rowIndex));
+    if (safeRow < 0) return;
+    const scroller = scrollerRef.current;
+    if (scroller) {
+      const top = safeRow * ROW_HEIGHT;
+      const bottom = top + ROW_HEIGHT;
+      if (top < scroller.scrollTop) scroller.scrollTop = top;
+      else if (bottom > scroller.scrollTop + scroller.clientHeight) {
+        scroller.scrollTop = Math.max(0, bottom - scroller.clientHeight);
+      }
+    }
+    requestAnimationFrame(() => {
+      workspaceRef.current
+        ?.querySelector<HTMLElement>(`[data-live-row="${safeRow}"][data-live-col="${column}"]`)
+        ?.focus();
+    });
+  };
+
+  const handleCellKeyDown = (
+    e: React.KeyboardEvent<HTMLElement>,
+    rowIndex: number,
+    column: number
+  ) => {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      focusLiveCell(rowIndex + 1, column);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (rowIndex === 0) {
+        workspaceRef.current?.querySelector<HTMLElement>('[data-live-search]')?.focus();
+      } else {
+        focusLiveCell(rowIndex - 1, column);
+      }
+    } else if (e.key === 'ArrowRight') {
+      e.preventDefault();
+      focusLiveCell(rowIndex, Math.min(5, column + 1));
+    } else if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      if (column === 0) focusGroup(activeGroupIndex());
+      else focusLiveCell(rowIndex, column - 1);
+    }
   };
 
   const handleGroupKeyDown = (e: React.KeyboardEvent<HTMLButtonElement>, index: number) => {
@@ -193,14 +261,18 @@ export const LiveTVView: React.FC<LiveTVViewProps> = ({
       focusGroup(index - 1);
     } else if (e.key === 'ArrowRight') {
       e.preventDefault();
-      focusRow(
-        Math.max(0, filteredStreams.findIndex((stream) => String(stream.stream_id) === selectedStreamId))
+      focusLiveCell(
+        Math.max(0, filteredStreams.findIndex((stream) => String(stream.stream_id) === selectedStreamId)),
+        0
       );
+    } else if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      focusAppRail();
     }
   };
 
   return (
-    <section className="live-workspace -m-4 sm:-m-6 h-[calc(100vh-5.5rem)] min-h-[560px] overflow-hidden bg-[#05080e]">
+    <section ref={workspaceRef} className="live-workspace -m-4 sm:-m-6 h-[calc(100vh-5.5rem)] min-h-[560px] overflow-hidden bg-[#05080e]">
       <div className="h-full flex min-w-0">
         <aside className="hidden lg:flex w-52 xl:w-60 shrink-0 flex-col border-r border-slate-800/80 bg-[#080d16]">
           <div className="h-12 px-3 flex items-center gap-2 border-b border-slate-800/80">
@@ -228,7 +300,7 @@ export const LiveTVView: React.FC<LiveTVViewProps> = ({
         </aside>
 
         <div className="flex-1 min-w-0 flex flex-col">
-          <header className="h-12 shrink-0 flex items-center gap-2 px-2 sm:px-3 border-b border-slate-800/80 bg-[#070b13]">
+          <header className="h-14 shrink-0 flex items-center gap-3 px-3 sm:px-4 border-b border-slate-800/80 bg-[#070b13]">
             <select
               value={quickFilter === 'category' ? selectedCategoryId : quickFilter}
               onChange={(e) => {
@@ -243,9 +315,17 @@ export const LiveTVView: React.FC<LiveTVViewProps> = ({
               <option value="recent">Recent</option>
               {visibleCategories.filter((c) => c.category_id !== 'all').map((c) => <option key={c.category_id} value={c.category_id}>{c.category_name}</option>)}
             </select>
-            <div className="relative flex-1 max-w-md">
+            <div className="relative flex-1 max-w-xl">
               <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
-              <input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Search channels or programs" className="w-full h-8 bg-[#0b111d] border border-slate-800 rounded-lg pl-8 pr-3 text-xs text-white focus:outline-none focus:border-cyan-400" />
+              <input data-live-search value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onKeyDown={(e) => {
+                if (e.key === 'ArrowDown') {
+                  e.preventDefault();
+                  focusLiveCell(Math.max(0, filteredStreams.findIndex((stream) => String(stream.stream_id) === selectedStreamId)), 0);
+                } else if (e.key === 'ArrowLeft') {
+                  e.preventDefault();
+                  focusGroup(activeGroupIndex());
+                }
+              }} placeholder="Search channels or programs" className="tv-focus-target w-full h-9 bg-[#0b111d] border border-slate-800 rounded-xl pl-8 pr-3 text-xs text-white focus:outline-none focus:border-cyan-400" />
             </div>
             <span className="hidden sm:block text-[11px] text-slate-500 tabular-nums">{filteredStreams.length.toLocaleString()} channels</span>
           </header>
@@ -269,28 +349,11 @@ export const LiveTVView: React.FC<LiveTVViewProps> = ({
                   <div key={stream.stream_id} style={{ position: 'absolute', top: index * ROW_HEIGHT, left: 0, right: 0, height: ROW_HEIGHT }} className={`flex border-b border-slate-800/60 ${selected ? 'bg-cyan-950/30' : 'bg-[#070b12] hover:bg-[#0b121e]'}`}>
                     <button
                       data-live-row={index}
+                      data-live-col={0}
                       onFocus={() => setSelectedStreamId(String(stream.stream_id))}
                       onClick={() => setSelectedStreamId(String(stream.stream_id))}
                       onKeyDown={(e) => {
-                        if (e.key === 'ArrowDown') { e.preventDefault(); focusRow(index + 1); }
-                        if (e.key === 'ArrowUp') { e.preventDefault(); focusRow(index - 1); }
-                        if (e.key === 'ArrowLeft') {
-                          e.preventDefault();
-                          const activeGroupIndex =
-                            quickFilter === 'favorites'
-                              ? 1
-                              : quickFilter === 'recent'
-                              ? 2
-                              : selectedCategoryId === 'all'
-                              ? 0
-                              : Math.max(
-                                  3,
-                                  visibleCategories
-                                    .filter((cat) => cat.category_id !== 'all')
-                                    .findIndex((cat) => cat.category_id === selectedCategoryId) + 3
-                                );
-                          focusGroup(activeGroupIndex);
-                        }
+                        handleCellKeyDown(e, index, 0);
                         if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); play(stream); }
                       }}
                       className="w-48 sm:w-56 shrink-0 px-2 flex items-center gap-2 border-r border-slate-800 text-left tv-focus-target"
@@ -308,6 +371,16 @@ export const LiveTVView: React.FC<LiveTVViewProps> = ({
                         return (
                           <button
                             key={program?.id || programIndex}
+                            data-live-row={index}
+                            data-live-col={programIndex + 1}
+                            onFocus={() => setSelectedStreamId(String(stream.stream_id))}
+                            onKeyDown={(e) => {
+                              handleCellKeyDown(e, index, programIndex + 1);
+                              if ((e.key === 'Enter' || e.key === ' ') && programIndex === 0) {
+                                e.preventDefault();
+                                play(stream);
+                              }
+                            }}
                             onClick={() => {
                               setSelectedStreamId(String(stream.stream_id));
                               if (programIndex === 0) play(stream);
@@ -326,10 +399,10 @@ export const LiveTVView: React.FC<LiveTVViewProps> = ({
                     </div>
 
                     <div className="w-16 shrink-0 flex items-center justify-center gap-1 border-l border-slate-800/60">
-                      <button onClick={() => onToggleFavorite(stream.stream_id)} className="p-1.5 rounded-md text-slate-500 hover:text-amber-400 tv-focus-target" aria-label={`${stream.isFavorite ? 'Remove' : 'Add'} ${stream.name} favorite`}>
+                      <button data-live-row={index} data-live-col={4} onFocus={() => setSelectedStreamId(String(stream.stream_id))} onKeyDown={(e) => handleCellKeyDown(e, index, 4)} onClick={() => onToggleFavorite(stream.stream_id)} className="p-1.5 rounded-md text-slate-500 hover:text-amber-400 tv-focus-target" aria-label={`${stream.isFavorite ? 'Remove' : 'Add'} ${stream.name} favorite`}>
                         <Star className={`w-3.5 h-3.5 ${stream.isFavorite ? 'fill-amber-400 text-amber-400' : ''}`} />
                       </button>
-                      <button onClick={() => play(stream)} className="p-1.5 rounded-md bg-cyan-500 text-slate-950 tv-focus-target" aria-label={`Watch ${stream.name}`}>
+                      <button data-live-row={index} data-live-col={5} onFocus={() => setSelectedStreamId(String(stream.stream_id))} onKeyDown={(e) => { handleCellKeyDown(e, index, 5); if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); play(stream); } }} onClick={() => play(stream)} className="p-1.5 rounded-md bg-cyan-500 text-slate-950 tv-focus-target" aria-label={`Watch ${stream.name}`}>
                         <Play className="w-3.5 h-3.5 fill-current" />
                       </button>
                     </div>
