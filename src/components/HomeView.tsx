@@ -57,14 +57,24 @@ export const HomeView: React.FC<HomeViewProps> = ({
   const homeRef = useRef<HTMLDivElement | null>(null);
 
   const handleTVNavigation = (e: React.KeyboardEvent<HTMLDivElement>) => {
-    if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) return;
     const current = e.target as HTMLElement;
-    if (!current.matches('[data-tv-item]')) return;
+    const isActionable = current.matches('button:not([disabled]), [data-tv-item]');
+    if (!isActionable) return;
+
+    if ((e.key === 'Enter' || e.key === ' ') && current.matches('[data-tv-item]:not(button)')) {
+      e.preventDefault();
+      e.stopPropagation();
+      current.click();
+      return;
+    }
+
+    if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) return;
 
     const root = homeRef.current;
     if (!root) return;
-    const items = Array.from(root.querySelectorAll<HTMLElement>('[data-tv-item]'))
-      .filter((item) => item.offsetParent !== null);
+    const items = Array.from(
+      root.querySelectorAll<HTMLElement>('button:not([disabled]), [data-tv-item]')
+    ).filter((item) => item.offsetParent !== null);
     const currentRect = current.getBoundingClientRect();
     const cx = currentRect.left + currentRect.width / 2;
     const cy = currentRect.top + currentRect.height / 2;
@@ -224,7 +234,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
             </div>
             <button
               onClick={() => onNavigateTab('favorites')}
-              className="text-xs font-semibold text-cyan-400 hover:text-cyan-300 flex items-center gap-1 group"
+              data-tv-item className="text-xs font-semibold text-cyan-300 hover:text-white flex items-center gap-1 group px-3 py-2 rounded-xl border border-transparent tv-focus-target"
             >
               <span>View History</span>
               <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
@@ -235,6 +245,9 @@ export const HomeView: React.FC<HomeViewProps> = ({
             {continueWatching.slice(0, 5).map((item) => (
               <div
                 key={item.id}
+                data-tv-item
+                tabIndex={0}
+                role="button"
                 onClick={() => onPlayHistoryItem(item)}
                 data-tv-item tabIndex={0} className="group relative bg-[#0e1422] rounded-2xl border border-slate-800/80 hover:border-cyan-500/50 p-3 transition-all duration-200 cursor-pointer shadow-lg hover:shadow-cyan-950/40 tv-focus-target"
               >
@@ -296,7 +309,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
             </div>
             <button
               onClick={() => onNavigateTab('favorites')}
-              className="text-xs font-semibold text-cyan-400 hover:text-cyan-300 flex items-center gap-1 group"
+              data-tv-item className="text-xs font-semibold text-cyan-300 hover:text-white flex items-center gap-1 group px-3 py-2 rounded-xl border border-transparent tv-focus-target"
             >
               <span>View All</span>
               <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
@@ -307,6 +320,9 @@ export const HomeView: React.FC<HomeViewProps> = ({
             {favoriteChannels.slice(0, 6).map((stream) => (
               <div
                 key={stream.stream_id}
+                data-tv-item
+                tabIndex={0}
+                role="button"
                 onClick={() => {
                   if (parentalControlService.isChannelLocked(stream) && onPromptPinForStream) {
                     onPromptPinForStream(stream);
@@ -352,7 +368,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
             </div>
             <button
               onClick={() => onNavigateTab('live')}
-              className="text-xs font-semibold text-cyan-400 hover:text-cyan-300 flex items-center gap-1 group"
+              data-tv-item className="text-xs font-semibold text-cyan-300 hover:text-white flex items-center gap-1 group px-3 py-2 rounded-xl border border-transparent tv-focus-target"
             >
               <span>Channel Guide</span>
               <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
@@ -363,6 +379,9 @@ export const HomeView: React.FC<HomeViewProps> = ({
             {recentLiveStreams.slice(0, 4).map((stream) => (
               <div
                 key={stream.stream_id}
+                data-tv-item
+                tabIndex={0}
+                role="button"
                 onClick={() => {
                   if (parentalControlService.isChannelLocked(stream) && onPromptPinForStream) {
                     onPromptPinForStream(stream);
@@ -414,7 +433,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
             </div>
             <button
               onClick={() => onNavigateTab('movies')}
-              className="text-xs font-semibold text-cyan-400 hover:text-cyan-300 flex items-center gap-1 group"
+              data-tv-item className="text-xs font-semibold text-cyan-300 hover:text-white flex items-center gap-1 group px-3 py-2 rounded-xl border border-transparent tv-focus-target"
             >
               <span>View Movies</span>
               <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
@@ -427,6 +446,9 @@ export const HomeView: React.FC<HomeViewProps> = ({
               return (
                 <div
                   key={movie.stream_id}
+                  data-tv-item
+                  tabIndex={0}
+                  role="button"
                   onClick={() => {
                     if (isLocked && onPromptPinForMovie) {
                       onPromptPinForMovie(movie);
@@ -493,7 +515,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
             </div>
             <button
               onClick={() => onNavigateTab('series')}
-              className="text-xs font-semibold text-cyan-400 hover:text-cyan-300 flex items-center gap-1 group"
+              data-tv-item className="text-xs font-semibold text-cyan-300 hover:text-white flex items-center gap-1 group px-3 py-2 rounded-xl border border-transparent tv-focus-target"
             >
               <span>View Series</span>
               <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
@@ -504,6 +526,9 @@ export const HomeView: React.FC<HomeViewProps> = ({
             {recentSeries.map((series) => (
               <div
                 key={series.series_id}
+                data-tv-item
+                tabIndex={0}
+                role="button"
                 onClick={() => onNavigateTab('series')}
                 data-tv-item tabIndex={0} className="group relative bg-[#0e1422] rounded-2xl border border-slate-800/80 hover:border-cyan-500/50 overflow-hidden cursor-pointer transition shadow-md tv-focus-target"
               >
