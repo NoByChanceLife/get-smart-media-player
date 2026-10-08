@@ -43,37 +43,63 @@ export const SeriesView: React.FC<SeriesViewProps> = ({
   const seriesGridRef = useRef<HTMLDivElement | null>(null);
   const seriesViewRef = useRef<HTMLDivElement | null>(null);
 
-  const handleSeriesViewNavigation = (e: React.KeyboardEvent<HTMLDivElement>) => {
-    if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) return;
+  const focusTopBarFromMedia = () => {
+    const target = document.querySelector<HTMLElement>(
+      '[data-tv-topbar] .tv-focus-target, [data-tv-topbar] button:not([disabled]), [data-tv-topbar] select:not([disabled])'
+    );
+    target?.focus();
+  };
+
+  const focusZoneItem = (zone: string, preferredIndex = 0) => {
+    const root = seriesViewRef.current;
+    if (!root) return false;
+    const items = Array.from(
+      root.querySelectorAll<HTMLElement>(`[data-tv-zone="${zone}"]`)
+    ).filter((item) => item.offsetParent !== null);
+    if (!items.length) return false;
+    const target = items[Math.min(Math.max(preferredIndex, 0), items.length - 1)];
+    target.focus();
+    target.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+    return true;
+  };
+
+  const handleMediaViewNavigation = (e: React.KeyboardEvent<HTMLDivElement>) => {
     const current = e.target as HTMLElement;
     if (current.closest('[data-media-card]')) return;
+    const zone = current.dataset.tvZone;
+    if (!zone) return;
+
     const root = seriesViewRef.current;
     if (!root) return;
-    const items = Array.from(
-      root.querySelectorAll<HTMLElement>('[data-tv-control], button:not([disabled]), input:not([disabled])')
-    ).filter((item, index, all) => item.offsetParent !== null && all.indexOf(item) === index);
-    if (!items.includes(current)) return;
+    const zoneItems = Array.from(
+      root.querySelectorAll<HTMLElement>(`[data-tv-zone="${zone}"]`)
+    ).filter((item) => item.offsetParent !== null);
+    const index = zoneItems.indexOf(current);
 
-    const rect = current.getBoundingClientRect();
-    const cx = rect.left + rect.width / 2;
-    const cy = rect.top + rect.height / 2;
-    const candidates = items.filter((item) => item !== current).map((item) => {
-      const r = item.getBoundingClientRect();
-      const x = r.left + r.width / 2;
-      const y = r.top + r.height / 2;
-      const dx = x - cx;
-      const dy = y - cy;
-      const valid = e.key === 'ArrowRight' ? dx > 4 : e.key === 'ArrowLeft' ? dx < -4 : e.key === 'ArrowDown' ? dy > 4 : dy < -4;
-      const primary = e.key === 'ArrowLeft' || e.key === 'ArrowRight' ? Math.abs(dx) : Math.abs(dy);
-      const cross = e.key === 'ArrowLeft' || e.key === 'ArrowRight' ? Math.abs(dy) : Math.abs(dx);
-      return { item, valid, score: primary + cross * 2.5 };
-    }).filter((x) => x.valid).sort((a,b) => a.score-b.score);
-    const next = candidates[0]?.item;
-    if (next) {
+    if ((e.key === 'ArrowLeft' || e.key === 'ArrowRight') && zone !== 'search') {
+      const nextIndex = e.key === 'ArrowRight' ? index + 1 : index - 1;
+      if (nextIndex >= 0 && nextIndex < zoneItems.length) {
+        e.preventDefault();
+        e.stopPropagation();
+        zoneItems[nextIndex].focus();
+        zoneItems[nextIndex].scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+      }
+      return;
+    }
+
+    if (e.key === 'ArrowUp') {
       e.preventDefault();
       e.stopPropagation();
-      next.focus();
-      next.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+      if (zone === 'search') focusZoneItem('categories');
+      else if (zone === 'categories') focusTopBarFromMedia();
+      return;
+    }
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      e.stopPropagation();
+      if (zone === 'categories') focusZoneItem('search');
+      else if (zone === 'search') focusZoneItem('posters');
     }
   };
 
@@ -91,10 +117,8 @@ export const SeriesView: React.FC<SeriesViewProps> = ({
     else if (e.key === 'ArrowUp') {
       if (index < columns) {
         e.preventDefault();
-        const header = seriesViewRef.current?.querySelectorAll<HTMLElement>('[data-tv-control]');
-        const target = header && header.length ? header[Math.min(index, header.length - 1)] : null;
-        target?.focus();
-        target?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+        e.stopPropagation();
+        focusZoneItem('search');
         return;
       }
       next = Math.max(0, index - columns);
@@ -175,9 +199,9 @@ export const SeriesView: React.FC<SeriesViewProps> = ({
   const activeSeason = seasons.find((s) => s.season_num === activeSeasonNum) || seasons[0];
 
   return (
-    <div ref={seriesViewRef} onKeyDownCapture={handleSeriesViewNavigation} className="flex flex-col h-full space-y-6 animate-in fade-in duration-200">
+    <div ref={seriesViewRef} onKeyDownCapture={handleMediaViewNavigation} className="flex flex-col h-full space-y-6 animate-in fade-in duration-200">
       {/* Categories & Search Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+      <div className="flex flex-col gap-3">
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
           {visibleCategories.map((cat) => {
             const isSelected = selectedCategoryId === cat.category_id;
@@ -186,8 +210,7 @@ export const SeriesView: React.FC<SeriesViewProps> = ({
             return (
               <button
                 key={cat.category_id}
-                data-tv-control
-                data-media-navigation
+                data-tv-zone="categories"
                 onClick={() => onSelectCategory(cat.category_id)}
                 className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition tv-focus-target ${
                   isSelected
@@ -202,12 +225,11 @@ export const SeriesView: React.FC<SeriesViewProps> = ({
           })}
         </div>
 
-        <div className="relative w-full md:w-64 shrink-0">
+        <div className="relative w-full max-w-md shrink-0">
           <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
             type="text"
-            data-tv-control
-            data-media-navigation
+            data-tv-zone="categories"
             placeholder="Search TV series..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -225,6 +247,7 @@ export const SeriesView: React.FC<SeriesViewProps> = ({
             <div
               key={series.series_id}
               data-media-card
+              data-tv-zone="posters"
               tabIndex={0}
               role="button"
               aria-label={`Open ${series.name}`}
