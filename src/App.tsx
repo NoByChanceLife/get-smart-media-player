@@ -621,6 +621,11 @@ export default function App() {
           allLiveStreams={liveStreams}
           onSelectLiveStream={handlePlayLiveStream}
           onOpenPerformanceSettings={() => setIsPerformanceModalOpen(true)}
+          onOpenGuide={() => {
+            setPlaybackTarget(null);
+            setSecondaryPlaybackTarget(null);
+            setCurrentTab('live');
+          }}
         />
       )}
 
