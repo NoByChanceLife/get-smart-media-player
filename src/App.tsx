@@ -77,6 +77,20 @@ export default function App() {
 
   const mainContentRef = useRef<HTMLDivElement | null>(null);
 
+  const focusFirstContentControl = useCallback(() => {
+    const first = mainContentRef.current?.querySelector<HTMLElement>(
+      '.tv-focus-target, button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), [tabindex="0"]'
+    );
+    first?.focus();
+  }, []);
+
+  const focusNavigationRail = useCallback(() => {
+    const first = document.querySelector<HTMLElement>(
+      '[aria-label="Main Navigation"] .tv-focus-target, [aria-label="Main Navigation"] button:not([disabled])'
+    );
+    first?.focus();
+  }, []);
+
   // Load all IPTV data across active servers
   const loadData = useCallback(async () => {
     setIsLoadingData(true);
@@ -312,6 +326,38 @@ export default function App() {
       }
 
       if (!playbackTarget || isFloatingPiP) {
+        const target = e.target as HTMLElement;
+        const focusIsOnPage =
+          target === document.body ||
+          target === document.documentElement ||
+          target === mainContentRef.current;
+
+        // TV/remote entry behavior: prevent the browser from treating arrows as
+        // page-scroll keys when no application control currently owns focus.
+        if (focusIsOnPage && ['ArrowUp', 'ArrowDown', 'ArrowRight'].includes(e.key)) {
+          e.preventDefault();
+          focusFirstContentControl();
+          return;
+        }
+
+        if (focusIsOnPage && e.key === 'ArrowLeft') {
+          e.preventDefault();
+          focusNavigationRail();
+          return;
+        }
+
+        // From any control in the main content, Left provides a predictable
+        // escape path to the application navigation rail.
+        if (
+          e.key === 'ArrowLeft' &&
+          mainContentRef.current?.contains(target) &&
+          !target.closest('input, textarea, select')
+        ) {
+          e.preventDefault();
+          focusNavigationRail();
+          return;
+        }
+
         switch (e.key) {
           case '1':
             setCurrentTab('home');
@@ -363,6 +409,8 @@ export default function App() {
     isParentalControlsOpen,
     isProfileSwitcherOpen,
     pinPromptState.isOpen,
+    focusFirstContentControl,
+    focusNavigationRail,
   ]);
 
   return (
@@ -379,9 +427,7 @@ export default function App() {
         onOpenPlaybackSettings={() => setIsPerformanceModalOpen(true)}
         isExpanded={isRailExpanded}
         onToggleExpanded={() => setIsRailExpanded(!isRailExpanded)}
-        onFocusContent={() => {
-          mainContentRef.current?.focus();
-        }}
+        onFocusContent={focusFirstContentControl}
       />
 
       {/* Main Layout Container */}
