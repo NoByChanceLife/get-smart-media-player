@@ -431,6 +431,12 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     const handleKeyDown = (e: KeyboardEvent) => {
       resetControlsTimer();
       switch (e.key) {
+        case 'Enter':
+          // TV remote OK: reveal the lightweight player OSD even when the
+          // stream is unavailable. Playback state must never hide controls.
+          e.preventDefault();
+          setShowControls(true);
+          break;
         case ' ':
           e.preventDefault();
           togglePlay();
@@ -552,33 +558,36 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         </div>
       )}
 
-      {/* Error Overlay */}
+      {/* Non-blocking stream status. A dead stream must not hide the TV OSD/options. */}
       {errorMsg && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/90 p-6 text-center z-30">
-          <div className="w-16 h-16 rounded-2xl bg-rose-500/10 border border-rose-500/30 flex items-center justify-center mb-4 text-rose-400">
-            <Radio className="w-8 h-8 animate-pulse" />
-          </div>
-          <h3 className="text-lg font-bold text-white mb-2">Stream Error</h3>
-          <p className="text-sm text-slate-300 max-w-md mb-6">{errorMsg}</p>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => {
-                setErrorMsg(null);
-                setIsLoading(true);
-                const v = videoRef.current;
-                if (v) v.load();
-              }}
-              className="px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-xl text-xs font-semibold flex items-center gap-2"
-            >
-              <RotateCw className="w-4 h-4" />
-              <span>Retry Stream</span>
-            </button>
-            <button
-              onClick={onClose}
-              className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-medium"
-            >
-              Back to Guide
-            </button>
+        <div className="absolute inset-0 flex items-center justify-center p-6 text-center z-10 pointer-events-none">
+          <div className="pointer-events-auto max-w-lg rounded-2xl border border-white/10 bg-black/60 backdrop-blur-xl px-5 py-4 shadow-2xl">
+            <div className="flex items-center justify-center gap-2 text-rose-300 mb-1.5">
+              <Radio className="w-4 h-4" />
+              <h3 className="text-sm font-bold text-white">Stream unavailable</h3>
+            </div>
+            <p className="text-xs text-slate-300 max-w-md">{errorMsg}</p>
+            <div className="mt-3 flex items-center justify-center gap-2">
+              <button
+                onClick={() => {
+                  setErrorMsg(null);
+                  setIsLoading(true);
+                  const v = videoRef.current;
+                  if (v) v.load();
+                }}
+                className="tv-focus-target px-3 py-2 bg-white/10 hover:bg-white/15 border border-white/10 text-white rounded-xl text-xs font-semibold flex items-center gap-2"
+              >
+                <RotateCw className="w-3.5 h-3.5" />
+                <span>Retry</span>
+              </button>
+              <button
+                onClick={onClose}
+                className="tv-focus-target px-3 py-2 bg-white/10 hover:bg-white/15 border border-white/10 text-slate-200 rounded-xl text-xs font-medium"
+              >
+                Guide
+              </button>
+            </div>
+            <p className="mt-2 text-[10px] text-slate-500">Press OK for player controls</p>
           </div>
         </div>
       )}
