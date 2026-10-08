@@ -73,44 +73,61 @@ export const SeriesView: React.FC<SeriesViewProps> = ({
   const handleMediaViewNavigation = (e: React.KeyboardEvent<HTMLDivElement>) => {
     const current = e.target as HTMLElement;
     if (current.closest('[data-media-card]')) return;
-    const zone = current.dataset.tvZone;
-    if (!zone) return;
+    if (!current.matches('button:not([disabled]), input:not([disabled]), [data-tv-zone]')) return;
 
+    if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) return;
     const root = seriesViewRef.current;
     if (!root) return;
-    const zoneItems = Array.from(
-      root.querySelectorAll<HTMLElement>(`[data-tv-zone="${zone}"]`)
-    ).filter((item) => item.offsetParent !== null);
-    const index = zoneItems.indexOf(current);
 
-    if ((e.key === 'ArrowLeft' || e.key === 'ArrowRight') && zone !== 'search') {
-      const nextIndex = e.key === 'ArrowRight' ? index + 1 : index - 1;
-      if (nextIndex >= 0 && nextIndex < zoneItems.length) {
-        e.preventDefault();
-        e.stopPropagation();
-        zoneItems[nextIndex].focus();
-        zoneItems[nextIndex].scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
-      } else if (e.key === 'ArrowLeft' && index === 0) {
-        e.preventDefault();
-        e.stopPropagation();
-        focusNavigationRailFromMedia();
-      }
+    const items = Array.from(
+      root.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), input:not([disabled]), [data-tv-zone], [data-media-card]'
+      )
+    ).filter((item, index, all) => item.offsetParent !== null && all.indexOf(item) === index);
+
+    const currentRect = current.getBoundingClientRect();
+    const cx = currentRect.left + currentRect.width / 2;
+    const cy = currentRect.top + currentRect.height / 2;
+    const candidates = items
+      .filter((item) => item !== current)
+      .map((item) => {
+        const rect = item.getBoundingClientRect();
+        const x = rect.left + rect.width / 2;
+        const y = rect.top + rect.height / 2;
+        const dx = x - cx;
+        const dy = y - cy;
+        const valid =
+          (e.key === 'ArrowRight' && dx > 8) ||
+          (e.key === 'ArrowLeft' && dx < -8) ||
+          (e.key === 'ArrowDown' && dy > 8) ||
+          (e.key === 'ArrowUp' && dy < -8);
+        if (!valid) return null;
+        const primary = e.key === 'ArrowLeft' || e.key === 'ArrowRight' ? Math.abs(dx) : Math.abs(dy);
+        const cross = e.key === 'ArrowLeft' || e.key === 'ArrowRight' ? Math.abs(dy) : Math.abs(dx);
+        return { item, score: primary + cross * 3 };
+      })
+      .filter((candidate): candidate is { item: HTMLElement; score: number } => Boolean(candidate))
+      .sort((a, b) => a.score - b.score);
+
+    const next = candidates[0]?.item;
+    if (next) {
+      e.preventDefault();
+      e.stopPropagation();
+      next.focus();
+      next.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
       return;
     }
 
+    if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      e.stopPropagation();
+      focusNavigationRailFromMedia();
+      return;
+    }
     if (e.key === 'ArrowUp') {
       e.preventDefault();
       e.stopPropagation();
-      if (zone === 'search') focusZoneItem('categories');
-      else if (zone === 'categories') focusTopBarFromMedia();
-      return;
-    }
-
-    if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      e.stopPropagation();
-      if (zone === 'categories') focusZoneItem('search');
-      else if (zone === 'search') focusZoneItem('posters');
+      focusTopBarFromMedia();
     }
   };
 
@@ -132,9 +149,29 @@ export const SeriesView: React.FC<SeriesViewProps> = ({
     else if (e.key === 'ArrowDown') next = Math.min(cards.length - 1, index + columns);
     else if (e.key === 'ArrowUp') {
       if (index < columns) {
-        e.preventDefault();
-        e.stopPropagation();
-        focusZoneItem('search');
+        const root = seriesViewRef.current;
+        const candidates = Array.from(
+          root?.querySelectorAll<HTMLElement>('button:not([disabled]), input:not([disabled]), [data-tv-zone]:not([data-media-card])') ?? []
+        ).filter((item) => item.offsetParent !== null);
+        const cardRect = cards[index].getBoundingClientRect();
+        const cx = cardRect.left + cardRect.width / 2;
+        const above = candidates
+          .map((item) => {
+            const rect = item.getBoundingClientRect();
+            const x = rect.left + rect.width / 2;
+            const y = rect.top + rect.height / 2;
+            const dy = cardRect.top - y;
+            if (dy <= 0) return null;
+            return { item, score: dy + Math.abs(x - cx) * 3 };
+          })
+          .filter((candidate): candidate is { item: HTMLElement; score: number } => Boolean(candidate))
+          .sort((a, b) => a.score - b.score)[0]?.item;
+        if (above) {
+          e.preventDefault();
+          e.stopPropagation();
+          above.focus();
+          above.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+        }
         return;
       }
       next = Math.max(0, index - columns);
