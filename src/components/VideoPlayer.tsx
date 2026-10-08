@@ -17,6 +17,9 @@ import {
   Sliders,
   Sparkles,
   Radio,
+  Square,
+  Home,
+  Gauge,
 } from 'lucide-react';
 import { PlaybackTarget, XtreamLiveStream, XtreamEPGProgramme } from '../types/xtream';
 import { xtreamService } from '../services/xtreamClient';
@@ -29,6 +32,7 @@ import { Activity, CheckCircle } from 'lucide-react';
 interface VideoPlayerProps {
   target: PlaybackTarget;
   onClose: () => void;
+  onStop: () => void;
   onMinimizeToPiP?: () => void;
   onLaunchDualPiP?: (secondTarget: PlaybackTarget) => void;
   allLiveStreams?: XtreamLiveStream[];
@@ -41,6 +45,7 @@ interface VideoPlayerProps {
 export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   target,
   onClose,
+  onStop,
   onMinimizeToPiP,
   onLaunchDualPiP,
   allLiveStreams = [],
@@ -73,10 +78,12 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   // listener must never participate in stream initialization or HLS teardown.
   const isVisuallyHiddenRef = useRef(isVisuallyHidden);
   const onCloseRef = useRef(onClose);
+  const onStopRef = useRef(onStop);
   const onOpenGuideRef = useRef(onOpenGuide);
 
   useEffect(() => { isVisuallyHiddenRef.current = isVisuallyHidden; }, [isVisuallyHidden]);
   useEffect(() => { onCloseRef.current = onClose; }, [onClose]);
+  useEffect(() => { onStopRef.current = onStop; }, [onStop]);
   useEffect(() => { onOpenGuideRef.current = onOpenGuide; }, [onOpenGuide]);
 
   // Derive title and current info
@@ -515,7 +522,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         case 'X':
         case 'MediaStop':
           e.preventDefault();
-          onCloseRef.current();
+          onStopRef.current();
           break;
         case 'm':
         case 'M':
@@ -858,6 +865,24 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
               {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5 ml-0.5 fill-white" />}
             </button>
 
+            <button
+              onClick={onStop}
+              className="tv-focus-target h-10 px-3 rounded-xl bg-rose-500/18 hover:bg-rose-500/32 border border-rose-400/35 text-rose-100 flex items-center gap-2 justify-center transition active:scale-95"
+              title="Stop playback (X / Media Stop)"
+            >
+              <Square className="w-4 h-4 fill-current" />
+              <span className="hidden sm:inline text-xs font-bold">Stop</span>
+            </button>
+
+            <button
+              onClick={onClose}
+              className="tv-focus-target h-10 px-3 rounded-xl bg-white/10 hover:bg-white/20 border border-white/10 text-white flex items-center gap-2 justify-center transition active:scale-95"
+              title="Home / browse while playback continues"
+            >
+              <Home className="w-4 h-4" />
+              <span className="hidden sm:inline text-xs font-semibold">Home</span>
+            </button>
+
             {/* Quick Zap buttons for Live TV */}
             {target.type === 'live' && allLiveStreams.length > 0 && onSelectLiveStream && (
               <div className="flex items-center gap-1">
@@ -909,7 +934,9 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
           {target.type === 'live' ? (
             <div className="hidden sm:flex items-center gap-4 text-[11px] text-white/60">
-              <span><span className="text-white/90 font-semibold">OK</span> Options</span>
+              <span><span className="text-white/90 font-semibold">OK</span> Controls</span>
+              <span><span className="text-white/90 font-semibold">Space</span> Play/Pause</span>
+              <span><span className="text-white/90 font-semibold">X</span> Stop</span>
               <span><span className="text-white/90 font-semibold">↑ ↓</span> Channels</span>
               <span><span className="text-white/90 font-semibold">←</span> Guide</span>
             </div>
