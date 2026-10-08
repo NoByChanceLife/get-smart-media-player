@@ -323,7 +323,16 @@ app.post('/api/xtream/stream-ticket', async (req: Request, res: Response) => {
   if (!streamUrl) return res.status(400).json({ error: 'Missing stream URL' });
 
   try {
-    await validateTargetUrl(streamUrl);
+    const validation = await validateTargetUrl(streamUrl);
+    if (!validation.isValid) {
+      const validationError = new Error(`SSRF Security check failed: ${validation.error || 'Stream URL is not allowed.'}`);
+      const classified = classifyNetworkError(validationError);
+      return res.status(403).json({
+        error: classified.message,
+        errorType: classified.type,
+      });
+    }
+
     const ticket = createStreamTicket(streamUrl);
     return res.json({
       streamPath: `/api/xtream/stream/${ticket}`,
