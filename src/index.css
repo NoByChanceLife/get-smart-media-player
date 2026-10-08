@@ -163,40 +163,52 @@
 }
 
 
-/* Watching mode: preserve the normal Home information architecture while
-   letting the active video remain the dominant visual layer underneath it. */
+/* Watching mode: video is the dominant layer. Navigation remains legible,
+   but broad opaque surfaces disappear until the user focuses an action. */
 .watching-glass-home {
-  text-shadow: 0 1px 3px rgba(0, 0, 0, .92);
+  text-shadow: 0 2px 5px rgba(0, 0, 0, .96);
 }
 .watching-glass-home section {
-  background-color: rgba(3, 8, 16, .14) !important;
+  background: transparent !important;
+  background-color: transparent !important;
   box-shadow: none !important;
-  border-color: rgba(148, 163, 184, .14) !important;
+  border-color: transparent !important;
 }
 .watching-glass-home section:first-of-type {
-  background: linear-gradient(90deg, rgba(2, 6, 13, .58) 0%, rgba(2, 6, 13, .24) 48%, rgba(2, 6, 13, .04) 78%, transparent 100%) !important;
-  backdrop-filter: blur(1.5px);
+  background: linear-gradient(90deg, rgba(2, 6, 13, .34) 0%, rgba(2, 6, 13, .10) 45%, transparent 78%) !important;
+  border-color: rgba(148, 163, 184, .08) !important;
+  backdrop-filter: none;
 }
 .watching-glass-home [data-tv-item] {
-  background-color: rgba(5, 11, 21, .34) !important;
-  border-color: rgba(148, 163, 184, .18) !important;
-  box-shadow: 0 8px 26px rgba(0, 0, 0, .14) !important;
-  backdrop-filter: blur(3px);
+  background: rgba(3, 8, 16, .18) !important;
+  background-color: rgba(3, 8, 16, .18) !important;
+  border-color: rgba(226, 232, 240, .12) !important;
+  box-shadow: none !important;
+  backdrop-filter: blur(1.5px);
 }
 .watching-glass-home [data-tv-item]:hover {
-  background-color: rgba(8, 18, 32, .56) !important;
+  background: rgba(3, 10, 20, .32) !important;
 }
 .watching-glass-home [data-tv-item]:focus,
 .watching-glass-home [data-tv-item]:focus-visible {
-  background-color: rgba(3, 105, 161, .52) !important;
+  background: rgba(3, 105, 161, .64) !important;
   border-color: #67e8f9 !important;
   box-shadow:
     0 0 0 3px #22d3ee,
     0 0 0 6px rgba(34, 211, 238, .18),
-    0 12px 34px rgba(0, 0, 0, .28) !important;
+    0 14px 38px rgba(0, 0, 0, .34) !important;
   backdrop-filter: blur(8px);
 }
 .watching-glass-home [class*="bg-slate-9"],
 .watching-glass-home [class*="bg-[#0e1422]"] {
-  background-color: rgba(4, 10, 19, .30) !important;
+  background: rgba(3, 8, 16, .16) !important;
+  background-color: rgba(3, 8, 16, .16) !important;
+}
+.watching-glass-home img {
+  opacity: .78;
+}
+.watching-glass-home [data-tv-item]:focus img,
+.watching-glass-home [data-tv-item]:focus-visible img,
+.watching-glass-home [data-tv-item]:hover img {
+  opacity: 1;
 }
