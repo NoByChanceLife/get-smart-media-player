@@ -53,6 +53,26 @@ export const TVNavigationRail: React.FC<TVNavigationRailProps> = ({
   const [hovered, setHovered] = useState(false);
   const railRef = useRef<HTMLDivElement | null>(null);
 
+  const getFocusableItems = () =>
+    Array.from(
+      railRef.current?.querySelectorAll<HTMLElement>('button:not([disabled]), [tabindex="0"]') ?? []
+    ).filter((element) => element.offsetParent !== null);
+
+  const focusRelativeItem = (direction: 1 | -1) => {
+    const items = getFocusableItems();
+    if (!items.length) return;
+
+    const currentIndex = items.indexOf(document.activeElement as HTMLElement);
+    const nextIndex =
+      currentIndex < 0
+        ? direction > 0
+          ? 0
+          : items.length - 1
+        : Math.min(items.length - 1, Math.max(0, currentIndex + direction));
+
+    items[nextIndex]?.focus();
+  };
+
   const effectiveExpanded = isExpanded || hovered;
 
   const primaryNavItems: Array<{
@@ -69,8 +89,22 @@ export const TVNavigationRail: React.FC<TVNavigationRailProps> = ({
     { id: 'search', label: 'Search', icon: <Search className="w-5 h-5 shrink-0" />, keyHint: '/' },
   ];
 
-  // Remote key navigation: pressing Right when on the rail moves focus to the main content
+  // Deterministic TV/keyboard navigation inside the rail.
+  // Up/Down moves one visible action at a time. Right returns to the current
+  // page content. Enter/Space remain native button activation.
   const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      focusRelativeItem(1);
+      return;
+    }
+
+    if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      focusRelativeItem(-1);
+      return;
+    }
+
     if (e.key === 'ArrowRight' && onFocusContent) {
       e.preventDefault();
       onFocusContent();
