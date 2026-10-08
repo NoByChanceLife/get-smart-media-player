@@ -23,6 +23,7 @@ export const WatchingGuideOverlay: React.FC<WatchingGuideOverlayProps> = ({
   const [focusedStreamId, setFocusedStreamId] = useState<string>(String(currentStream.stream_id));
   const rowRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const groupRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+  const homeButtonRef = useRef<HTMLButtonElement | null>(null);
   const closeButtonRef = useRef<HTMLButtonElement | null>(null);
 
   const groups = useMemo(() => [
@@ -107,7 +108,7 @@ export const WatchingGuideOverlay: React.FC<WatchingGuideOverlayProps> = ({
       activeGroup?.scrollIntoView({ block: 'nearest' });
     } else if (event.key === 'ArrowRight') {
       event.preventDefault();
-      closeButtonRef.current?.focus();
+      homeButtonRef.current?.focus();
     } else if (event.key === 'Escape' || event.key === 'Backspace') {
       event.preventDefault();
       onClose();
@@ -163,7 +164,18 @@ export const WatchingGuideOverlay: React.FC<WatchingGuideOverlayProps> = ({
             </div>
             <div className="flex items-center gap-2">
             <button
+              ref={homeButtonRef}
               onClick={onOpenAppNavigation}
+              onKeyDown={(event) => {
+                if (event.key === 'ArrowRight') {
+                  event.preventDefault();
+                  closeButtonRef.current?.focus();
+                } else if (event.key === 'ArrowLeft' || event.key === 'ArrowDown') {
+                  event.preventDefault();
+                  const currentIndex = Math.max(0, visibleStreams.findIndex((stream) => String(stream.stream_id) === focusedStreamId));
+                  focusStream(currentIndex);
+                }
+              }}
               className="tv-focus-target flex items-center gap-2 rounded-xl border border-white/15 bg-black/30 px-3 py-2 text-xs font-semibold text-white hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-cyan-400/95"
             >
               <Home className="w-3.5 h-3.5" /> Home
