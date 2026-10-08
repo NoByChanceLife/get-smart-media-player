@@ -88,12 +88,33 @@ app.use('/api', (req, res, next) => {
   const origin = req.headers.origin;
 
   if (origin) {
-    if (!isAllowedOrigin(origin)) {
+    // Browser POST/fetch requests can include an Origin header even when they
+    // are same-origin. Production previously treated every Origin header as
+    // cross-origin unless it appeared in CORS_ALLOWED_ORIGINS, which could
+    // block Get Smart's own stream-ticket requests on Cloud Run.
+    let isSameOrigin = false;
+    try {
+      const parsedOrigin = new URL(origin);
+      const forwardedHost = (req.headers['x-forwarded-host'] as string | undefined)?.split(',')[0]?.trim();
+      const requestHost = forwardedHost || req.headers.host || '';
+      const forwardedProto = (req.headers['x-forwarded-proto'] as string | undefined)?.split(',')[0]?.trim();
+      const requestProto = forwardedProto || req.protocol;
+      isSameOrigin =
+        parsedOrigin.host.toLowerCase() === requestHost.toLowerCase() &&
+        parsedOrigin.protocol.replace(':', '') === requestProto;
+    } catch {
+      isSameOrigin = false;
+    }
+
+    if (!isSameOrigin && !isAllowedOrigin(origin)) {
       return res.status(403).json({ error: 'Cross-origin API request is not allowed.' });
     }
 
-    res.header('Access-Control-Allow-Origin', origin);
-    res.header('Vary', 'Origin');
+    // CORS headers are only needed for an explicitly allowed cross-origin caller.
+    if (!isSameOrigin) {
+      res.header('Access-Control-Allow-Origin', origin);
+      res.header('Vary', 'Origin');
+    }
   }
 
   res.header('Access-Control-Allow-Methods', 'GET, POST, HEAD, OPTIONS');
