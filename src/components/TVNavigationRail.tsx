@@ -117,7 +117,7 @@ export const TVNavigationRail: React.FC<TVNavigationRailProps> = ({
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       onKeyDown={handleKeyDown}
-      className={`hidden md:flex flex-col justify-between fixed top-0 left-0 bottom-0 z-50 bg-[#070b13]/95 backdrop-blur-2xl border-r border-slate-800/80 transition-all duration-300 ease-out select-none shadow-2xl ${
+      className={`hidden md:flex flex-col justify-between fixed top-0 left-0 bottom-0 z-[70] bg-[#070b13]/95 backdrop-blur-2xl border-r border-slate-800/80 transition-all duration-300 ease-out select-none shadow-2xl ${
         effectiveExpanded ? 'w-64' : 'w-[74px]'
       }`}
       aria-label="Main Navigation"
