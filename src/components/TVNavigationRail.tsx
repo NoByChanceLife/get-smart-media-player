@@ -76,6 +76,8 @@ export const TVNavigationRail: React.FC<TVNavigationRailProps> = ({
     next?.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'auto' });
   };
 
+  // Remote focus owns the temporary expanded state. A click/OK may change the
+  // selected route, but the rail stays expanded until focus actually leaves it.
   const effectiveExpanded = isExpanded || hovered || focusWithin;
 
   const primaryNavItems: Array<{
@@ -136,7 +138,10 @@ export const TVNavigationRail: React.FC<TVNavigationRailProps> = ({
       onFocusCapture={() => setFocusWithin(true)}
       onBlurCapture={(e) => {
         const next = e.relatedTarget as Node | null;
-        if (!next || !railRef.current?.contains(next)) setFocusWithin(false);
+        // Android TV WebView may report relatedTarget as null while React is
+        // re-rendering after OK/select. Do not collapse the rail in that case;
+        // only collapse once focus is positively known to have moved outside.
+        if (next && !railRef.current?.contains(next)) setFocusWithin(false);
       }}
       onKeyDown={handleKeyDown}
       className={`hidden md:flex flex-col justify-between fixed top-0 left-0 bottom-0 z-[70] bg-[#070b13]/95 backdrop-blur-2xl border-r border-slate-800/80 transition-all duration-300 ease-out select-none shadow-2xl ${
