@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   Star,
   Clock,
@@ -34,6 +34,7 @@ export const FavoritesView: React.FC<FavoritesViewProps> = ({
   onPlayHistoryItem,
   onToggleFavorite,
 }) => {
+  const viewRef = useRef<HTMLDivElement | null>(null);
   const [activeTab, setActiveTab] = useState<'favorites' | 'history'>('favorites');
   const [historyItems, setHistoryItems] = useState<WatchHistoryItem[]>(() => xtreamService.getHistory());
 
@@ -48,12 +49,67 @@ export const FavoritesView: React.FC<FavoritesViewProps> = ({
     setHistoryItems([]);
   };
 
+  const handleTVNavigation = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    const current = e.target as HTMLElement;
+    if (!current.matches('[data-tv-item]')) return;
+
+    if ((e.key === 'Enter' || e.key === ' ') && !current.matches('button')) {
+      e.preventDefault();
+      current.click();
+      return;
+    }
+
+    if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) return;
+    const root = viewRef.current;
+    if (!root) return;
+
+    const items = Array.from(root.querySelectorAll<HTMLElement>('[data-tv-item]'))
+      .filter((item) => item.offsetParent !== null);
+    const rect = current.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    const horizontal = e.key === 'ArrowLeft' || e.key === 'ArrowRight';
+
+    const next = items
+      .filter((item) => item !== current)
+      .map((item) => {
+        const r = item.getBoundingClientRect();
+        const dx = r.left + r.width / 2 - cx;
+        const dy = r.top + r.height / 2 - cy;
+        const valid =
+          (e.key === 'ArrowRight' && dx > 8) ||
+          (e.key === 'ArrowLeft' && dx < -8) ||
+          (e.key === 'ArrowDown' && dy > 8) ||
+          (e.key === 'ArrowUp' && dy < -8);
+        if (!valid) return null;
+        return { item, score: (horizontal ? Math.abs(dx) : Math.abs(dy)) + (horizontal ? Math.abs(dy) : Math.abs(dx)) * 3 };
+      })
+      .filter((entry): entry is { item: HTMLElement; score: number } => Boolean(entry))
+      .sort((a, b) => a.score - b.score)[0]?.item;
+
+    if (next) {
+      e.preventDefault();
+      next.focus({ preventScroll: true });
+      next.scrollIntoView({ behavior: 'auto', block: 'nearest', inline: 'nearest' });
+      return;
+    }
+
+    if (e.key === 'ArrowLeft') {
+      const rail = document.querySelector<HTMLElement>('[data-tv-nav-item][aria-current="page"]');
+      if (rail) {
+        e.preventDefault();
+        rail.focus({ preventScroll: true });
+      }
+    }
+  };
+
   return (
-    <div className="flex flex-col h-full space-y-6">
+    <div ref={viewRef} onKeyDownCapture={handleTVNavigation} className="flex flex-col h-full space-y-6">
       {/* Sub-Tabs: Favorites vs History */}
       <div className="flex items-center justify-between">
         <div className="flex items-center p-1 bg-slate-900 border border-slate-800 rounded-2xl">
           <button
+            data-tv-item
             onClick={() => setActiveTab('favorites')}
             className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition ${
               activeTab === 'favorites'
@@ -65,6 +121,7 @@ export const FavoritesView: React.FC<FavoritesViewProps> = ({
             <span>Favorites ({totalFavorites})</span>
           </button>
           <button
+            data-tv-item
             onClick={() => {
               setActiveTab('history');
               setHistoryItems(xtreamService.getHistory());
@@ -82,6 +139,7 @@ export const FavoritesView: React.FC<FavoritesViewProps> = ({
 
         {activeTab === 'history' && historyItems.length > 0 && (
           <button
+            data-tv-item
             onClick={handleClearHistory}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs text-rose-400 hover:bg-rose-500/10 border border-rose-500/20 transition"
           >
@@ -113,6 +171,7 @@ export const FavoritesView: React.FC<FavoritesViewProps> = ({
                   {favoriteLive.map((stream) => (
                     <div
                       key={stream.stream_id}
+                      data-tv-item tabIndex={0} role="button"
                       onClick={() => onPlayLiveStream(stream)}
                       className="group bg-slate-900/80 hover:bg-slate-850 border border-slate-800/80 hover:border-cyan-500/50 rounded-2xl p-3 flex flex-col justify-between cursor-pointer transition"
                     >
@@ -150,6 +209,7 @@ export const FavoritesView: React.FC<FavoritesViewProps> = ({
                   {favoriteMovies.map((movie) => (
                     <div
                       key={movie.stream_id}
+                      data-tv-item tabIndex={0} role="button"
                       onClick={() => onPlayMovie(movie)}
                       className="group bg-slate-900/80 hover:bg-slate-850 border border-slate-800/80 hover:border-cyan-500/50 rounded-2xl overflow-hidden cursor-pointer transition flex flex-col"
                     >
@@ -190,6 +250,7 @@ export const FavoritesView: React.FC<FavoritesViewProps> = ({
             {historyItems.map((item) => (
               <div
                 key={item.id}
+                data-tv-item tabIndex={0} role="button"
                 onClick={() => onPlayHistoryItem(item)}
                 className="group bg-slate-900/70 hover:bg-slate-850 border border-slate-800 hover:border-cyan-500/40 rounded-2xl p-3 sm:px-4 flex items-center justify-between cursor-pointer transition"
               >
