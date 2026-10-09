@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import {
   Search,
   Tv,
@@ -37,6 +37,7 @@ export const GlobalSearchView: React.FC<GlobalSearchViewProps> = ({
   onPromptPinForStream,
   onPromptPinForMovie,
 }) => {
+  const viewRef = useRef<HTMLDivElement | null>(null);
   const [query, setQuery] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'live' | 'movies' | 'series'>('all');
 
@@ -77,13 +78,54 @@ export const GlobalSearchView: React.FC<GlobalSearchViewProps> = ({
     (filterType === 'all' || filterType === 'movies' ? results.movies.length : 0) +
     (filterType === 'all' || filterType === 'series' ? results.series.length : 0);
 
+  const handleTVNavigation = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    const current = e.target as HTMLElement;
+    if (!current.matches('[data-tv-item]')) return;
+
+    if ((e.key === 'Enter' || e.key === ' ') && !current.matches('button, input')) {
+      e.preventDefault();
+      current.click();
+      return;
+    }
+    if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) return;
+
+    const items = Array.from(viewRef.current?.querySelectorAll<HTMLElement>('[data-tv-item]') ?? [])
+      .filter((item) => item.offsetParent !== null);
+    const rect = current.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    const horizontal = e.key === 'ArrowLeft' || e.key === 'ArrowRight';
+    const next = items.filter((item) => item !== current).map((item) => {
+      const r = item.getBoundingClientRect();
+      const dx = r.left + r.width / 2 - cx;
+      const dy = r.top + r.height / 2 - cy;
+      const valid = (e.key === 'ArrowRight' && dx > 8) || (e.key === 'ArrowLeft' && dx < -8) ||
+        (e.key === 'ArrowDown' && dy > 8) || (e.key === 'ArrowUp' && dy < -8);
+      return valid ? { item, score: (horizontal ? Math.abs(dx) : Math.abs(dy)) + (horizontal ? Math.abs(dy) : Math.abs(dx)) * 3 } : null;
+    }).filter((entry): entry is { item: HTMLElement; score: number } => Boolean(entry))
+      .sort((a, b) => a.score - b.score)[0]?.item;
+
+    if (next) {
+      e.preventDefault();
+      next.focus({ preventScroll: true });
+      next.scrollIntoView({ behavior: 'auto', block: 'nearest', inline: 'nearest' });
+    } else if (e.key === 'ArrowLeft') {
+      const rail = document.querySelector<HTMLElement>('[data-tv-nav-item][aria-current="page"]');
+      if (rail) {
+        e.preventDefault();
+        rail.focus({ preventScroll: true });
+      }
+    }
+  };
+
   return (
-    <div className="space-y-6 max-w-6xl mx-auto pb-12 animate-in fade-in duration-200">
+    <div ref={viewRef} onKeyDownCapture={handleTVNavigation} className="space-y-6 max-w-6xl mx-auto pb-12 animate-in fade-in duration-200">
       {/* Search Header Bar */}
       <div className="flex flex-col sm:flex-row items-center gap-3">
         <div className="relative flex-1 w-full">
           <Search className="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-cyan-400" />
           <input
+            data-tv-item
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -93,6 +135,7 @@ export const GlobalSearchView: React.FC<GlobalSearchViewProps> = ({
           />
           {query && (
             <button
+              data-tv-item
               onClick={() => setQuery('')}
               className="absolute right-3.5 top-1/2 -translate-y-1/2 p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition"
             >
@@ -106,6 +149,7 @@ export const GlobalSearchView: React.FC<GlobalSearchViewProps> = ({
           {(['all', 'live', 'movies', 'series'] as const).map((type) => (
             <button
               key={type}
+              data-tv-item
               onClick={() => setFilterType(type)}
               className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition capitalize ${
                 filterType === type
@@ -156,6 +200,7 @@ export const GlobalSearchView: React.FC<GlobalSearchViewProps> = ({
             {results.live.map((stream) => (
               <div
                 key={stream.stream_id}
+                data-tv-item tabIndex={0} role="button"
                 onClick={() => {
                   if (parentalControlService.isChannelLocked(stream) && onPromptPinForStream) {
                     onPromptPinForStream(stream);
@@ -211,6 +256,7 @@ export const GlobalSearchView: React.FC<GlobalSearchViewProps> = ({
               return (
                 <div
                   key={movie.stream_id}
+                  data-tv-item tabIndex={0} role="button"
                   onClick={() => {
                     if (isLocked && onPromptPinForMovie) {
                       onPromptPinForMovie(movie);
@@ -271,6 +317,7 @@ export const GlobalSearchView: React.FC<GlobalSearchViewProps> = ({
             {results.series.map((series) => (
               <div
                 key={series.series_id}
+                data-tv-item tabIndex={0} role="button"
                 onClick={() => onSelectSeries(series)}
                 className="group relative bg-[#0e1422] rounded-2xl border border-slate-800 hover:border-cyan-500/50 overflow-hidden cursor-pointer transition shadow tv-focus-target"
               >
