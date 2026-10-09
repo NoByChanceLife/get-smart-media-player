@@ -284,7 +284,7 @@ export const LiveTVView: React.FC<LiveTVViewProps> = ({
             <span className="text-xs font-bold uppercase tracking-wider text-slate-200">Groups</span>
           </div>
           <div ref={groupsRef} className="p-2 space-y-1 overflow-y-auto custom-scrollbar">
-            <button onKeyDown={(e) => handleGroupKeyDown(e, 0)} onClick={() => selectGroup('all')} className={`live-group ${quickFilter === 'category' && selectedCategoryId === 'all' ? 'live-group-active' : ''}`}>
+            <button data-live-entry onKeyDown={(e) => handleGroupKeyDown(e, 0)} onClick={() => selectGroup('all')} className={`live-group ${quickFilter === 'category' && selectedCategoryId === 'all' ? 'live-group-active' : ''}`}>
               <Tv className="w-4 h-4" /><span>All Channels</span><small>{streams.length}</small>
             </button>
             <button onKeyDown={(e) => handleGroupKeyDown(e, 1)} onClick={() => setQuickFilter('favorites')} className={`live-group ${quickFilter === 'favorites' ? 'live-group-active' : ''}`}>
