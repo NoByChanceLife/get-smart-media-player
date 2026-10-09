@@ -110,7 +110,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
       e.preventDefault();
       e.stopPropagation();
       next.focus();
-      next.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+      next.scrollIntoView({ behavior: 'auto', block: 'nearest', inline: 'nearest' });
       return;
     }
 
