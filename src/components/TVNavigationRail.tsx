@@ -90,8 +90,10 @@ export const TVNavigationRail: React.FC<TVNavigationRailProps> = ({
   ];
 
   // Deterministic TV/keyboard navigation inside the rail.
-  // Up/Down moves one visible action at a time. Right returns to the current
-  // page content. Enter/Space remain native button activation.
+  // Android TV WebView can deliver the remote center/OK button without
+  // consistently performing the browser's implicit button click, so we
+  // explicitly activate the focused control. Arrow handling remains useful
+  // for desktop keyboards and maps directly to Android TV D-pad events.
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'ArrowDown') {
       e.preventDefault();
@@ -108,6 +110,17 @@ export const TVNavigationRail: React.FC<TVNavigationRailProps> = ({
     if (e.key === 'ArrowRight' && onFocusContent) {
       e.preventDefault();
       onFocusContent();
+      return;
+    }
+
+    if (e.key === 'Enter' || e.key === 'NumpadEnter') {
+      e.preventDefault();
+      e.stopPropagation();
+
+      const focused = document.activeElement as HTMLElement | null;
+      if (focused && railRef.current?.contains(focused)) {
+        focused.click();
+      }
     }
   };
 
