@@ -181,6 +181,8 @@ export const TVNavigationRail: React.FC<TVNavigationRailProps> = ({
           return (
             <button
               key={item.id}
+              data-tv-nav-item
+              aria-current={isActive ? 'page' : undefined}
               onClick={() => onSelectTab(item.id)}
               className={`w-full flex items-center gap-3.5 px-3 py-3 rounded-2xl text-sm font-semibold transition-all duration-200 tv-focus-target group relative ${
                 isActive
