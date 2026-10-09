@@ -89,6 +89,18 @@ export default function App() {
     const root = mainContentRef.current;
     if (!root) return;
 
+    // Live TV has its own spatial-navigation workspace. Enter it through the
+    // groups column rather than the generic first focusable control (which can
+    // otherwise land on the hero/search area).
+    if (currentTab === 'live') {
+      const liveEntry = root.querySelector<HTMLElement>('[data-live-entry]');
+      if (liveEntry) {
+        liveEntry.focus({ preventScroll: true });
+        liveEntry.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'auto' });
+        return;
+      }
+    }
+
     // On Movies/Series the useful TV handoff target is the first poster, not
     // the featured/header buttons above the grid. This keeps Right from the
     // rail aligned with the customer's intent to browse content.
