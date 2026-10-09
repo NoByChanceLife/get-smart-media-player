@@ -216,6 +216,20 @@ export const LiveTVView: React.FC<LiveTVViewProps> = ({
   const focusLiveCell = (rowIndex: number, column: number) => {
     const safeRow = Math.min(filteredStreams.length - 1, Math.max(0, rowIndex));
     if (safeRow < 0) return;
+
+    const focusRenderedCell = () => {
+      const target = workspaceRef.current
+        ?.querySelector<HTMLElement>(`[data-live-row="${safeRow}"][data-live-col="${column}"]`);
+      if (!target) return false;
+      target.focus({ preventScroll: true });
+      target.scrollIntoView({ behavior: 'auto', block: 'nearest', inline: 'nearest' });
+      return true;
+    };
+
+    // If the row is already rendered, move focus synchronously. This matters on
+    // Android TV because a delayed handoff can be lost after the key event ends.
+    if (focusRenderedCell()) return;
+
     const scroller = scrollerRef.current;
     if (scroller) {
       const top = safeRow * ROW_HEIGHT;
@@ -225,11 +239,10 @@ export const LiveTVView: React.FC<LiveTVViewProps> = ({
         scroller.scrollTop = Math.max(0, bottom - scroller.clientHeight);
       }
     }
+
+    // Virtualized rows may need one paint after scrolling before they exist.
     requestAnimationFrame(() => {
-      const target = workspaceRef.current
-        ?.querySelector<HTMLElement>(`[data-live-row="${safeRow}"][data-live-col="${column}"]`);
-      target?.focus({ preventScroll: true });
-      target?.scrollIntoView({ behavior: 'auto', block: 'nearest', inline: 'nearest' });
+      requestAnimationFrame(() => focusRenderedCell());
     });
   };
 
