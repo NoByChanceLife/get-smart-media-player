@@ -66,7 +66,7 @@ export const SeriesView: React.FC<SeriesViewProps> = ({
     if (!items.length) return false;
     const target = items[Math.min(Math.max(preferredIndex, 0), items.length - 1)];
     target.focus();
-    target.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+    target.scrollIntoView({ behavior: 'auto', block: 'nearest', inline: 'nearest' });
     return true;
   };
 
@@ -114,7 +114,7 @@ export const SeriesView: React.FC<SeriesViewProps> = ({
       e.preventDefault();
       e.stopPropagation();
       next.focus();
-      next.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+      next.scrollIntoView({ behavior: 'auto', block: 'nearest', inline: 'nearest' });
       return;
     }
 
@@ -170,7 +170,7 @@ export const SeriesView: React.FC<SeriesViewProps> = ({
           e.preventDefault();
           e.stopPropagation();
           above.focus();
-          above.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+          above.scrollIntoView({ behavior: 'auto', block: 'nearest', inline: 'nearest' });
         }
         return;
       }
@@ -183,7 +183,7 @@ export const SeriesView: React.FC<SeriesViewProps> = ({
     } else return;
     e.preventDefault();
     cards[next]?.focus();
-    cards[next]?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+    cards[next]?.scrollIntoView({ behavior: 'auto', block: 'nearest', inline: 'nearest' });
   };
 
   const canAccess = parentalControlService.canAccessSection('series');
