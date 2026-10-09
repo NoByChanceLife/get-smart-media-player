@@ -51,6 +51,7 @@ export const TVNavigationRail: React.FC<TVNavigationRailProps> = ({
   onFocusContent,
 }) => {
   const [hovered, setHovered] = useState(false);
+  const [focusWithin, setFocusWithin] = useState(false);
   const railRef = useRef<HTMLDivElement | null>(null);
 
   const getFocusableItems = () =>
@@ -70,10 +71,12 @@ export const TVNavigationRail: React.FC<TVNavigationRailProps> = ({
           : items.length - 1
         : Math.min(items.length - 1, Math.max(0, currentIndex + direction));
 
-    items[nextIndex]?.focus();
+    const next = items[nextIndex];
+    next?.focus({ preventScroll: true });
+    next?.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'auto' });
   };
 
-  const effectiveExpanded = isExpanded || hovered;
+  const effectiveExpanded = isExpanded || hovered || focusWithin;
 
   const primaryNavItems: Array<{
     id: NavTab;
@@ -109,6 +112,7 @@ export const TVNavigationRail: React.FC<TVNavigationRailProps> = ({
 
     if (e.key === 'ArrowRight' && onFocusContent) {
       e.preventDefault();
+      if (isExpanded) onToggleExpanded();
       onFocusContent();
       return;
     }
@@ -129,6 +133,11 @@ export const TVNavigationRail: React.FC<TVNavigationRailProps> = ({
       ref={railRef}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
+      onFocusCapture={() => setFocusWithin(true)}
+      onBlurCapture={(e) => {
+        const next = e.relatedTarget as Node | null;
+        if (!next || !railRef.current?.contains(next)) setFocusWithin(false);
+      }}
       onKeyDown={handleKeyDown}
       className={`hidden md:flex flex-col justify-between fixed top-0 left-0 bottom-0 z-[70] bg-[#070b13]/95 backdrop-blur-2xl border-r border-slate-800/80 transition-all duration-300 ease-out select-none shadow-2xl ${
         effectiveExpanded ? 'w-64' : 'w-[74px]'
