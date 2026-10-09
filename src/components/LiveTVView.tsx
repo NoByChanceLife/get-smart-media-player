@@ -195,7 +195,8 @@ export const LiveTVView: React.FC<LiveTVViewProps> = ({
     const activeRailItem =
       document.querySelector<HTMLElement>('[data-tv-nav-item][aria-current="page"]') ||
       document.querySelector<HTMLElement>('[data-tv-nav-item]');
-    activeRailItem?.focus();
+    activeRailItem?.focus({ preventScroll: true });
+    activeRailItem?.scrollIntoView({ behavior: 'auto', block: 'nearest', inline: 'nearest' });
   };
 
   const activeGroupIndex = () =>
@@ -225,9 +226,10 @@ export const LiveTVView: React.FC<LiveTVViewProps> = ({
       }
     }
     requestAnimationFrame(() => {
-      workspaceRef.current
-        ?.querySelector<HTMLElement>(`[data-live-row="${safeRow}"][data-live-col="${column}"]`)
-        ?.focus();
+      const target = workspaceRef.current
+        ?.querySelector<HTMLElement>(`[data-live-row="${safeRow}"][data-live-col="${column}"]`);
+      target?.focus({ preventScroll: true });
+      target?.scrollIntoView({ behavior: 'auto', block: 'nearest', inline: 'nearest' });
     });
   };
 
@@ -276,7 +278,16 @@ export const LiveTVView: React.FC<LiveTVViewProps> = ({
   };
 
   return (
-    <section ref={workspaceRef} className="live-workspace -m-4 sm:-m-6 h-[calc(100vh-5.5rem)] min-h-[560px] overflow-hidden bg-[#05080e]">
+    <section
+      ref={workspaceRef}
+      onFocusCapture={(e) => {
+        const target = e.target as HTMLElement;
+        if (target.matches('.live-group, [data-live-row], [data-live-search], .tv-focus-target')) {
+          target.scrollIntoView({ behavior: 'auto', block: 'nearest', inline: 'nearest' });
+        }
+      }}
+      className="live-workspace -m-4 sm:-m-6 h-[calc(100vh-5.5rem)] min-h-[560px] overflow-hidden bg-[#05080e]"
+    >
       <div className="h-full flex min-w-0">
         <aside className="hidden lg:flex w-52 xl:w-60 shrink-0 flex-col border-r border-slate-800/80 bg-[#080d16]">
           <div className="h-12 px-3 flex items-center gap-2 border-b border-slate-800/80">
