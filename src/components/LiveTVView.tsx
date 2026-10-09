@@ -295,18 +295,18 @@ export const LiveTVView: React.FC<LiveTVViewProps> = ({
             <span className="text-xs font-bold uppercase tracking-wider text-slate-200">Groups</span>
           </div>
           <div ref={groupsRef} className="p-2 space-y-1 overflow-y-auto custom-scrollbar">
-            <button data-live-entry onKeyDown={(e) => handleGroupKeyDown(e, 0)} onClick={() => selectGroup('all')} className={`live-group ${quickFilter === 'category' && selectedCategoryId === 'all' ? 'live-group-active' : ''}`}>
+            <button data-live-entry onKeyDown={(e) => handleGroupKeyDown(e, 0)} onClick={() => selectGroup('all')} className={`live-group tv-focus-target ${quickFilter === 'category' && selectedCategoryId === 'all' ? 'live-group-active' : ''}`}>
               <Tv className="w-4 h-4" /><span>All Channels</span><small>{streams.length}</small>
             </button>
-            <button onKeyDown={(e) => handleGroupKeyDown(e, 1)} onClick={() => setQuickFilter('favorites')} className={`live-group ${quickFilter === 'favorites' ? 'live-group-active' : ''}`}>
+            <button onKeyDown={(e) => handleGroupKeyDown(e, 1)} onClick={() => setQuickFilter('favorites')} className={`live-group tv-focus-target ${quickFilter === 'favorites' ? 'live-group-active' : ''}`}>
               <Star className="w-4 h-4" /><span>Favorites</span>
             </button>
-            <button onKeyDown={(e) => handleGroupKeyDown(e, 2)} onClick={() => setQuickFilter('recent')} className={`live-group ${quickFilter === 'recent' ? 'live-group-active' : ''}`}>
+            <button onKeyDown={(e) => handleGroupKeyDown(e, 2)} onClick={() => setQuickFilter('recent')} className={`live-group tv-focus-target ${quickFilter === 'recent' ? 'live-group-active' : ''}`}>
               <Clock className="w-4 h-4" /><span>Recently Watched</span>
             </button>
             <div className="px-2 pt-3 pb-1 text-[10px] uppercase tracking-widest text-slate-600">Provider groups</div>
             {visibleCategories.filter((cat) => cat.category_id !== 'all').map((cat, categoryIndex) => (
-              <button key={cat.category_id} onKeyDown={(e) => handleGroupKeyDown(e, categoryIndex + 3)} onClick={() => selectGroup(cat.category_id)} className={`live-group ${quickFilter === 'category' && selectedCategoryId === cat.category_id ? 'live-group-active' : ''}`}>
+              <button key={cat.category_id} onKeyDown={(e) => handleGroupKeyDown(e, categoryIndex + 3)} onClick={() => selectGroup(cat.category_id)} className={`live-group tv-focus-target ${quickFilter === 'category' && selectedCategoryId === cat.category_id ? 'live-group-active' : ''}`}>
                 {parentalControlService.isCategoryLocked(cat.category_id, 'live') ? <Lock className="w-3.5 h-3.5 text-rose-400" /> : <span className="w-1.5 h-1.5 rounded-full bg-cyan-500" />}
                 <span>{cat.category_name}</span>
               </button>
@@ -399,6 +399,7 @@ export const LiveTVView: React.FC<LiveTVViewProps> = ({
                       data-live-row={index}
                       data-live-col={0}
                       onFocus={() => setSelectedStreamId(String(stream.stream_id))}
+                      onMouseEnter={() => setSelectedStreamId(String(stream.stream_id))}
                       onClick={() => {
                         setSelectedStreamId(String(stream.stream_id));
                         play(stream);
@@ -425,6 +426,7 @@ export const LiveTVView: React.FC<LiveTVViewProps> = ({
                             data-live-row={index}
                             data-live-col={programIndex + 1}
                             onFocus={() => setSelectedStreamId(String(stream.stream_id))}
+                            onMouseEnter={() => setSelectedStreamId(String(stream.stream_id))}
                             onKeyDown={(e) => {
                               handleCellKeyDown(e, index, programIndex + 1);
                               if ((e.key === 'Enter' || e.key === ' ') && programIndex === 0) {
@@ -450,7 +452,7 @@ export const LiveTVView: React.FC<LiveTVViewProps> = ({
                     </div>
 
                     <div className="w-16 shrink-0 flex items-center justify-center gap-1 border-l border-slate-800/60">
-                      <button data-live-row={index} data-live-col={4} onFocus={() => setSelectedStreamId(String(stream.stream_id))} onKeyDown={(e) => handleCellKeyDown(e, index, 4)} onClick={() => onToggleFavorite(stream.stream_id)} className="p-1.5 rounded-md text-slate-500 hover:text-amber-400 tv-focus-target" aria-label={`${stream.isFavorite ? 'Remove' : 'Add'} ${stream.name} favorite`}>
+                      <button data-live-row={index} data-live-col={4} onFocus={() => setSelectedStreamId(String(stream.stream_id))} onMouseEnter={() => setSelectedStreamId(String(stream.stream_id))} onKeyDown={(e) => handleCellKeyDown(e, index, 4)} onClick={() => onToggleFavorite(stream.stream_id)} className="p-1.5 rounded-md text-slate-500 hover:text-amber-400 tv-focus-target" aria-label={`${stream.isFavorite ? 'Remove' : 'Add'} ${stream.name} favorite`}>
                         <Star className={`w-3.5 h-3.5 ${stream.isFavorite ? 'fill-amber-400 text-amber-400' : ''}`} />
                       </button>
                       <span className="w-7 h-7" aria-hidden="true" />
