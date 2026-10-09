@@ -51,6 +51,7 @@ export const TVNavigationRail: React.FC<TVNavigationRailProps> = ({
   onFocusContent,
 }) => {
   const [hovered, setHovered] = useState(false);
+  const [remoteOpen, setRemoteOpen] = useState(false);
   const railRef = useRef<HTMLDivElement | null>(null);
 
   const getFocusableItems = () =>
@@ -77,7 +78,7 @@ export const TVNavigationRail: React.FC<TVNavigationRailProps> = ({
 
   // Expansion is controlled only by the explicit rail state or mouse hover.
   // TV focus must not pin the overlay open after focus is handed to content.
-  const effectiveExpanded = isExpanded || hovered;
+  const effectiveExpanded = isExpanded || hovered || remoteOpen;
 
   const primaryNavItems: Array<{
     id: NavTab;
@@ -114,9 +115,10 @@ export const TVNavigationRail: React.FC<TVNavigationRailProps> = ({
     if (e.key === 'ArrowRight' && onFocusContent) {
       e.preventDefault();
       e.stopPropagation();
-      // Collapse first, then hand focus into the page after the layout has
-      // committed. This prevents the expanded rail from covering the focused
-      // content on Android TV.
+      // Right always means "leave the rail and enter the page". Close every
+      // temporary/explicit expansion source before moving focus.
+      setHovered(false);
+      setRemoteOpen(false);
       if (isExpanded) onToggleExpanded();
       requestAnimationFrame(() => {
         requestAnimationFrame(() => onFocusContent());
@@ -140,6 +142,7 @@ export const TVNavigationRail: React.FC<TVNavigationRailProps> = ({
       ref={railRef}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
+      onFocusCapture={() => setRemoteOpen(true)}
       onKeyDown={handleKeyDown}
       className={`hidden md:flex flex-col justify-between fixed top-0 left-0 bottom-0 z-[70] bg-[#070b13]/95 backdrop-blur-2xl border-r border-slate-800/80 transition-all duration-300 ease-out select-none shadow-2xl ${
         effectiveExpanded ? 'w-64' : 'w-[74px]'
@@ -316,8 +319,22 @@ export const TVNavigationRail: React.FC<TVNavigationRailProps> = ({
 
         {/* Rail Collapse Toggle */}
         <button
-          onClick={onToggleExpanded}
-          className="w-full flex items-center justify-center py-2 text-slate-500 hover:text-slate-200 hover:bg-slate-800/40 rounded-xl transition"
+          onClick={() => {
+            setRemoteOpen(false);
+            setHovered(false);
+            if (isExpanded) onToggleExpanded();
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'ArrowRight' && onFocusContent) {
+              e.preventDefault();
+              e.stopPropagation();
+              setRemoteOpen(false);
+              setHovered(false);
+              if (isExpanded) onToggleExpanded();
+              requestAnimationFrame(() => requestAnimationFrame(() => onFocusContent()));
+            }
+          }}
+          className="w-full flex items-center justify-center py-2 text-slate-500 hover:text-slate-200 hover:bg-slate-800/40 rounded-xl transition tv-focus-target"
           title={effectiveExpanded ? 'Collapse Rail' : 'Expand Rail'}
         >
           {effectiveExpanded ? (
