@@ -252,7 +252,7 @@ export const SeriesView: React.FC<SeriesViewProps> = ({
   const activeSeason = seasons.find((s) => s.season_num === activeSeasonNum) || seasons[0];
 
   return (
-    <div ref={seriesViewRef} onKeyDownCapture={handleMediaViewNavigation} className="flex flex-col h-full space-y-6 animate-in fade-in duration-200">
+    <div ref={seriesViewRef} onKeyDownCapture={handleMediaViewNavigation} className="gs-full-canvas flex flex-col h-full space-y-5 animate-in fade-in duration-200">
       {/* Categories & Search Header */}
       <div className="flex flex-col gap-3">
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
@@ -292,7 +292,7 @@ export const SeriesView: React.FC<SeriesViewProps> = ({
       </div>
 
       {/* Series Posters Grid */}
-      <div ref={seriesGridRef} className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+      <div ref={seriesGridRef} className="gs-poster-grid">
         {filteredSeries.map((series, seriesIndex) => {
           const isCatLocked = parentalControlService.isCategoryLocked(series.category_id, 'series');
 
