@@ -508,3 +508,46 @@ HS4 remediation based on the two-app comparison:
 - If no direct address completes, the app falls back to the reference-style HttpURLConnection request.
 - Failure messages report resolved-address counts and IPv4/IPv6 mix without exposing credentials or provider IP addresses.
 - This specifically distinguishes an address-family / DNS-route problem from a true per-app/VPN/network reachability problem.
+
+
+---
+
+# 2026-10-10 correction: only the branded MegaPlus app is confirmed to load this provider
+
+The test matrix was corrected after real-device verification:
+
+- **MegaPlus XCIPTV v4.0.3**: confirmed working and loading channels.
+- **Generic XCIPTV v5.0.1**: does **not** load the provider's channels.
+- **StreamVault**: does **not** load the provider's channels.
+- **Get Smart HS6**: resolves the host but cannot complete the provider request.
+
+This changes the compatibility hypothesis. A generic Xtream implementation is not sufficient evidence for this provider; the branded MegaPlus control-plane and its selected panel/server are now the primary reference.
+
+## MegaPlus multi-panel mapping found in the supplied APK
+
+Direct DEX inspection of the supplied MegaPlus v4.0.3 APK shows:
+
+- The login UI explicitly supports **PANEL 1**, **PANEL 2**, and **PANEL 3**.
+- PANEL 1 selects the remote-config key **`portal`**.
+- PANEL 2 selects **`portal2`**.
+- PANEL 3 selects **`portal3`**.
+- The remote configuration also contains **`portal4`** and **`portal5`**.
+- The selected panel is persisted under **`whichPanel`**.
+- MegaPlus downloads this configuration from its branded control-plane endpoint rather than compiling the portal values into the APK.
+- Separate override keys **`portal_vod`** and **`portal_series`** exist and are used by VOD/series catalog requests when enabled.
+- Live category and live stream refresh code builds standard `player_api.php` requests, but the base origin comes from the selected MegaPlus panel state.
+- The MegaPlus login and catalog refresh paths log their constructed Xtream URLs under the **`XCIPTV_TAG`** Android log tag.
+
+### Immediate diagnostic consequence
+
+The next decisive comparison is not another Get Smart transport rewrite. Capture the exact sanitized URLs that MegaPlus emits while **PANEL 1 / Server 1** is selected for:
+
+1. authentication,
+2. `get_live_categories`, and
+3. `get_live_streams`.
+
+If those URLs use a different origin than the manually configured public URL, Get Smart must support the branded multi-panel origin mapping. If the origin is identical, the remaining comparison becomes the exact request identity/header policy used by MegaPlus.
+
+## Online research relevance
+
+Current Xtream/XUI documentation confirms that providers can restrict clients by User-Agent/application identity, ISP, ASN, IP, geography, and rate/flood policy. A public StreamVault issue also documents a real provider that only worked in third-party players after the user set a provider-specific User-Agent. That research supports request identity as a credible second hypothesis, but StreamVault itself is **not** a working reference for this particular provider.
