@@ -19,6 +19,9 @@ export interface NativePlayerState {
   nextProgram?: string;
   osdVisible?: boolean;
   aspectMode?: 'Fit' | 'Fill' | 'Zoom' | string;
+  preferredAudioLanguage?: string;
+  subtitleDefaultMode?: 'auto' | 'off' | 'preferred' | string;
+  preferredSubtitleLanguage?: string;
   playbackState: 'idle' | 'buffering' | 'ready' | 'ended';
   isPlaying: boolean;
   playWhenReady: boolean;
@@ -76,7 +79,21 @@ interface NativeProviderPlugin {
     channelNumber?: string;
     currentProgram?: string;
     nextProgram?: string;
+    preferredAudioLanguage?: string;
+    subtitleDefaultMode?: 'auto' | 'off' | 'preferred';
+    preferredSubtitleLanguage?: string;
   }): Promise<{ started: boolean; engine: string }>;
+  setTrackPreferences(options: {
+    preferredAudioLanguage?: string;
+    subtitleDefaultMode?: 'auto' | 'off' | 'preferred';
+    preferredSubtitleLanguage?: string;
+  }): Promise<{
+    applied: boolean;
+    reason?: string;
+    preferredAudioLanguage?: string;
+    subtitleDefaultMode?: string;
+    preferredSubtitleLanguage?: string;
+  }>;
   updatePlayerMetadata(options: {
     title?: string;
     channelNumber?: string;
@@ -111,7 +128,7 @@ interface NativeProviderPlugin {
   }): Promise<{ status: number; contentType?: string; route?: string; data: unknown }>;
 }
 
-const EXPECTED_TRANSPORT_MARKER = 'GS-NATIVE-XCIPTV-HS12';
+const EXPECTED_TRANSPORT_MARKER = 'GS-NATIVE-XCIPTV-HS13';
 const NativeProvider = registerPlugin<NativeProviderPlugin>('GetSmartProvider');
 
 export class AndroidProviderTransport implements ProviderTransport {
@@ -174,9 +191,21 @@ export async function playNativeAndroidMedia(options: {
   channelNumber?: string;
   currentProgram?: string;
   nextProgram?: string;
+  preferredAudioLanguage?: string;
+  subtitleDefaultMode?: 'auto' | 'off' | 'preferred';
+  preferredSubtitleLanguage?: string;
 }): Promise<void> {
   if (!isNativeAndroidRuntime()) throw new Error('Native Android playback is unavailable.');
   await NativeProvider.playMedia(options);
+}
+
+export async function setNativeAndroidTrackPreferences(options: {
+  preferredAudioLanguage?: string;
+  subtitleDefaultMode?: 'auto' | 'off' | 'preferred';
+  preferredSubtitleLanguage?: string;
+}): Promise<void> {
+  if (!isNativeAndroidRuntime()) return;
+  await NativeProvider.setTrackPreferences(options);
 }
 
 export async function updateNativeAndroidPlayerMetadata(options: {
