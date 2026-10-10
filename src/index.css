@@ -2,11 +2,22 @@
 
 @layer base {
   :root {
-    --bg-main: #06090f;
-    --surface-card: #0d131f;
-    --surface-hover: #162032;
-    --accent-cyan: #06b6d4;
-    --accent-glow: rgba(6, 182, 212, 0.25);
+    /* Approved concept-board visual system */
+    --bg-main: #040b14;
+    --bg-elevated: #07111d;
+    --surface-card: #0a1624;
+    --surface-card-2: #0d1b2b;
+    --surface-hover: #11243a;
+    --surface-selected: #0b63f6;
+    --surface-selected-2: #1677ff;
+    --border-soft: #17304a;
+    --border-strong: #244767;
+    --text-primary: #f7fbff;
+    --text-secondary: #a9bbcc;
+    --text-muted: #6f879e;
+    --accent-cyan: #1f9dff;
+    --accent-blue: #0b63f6;
+    --accent-glow: rgba(11, 99, 246, 0.28);
 
 
     /* Get Smart geometry contract: large screens reveal more content instead
@@ -31,8 +42,10 @@
 
   body {
     font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
-    background-color: var(--bg-main);
-    color: #f1f5f9;
+    background:
+      radial-gradient(circle at 50% -18%, rgba(19, 79, 132, 0.18), transparent 34%),
+      linear-gradient(180deg, #06101c 0%, var(--bg-main) 32%, #030810 100%);
+    color: var(--text-primary);
     user-select: none;
     -webkit-tap-highlight-color: transparent;
   }
@@ -133,11 +146,11 @@
 .tv-focus-target.tv-focused {
   transform: scale(1.045);
   box-shadow:
-    0 0 0 3px #22d3ee,
-    0 0 0 6px rgba(34, 211, 238, 0.20),
-    0 14px 34px -8px rgba(6, 182, 212, 0.65);
-  border-color: #67e8f9 !important;
-  background-color: rgba(8, 145, 178, 0.18) !important;
+    0 0 0 2px #2aa7ff,
+    0 0 0 5px rgba(11, 99, 246, 0.20),
+    0 12px 28px -10px rgba(11, 99, 246, 0.78);
+  border-color: #4eb5ff !important;
+  background-color: rgba(11, 99, 246, 0.22) !important;
   color: #ffffff;
   z-index: 30;
 }
@@ -183,18 +196,19 @@
 /* Unified Live TV workspace */
 .live-group {
   width: 100%;
-  min-height: 36px;
+  min-height: 34px;
   display: grid;
   grid-template-columns: 18px minmax(0, 1fr) auto;
   align-items: center;
   gap: 8px;
-  padding: 7px 9px;
-  border-radius: 9px;
-  color: #94a3b8;
+  padding: 6px 8px;
+  border-radius: 7px;
+  border: 1px solid transparent;
+  color: var(--text-secondary);
   font-size: 11px;
   font-weight: 600;
   text-align: left;
-  transition: background-color .15s ease, color .15s ease, box-shadow .15s ease;
+  transition: background-color .15s ease, color .15s ease, border-color .15s ease, box-shadow .15s ease;
 }
 .live-group > span:nth-child(2) {
   overflow: hidden;
@@ -208,17 +222,19 @@
 .live-group:hover,
 .live-group:focus,
 .live-group:focus-visible {
-  background: #111a29;
-  color: #f8fafc;
+  background: #0d1d2f;
+  border-color: #1d3d5a;
+  color: #ffffff;
   outline: none;
 }
 .live-group-active {
-  background: #075985;
+  background: linear-gradient(90deg, #0b63f6 0%, #126fe9 100%);
+  border-color: #2c86ff;
   color: #fff;
-  box-shadow: inset 3px 0 0 #38bdf8;
+  box-shadow: inset 3px 0 0 #6dc6ff, 0 6px 18px rgba(0, 67, 170, .24);
 }
 .live-group-active small {
-  color: #bae6fd;
+  color: #d9efff;
 }
 
 @media (pointer: coarse) and (max-width: 767px) {
@@ -233,8 +249,8 @@
 /* Premium Live TV concept alignment */
 .live-workspace {
   background:
-    radial-gradient(circle at 76% -10%, rgba(14, 165, 233, 0.09), transparent 30%),
-    linear-gradient(180deg, #050a12 0%, #05080e 100%);
+    radial-gradient(circle at 78% -12%, rgba(14, 89, 156, 0.16), transparent 34%),
+    linear-gradient(180deg, #06101b 0%, #040b13 100%);
 }
 .live-feature {
   box-shadow: inset 0 -1px 0 rgba(56, 189, 248, 0.05);
@@ -243,8 +259,8 @@
   transition: background-color .14s ease, box-shadow .14s ease;
 }
 .live-guide-row-selected {
-  background: linear-gradient(90deg, rgba(7, 89, 133, .30), rgba(8, 47, 73, .16) 48%, rgba(7, 11, 18, .96));
-  box-shadow: inset 3px 0 0 rgba(56, 189, 248, .78);
+  background: linear-gradient(90deg, rgba(11, 99, 246, .20), rgba(10, 37, 68, .24) 48%, rgba(5, 13, 23, .98));
+  box-shadow: inset 3px 0 0 #1778ff;
 }
 .live-workspace button,
 .live-workspace [role="button"] {
@@ -252,22 +268,22 @@
 }
 
 .live-workspace .tv-focus-target:hover {
-  background-color: rgba(3, 105, 161, .18) !important;
-  box-shadow: inset 0 0 0 1px rgba(56, 189, 248, .45);
+  background-color: rgba(11, 99, 246, .16) !important;
+  box-shadow: inset 0 0 0 1px rgba(63, 148, 255, .48);
 }
 
 .live-workspace .tv-focus-target:focus,
 .live-workspace .tv-focus-target:focus-visible {
   transform: none;
   box-shadow:
-    inset 0 0 0 2px #38bdf8,
-    0 0 0 1px rgba(125, 211, 252, .45),
-    0 8px 24px -12px rgba(14, 165, 233, .75);
-  background-color: rgba(3, 105, 161, .26) !important;
+    inset 0 0 0 2px #1681ff,
+    0 0 0 1px rgba(109, 198, 255, .40),
+    0 8px 24px -12px rgba(11, 99, 246, .82);
+  background-color: rgba(11, 99, 246, .30) !important;
   z-index: 20;
 }
 .live-workspace input.tv-focus-target:focus {
-  box-shadow: 0 0 0 2px rgba(56, 189, 248, .72), 0 8px 24px -12px rgba(14, 165, 233, .65);
+  box-shadow: 0 0 0 2px rgba(31, 157, 255, .78), 0 8px 24px -12px rgba(11, 99, 246, .72);
 }
 
 
