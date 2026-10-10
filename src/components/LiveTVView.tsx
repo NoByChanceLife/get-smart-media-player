@@ -19,9 +19,47 @@ type LiveZone = 'groups' | 'channels' | 'now' | 'next' | 'later' | 'favorite';
 const ROW_HEIGHT = 52;
 const OVERSCAN = 6;
 
-const timeLabel = (value?: string) => {
-  if (!value) return '';
-  return value.split(' ')[1]?.slice(0, 5) || '';
+const parseEpgEpochMs = (program: XtreamEPGProgramme, edge: 'start' | 'end') => {
+  const timestamp = edge === 'start' ? program.start_timestamp : program.stop_timestamp;
+  const numeric = Number(timestamp);
+  if (Number.isFinite(numeric) && numeric > 0) {
+    return numeric > 10_000_000_000 ? numeric : numeric * 1000;
+  }
+
+  const raw = edge === 'start' ? program.start : program.end;
+  if (!raw) return 0;
+  const normalized = raw.includes('T') ? raw : raw.replace(' ', 'T');
+  const parsed = Date.parse(normalized);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const timeLabel = (program?: XtreamEPGProgramme, edge: 'start' | 'end' = 'start') => {
+  if (!program) return '';
+  const epochMs = parseEpgEpochMs(program, edge);
+  if (epochMs > 0) {
+    return new Date(epochMs).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  }
+
+  const raw = edge === 'start' ? program.start : program.end;
+  if (!raw) return '';
+  const match = raw.match(/(?:T|\s)(\d{1,2}:\d{2})/);
+  return match?.[1] || raw;
+};
+
+const orderProgramsForNow = (programs: XtreamEPGProgramme[]) => {
+  if (programs.length <= 1) return programs;
+  const now = Date.now();
+  const sorted = [...programs].sort(
+    (a, b) => parseEpgEpochMs(a, 'start') - parseEpgEpochMs(b, 'start')
+  );
+  const currentIndex = sorted.findIndex((program) => {
+    const start = parseEpgEpochMs(program, 'start');
+    const end = parseEpgEpochMs(program, 'end');
+    return start > 0 && end > 0 && start <= now && now < end;
+  });
+  if (currentIndex >= 0) return sorted.slice(currentIndex);
+  const nextIndex = sorted.findIndex((program) => parseEpgEpochMs(program, 'end') > now);
+  return nextIndex >= 0 ? sorted.slice(nextIndex) : sorted;
 };
 
 export const LiveTVView: React.FC<LiveTVViewProps> = ({
@@ -80,7 +118,7 @@ export const LiveTVView: React.FC<LiveTVViewProps> = ({
   const windowedStreams = filteredStreams.slice(startIndex, endIndex);
   const selectedIndex = Math.max(0, filteredStreams.findIndex((s) => String(s.stream_id) === selectedStreamId));
   const selectedStream = filteredStreams[selectedIndex] || filteredStreams[0];
-  const selectedPrograms = selectedStream ? epg[String(selectedStream.stream_id)] || [] : [];
+  const selectedPrograms = selectedStream ? orderProgramsForNow(epg[String(selectedStream.stream_id)] || []) : [];
   const selectedNow = selectedPrograms[0];
 
   useEffect(() => {
@@ -301,7 +339,7 @@ export const LiveTVView: React.FC<LiveTVViewProps> = ({
                   <h2 className="text-lg 2xl:text-xl font-semibold text-white font-heading truncate">{selectedNow?.title || selectedStream?.currentProgram || selectedStream?.name || 'Live TV'}</h2>
                   <div className="mt-1 text-xs text-slate-300 flex items-center gap-2">
                     <span className="font-semibold">{selectedStream?.name || 'Select a channel'}</span>
-                    {selectedNow && <span className="text-slate-500 font-mono">{timeLabel(selectedNow.start)}–{timeLabel(selectedNow.end)}</span>}
+                    {selectedNow && <span className="text-slate-500 font-mono">{timeLabel(selectedNow, 'start')}–{timeLabel(selectedNow, 'end')}</span>}
                     {selectedStream && <span className="px-1.5 py-0.5 rounded-md bg-[#ff254f]/15 border border-[#ff4568]/35 text-[8px] font-black text-[#ff5576] uppercase">Live</span>}
                   </div>
                   <p className="mt-2 max-w-2xl text-[11px] leading-relaxed text-slate-400 line-clamp-2">{selectedNow?.description || 'Browse the guide, choose a channel, and keep your place while exploring what is on now and next.'}</p>
@@ -343,7 +381,7 @@ export const LiveTVView: React.FC<LiveTVViewProps> = ({
             <div style={{ height: filteredStreams.length * ROW_HEIGHT, position: 'relative' }}>
               {windowedStreams.map((stream, localIndex) => {
                 const row = startIndex + localIndex;
-                const programs = epg[String(stream.stream_id)] || [];
+                const programs = orderProgramsForNow(epg[String(stream.stream_id)] || []);
                 const selected = selectedStreamId === String(stream.stream_id);
                 const cellProps = (zone: LiveZone) => ({
                   'data-live-row': row,
@@ -378,7 +416,7 @@ export const LiveTVView: React.FC<LiveTVViewProps> = ({
                               <span className="text-[11px] font-medium text-slate-200 truncate">{program?.title || (zone === 'now' ? stream.currentProgram || 'Live' : 'No guide data')}</span>
                               {zone === 'now' && <span className="text-[8px] font-bold text-rose-400 uppercase shrink-0">Live</span>}
                             </div>
-                            {program && <div className="text-[9px] text-slate-600 font-mono mt-0.5">{timeLabel(program.start)}–{timeLabel(program.end)}</div>}
+                            {program && <div className="text-[9px] text-slate-600 font-mono mt-0.5">{timeLabel(program, 'start')}–{timeLabel(program, 'end')}</div>}
                           </button>
                         );
                       })}
