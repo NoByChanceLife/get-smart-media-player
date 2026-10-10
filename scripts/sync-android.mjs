@@ -47,7 +47,11 @@ const compatibleBuildGradle = originalBuildGradle
   .replace(
     /^\s*implementation ['"]com\.squareup\.okhttp3:okhttp:3\.12\.11['"]\s*$/gm,
     '',
-  );
+  )
+  // Give this diagnostic APK an unmistakable Android package version so the
+  // device installer and App Info can prove which build is actually running.
+  .replace(/versionCode\s+\d+/, 'versionCode 2026101002')
+  .replace(/versionName\s+["'][^"']+["']/, 'versionName "2026.10.10-hs2"');
 
 if (compatibleBuildGradle !== originalBuildGradle) {
   writeFileSync(appBuildGradle, compatibleBuildGradle, 'utf8');
