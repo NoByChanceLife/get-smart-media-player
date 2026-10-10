@@ -493,7 +493,7 @@ export default function App() {
   ]);
 
   return (
-    <div className={`min-h-screen text-slate-100 flex flex-col selection:bg-cyan-500 selection:text-white ${playbackTarget && isBrowsingDuringPlayback ? 'bg-transparent' : 'bg-[#06090f]'}`}>
+    <div className={`min-h-screen text-slate-100 flex flex-col selection:bg-cyan-500 selection:text-white ${playbackTarget && isBrowsingDuringPlayback ? 'bg-transparent' : 'bg-[var(--bg-main)]'}`}>
       {/* App navigation belongs only to normal app browsing. The quick guide is
           intentionally isolated so it cannot stack with the full app shell. */}
       {(!playbackTarget || isBrowsingDuringPlayback || isFloatingPiP) && <TVNavigationRail
