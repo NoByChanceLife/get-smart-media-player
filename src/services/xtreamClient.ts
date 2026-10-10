@@ -452,14 +452,29 @@ class XtreamService {
 
     await Promise.all(fetchTasks);
 
+    // De-duplicate exact source identities before category filtering or player
+    // channel navigation. Do not de-duplicate by display name: providers can
+    // legitimately expose HD/FHD/backup feeds with similar names.
+    const distinctStreams = Array.from(
+      new Map(
+        allStreams.map((stream) => {
+          const directSource = String(stream.direct_source || '').trim();
+          const identity = directSource
+            ? `${stream.serverId || 'local'}|direct|${directSource}`
+            : `${stream.serverId || 'local'}|stream|${String(stream.stream_id)}`;
+          return [identity, stream] as const;
+        })
+      ).values()
+    );
+
     // Apply category filter if not 'all'
     if (categoryId && categoryId !== 'all') {
-      return allStreams.filter(
+      return distinctStreams.filter(
         (s) => s.category_id === categoryId || s.category_id.endsWith(`_${categoryId}`)
       );
     }
 
-    return allStreams;
+    return distinctStreams;
   }
 
   // Multi-Server Aggregated VOD Categories
