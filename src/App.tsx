@@ -59,6 +59,7 @@ export default function App() {
   // Data states
   const [liveCategories, setLiveCategories] = useState<XtreamCategory[]>([]);
   const [liveStreams, setLiveStreams] = useState<XtreamLiveStream[]>([]);
+  const [allLiveStreams, setAllLiveStreams] = useState<XtreamLiveStream[]>([]);
   const [selectedLiveCat, setSelectedLiveCat] = useState<string>('all');
 
   const [vodCategories, setVodCategories] = useState<XtreamCategory[]>([]);
@@ -151,6 +152,7 @@ export default function App() {
       ]);
       setLiveCategories(liveCats);
       setLiveStreams(liveStrms);
+      setAllLiveStreams(liveStrms);
       setIsLoadingData(false);
 
       // Category taxonomies are small and useful before the heavy media lists.
@@ -694,7 +696,7 @@ export default function App() {
           }}
           onMinimizeToPiP={() => setIsFloatingPiP(true)}
           onLaunchDualPiP={handleLaunchDualPiP}
-          allLiveStreams={liveStreams}
+          allLiveStreams={allLiveStreams.length > 0 ? allLiveStreams : liveStreams}
           onSelectLiveStream={handlePlayLiveStream}
           onOpenPerformanceSettings={() => setIsPerformanceModalOpen(true)}
           onOpenGuide={() => {
