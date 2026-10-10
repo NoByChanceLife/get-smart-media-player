@@ -16,7 +16,12 @@ export class AndroidProviderTransport implements ProviderTransport {
   public async requestJson<T>(request: ProviderRequest): Promise<T> {
     const result = await NativeProvider.requestJson(request);
     if (result.status < 200 || result.status >= 300) {
-      throw new Error(`Android provider transport returned HTTP ${result.status}.`);
+      const payload = result.data as any;
+      const detail =
+        payload && typeof payload === 'object' && typeof payload.error === 'string'
+          ? ` ${payload.error}`
+          : '';
+      throw new Error(`Android provider transport returned HTTP ${result.status}.${detail}`);
     }
     return result.data as T;
   }
