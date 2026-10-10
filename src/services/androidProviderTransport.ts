@@ -9,7 +9,7 @@ interface NativeTransportInfo {
 }
 
 interface NativeProviderPlugin {
-  playMedia(options: { url: string; title?: string; mediaType?: 'live' | 'vod' | 'series' }): Promise<{ started: boolean; engine: string }>;
+  playMedia(options: { url: string; title?: string; mediaType?: 'live' | 'vod' | 'series'; previousUrl?: string; nextUrl?: string }): Promise<{ started: boolean; engine: string }>;
   stopMedia(): Promise<{ stopped: boolean }>;
   getTransportInfo(): Promise<NativeTransportInfo>;
   requestJson(options: {
@@ -20,7 +20,7 @@ interface NativeProviderPlugin {
   }): Promise<{ status: number; contentType?: string; route?: string; data: unknown }>;
 }
 
-const EXPECTED_TRANSPORT_MARKER = 'GS-NATIVE-XCIPTV-HS7';
+const EXPECTED_TRANSPORT_MARKER = 'GS-NATIVE-XCIPTV-HS8';
 const NativeProvider = registerPlugin<NativeProviderPlugin>('GetSmartProvider');
 
 export class AndroidProviderTransport implements ProviderTransport {
@@ -80,6 +80,8 @@ export async function playNativeAndroidMedia(options: {
   url: string;
   title?: string;
   mediaType?: 'live' | 'vod' | 'series';
+  previousUrl?: string;
+  nextUrl?: string;
 }): Promise<void> {
   if (!isNativeAndroidRuntime()) throw new Error('Native Android playback is unavailable.');
   await NativeProvider.playMedia(options);
