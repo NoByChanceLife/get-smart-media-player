@@ -23,7 +23,6 @@ mkdirSync(packageDir, { recursive: true });
 
 copyFileSync(join(root, 'native', 'android', 'GetSmartProviderPlugin.java'), join(packageDir, 'GetSmartProviderPlugin.java'));
 copyFileSync(join(root, 'native', 'android', 'MainActivity.java'), join(packageDir, 'MainActivity.java'));
-copyFileSync(join(root, 'native', 'android', 'NativePlayerActivity.java'), join(packageDir, 'NativePlayerActivity.java'));
 copyFileSync(join(root, 'native', 'android', 'AndroidManifest.xml'), join(root, 'android', 'app', 'src', 'main', 'AndroidManifest.xml'));
 
 // Capacitor copy does not guarantee removal of old hashed Vite/PWA assets.
@@ -56,8 +55,8 @@ const compatibleBuildGradle = originalBuildGradle
   )
   // Give this diagnostic APK an unmistakable Android package version so the
   // device installer and App Info can prove which build is actually running.
-  .replace(/versionCode\s+\d+/, 'versionCode 2026101008')
-  .replace(/versionName\s+["'][^"']+["']/, 'versionName "2026.10.10-hs8"');
+  .replace(/versionCode\s+\d+/, 'versionCode 2026101009')
+  .replace(/versionName\s+["'][^"']+["']/, 'versionName "2026.10.10-hs9"');
 
 if (compatibleBuildGradle !== originalBuildGradle) {
   writeFileSync(appBuildGradle, compatibleBuildGradle, 'utf8');
