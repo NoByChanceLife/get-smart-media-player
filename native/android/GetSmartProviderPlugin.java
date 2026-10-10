@@ -30,6 +30,7 @@ import android.view.ViewGroup;
 import android.view.Window;
 import android.widget.Button;
 import android.widget.FrameLayout;
+import android.widget.HorizontalScrollView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
@@ -100,7 +101,7 @@ public class GetSmartProviderPlugin extends Plugin {
     private static final int DIRECT_ADDRESS_CONNECT_TIMEOUT_MS = 6_000;
     private static final int NETWORK_ROUTE_CONNECT_TIMEOUT_MS = 8_000;
     private static final int MAX_REDIRECTS = 5;
-    private static final String TRANSPORT_BUILD = "GS-NATIVE-XCIPTV-HS16";
+    private static final String TRANSPORT_BUILD = "GS-NATIVE-XCIPTV-HS17";
 
     private static final String CREDENTIAL_PREFS = "getsmart_secure_credentials";
     private static final String CREDENTIAL_DRAFT_KEY = "xtream_draft_v1";
@@ -920,8 +921,13 @@ public class GetSmartProviderPlugin extends Plugin {
             )
         );
 
-        nativePlayerView.setOnClickListener((view) -> showNativeOsd(true));
-        nativePlayerOverlay.setOnClickListener((view) -> showNativeOsd(true));
+        nativePlayerView.setOnClickListener((view) -> {
+            if (nativeOsdVisible) hideNativeOsd();
+            else showNativeOsd(true);
+        });
+        nativePlayerOverlay.setOnClickListener((view) -> {
+            if (!nativeOsdVisible) showNativeOsd(true);
+        });
         nativePlayerView.setOnKeyListener((view, keyCode, event) ->
             handleNativePlayerKeyEvent(event)
         );
@@ -1234,7 +1240,7 @@ public class GetSmartProviderPlugin extends Plugin {
         }) {
             addOsdButton(primaryControls, button);
         }
-        nativeOsdBottom.addView(primaryControls);
+        addScrollableOsdRow(nativeOsdBottom, primaryControls);
 
         LinearLayout secondaryControls = new LinearLayout(getActivity());
         secondaryControls.setOrientation(LinearLayout.HORIZONTAL);
@@ -1283,7 +1289,8 @@ public class GetSmartProviderPlugin extends Plugin {
         }) {
             addOsdButton(secondaryControls, button);
         }
-        nativeOsdBottom.addView(secondaryControls);
+        addScrollableOsdRow(nativeOsdBottom, secondaryControls);
+        wireNativeOsdFocus();
 
         FrameLayout.LayoutParams bottomParams = new FrameLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT,
@@ -1291,6 +1298,71 @@ public class GetSmartProviderPlugin extends Plugin {
             Gravity.BOTTOM
         );
         nativeOsdOverlay.addView(nativeOsdBottom, bottomParams);
+    }
+
+    private void wireNativeOsdFocus() {
+        Button[] primary = new Button[] {
+            nativeGuideButton, nativePreviousButton, nativeSeekBackButton, nativePlayPauseButton,
+            nativeSeekForwardButton, nativeNextButton, nativeLastButton, nativeStopButton
+        };
+        Button[] secondary = new Button[] {
+            nativeAudioButton, nativeSubtitleButton, nativeQualityButton, nativeHealthButton,
+            nativeMuteButton, nativeVolumeDownButton, nativeVolumeUpButton, nativeAspectButton
+        };
+
+        wireHorizontalFocus(primary);
+        wireHorizontalFocus(secondary);
+
+        for (int i = 0; i < primary.length; i++) {
+            Button top = primary[i];
+            Button bottom = secondary[Math.min(i, secondary.length - 1)];
+            if (top != null && bottom != null) {
+                top.setNextFocusDownId(bottom.getId());
+                bottom.setNextFocusUpId(top.getId());
+            }
+        }
+    }
+
+    private void wireHorizontalFocus(Button[] buttons) {
+        for (int i = 0; i < buttons.length; i++) {
+            Button button = buttons[i];
+            if (button == null) continue;
+            if (button.getId() == View.NO_ID) button.setId(View.generateViewId());
+
+            Button previous = buttons[(i - 1 + buttons.length) % buttons.length];
+            Button next = buttons[(i + 1) % buttons.length];
+            if (previous != null) {
+                if (previous.getId() == View.NO_ID) previous.setId(View.generateViewId());
+                button.setNextFocusLeftId(previous.getId());
+            }
+            if (next != null) {
+                if (next.getId() == View.NO_ID) next.setId(View.generateViewId());
+                button.setNextFocusRightId(next.getId());
+            }
+        }
+    }
+
+    private void addScrollableOsdRow(LinearLayout parent, LinearLayout row) {
+        HorizontalScrollView scroller = new HorizontalScrollView(getActivity());
+        scroller.setFillViewport(true);
+        scroller.setHorizontalScrollBarEnabled(false);
+        scroller.setFocusable(false);
+        scroller.setFocusableInTouchMode(false);
+        scroller.addView(
+            row,
+            new HorizontalScrollView.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                Gravity.CENTER_HORIZONTAL
+            )
+        );
+        parent.addView(
+            scroller,
+            new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+        );
     }
 
     private void addOsdButton(LinearLayout row, Button button) {
@@ -1308,10 +1380,12 @@ public class GetSmartProviderPlugin extends Plugin {
         button.setTextColor(Color.WHITE);
         button.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
         button.setAllCaps(false);
-        button.setMinWidth(dp(68));
-        button.setPadding(dp(10), 0, dp(10), 0);
+        button.setMinWidth(dp(76));
+        button.setMinHeight(dp(48));
+        button.setPadding(dp(12), 0, dp(12), 0);
         button.setFocusable(true);
-        button.setFocusableInTouchMode(false);
+        button.setFocusableInTouchMode(true);
+        button.setClickable(true);
         button.setOnFocusChangeListener((view, hasFocus) -> {
             if (hasFocus) {
                 nativeUiHandler.removeCallbacks(hideNativeOsdRunnable);
@@ -1915,8 +1989,10 @@ public class GetSmartProviderPlugin extends Plugin {
         updateNativeOsdText();
         nativeUiHandler.post(refreshNativeProgressRunnable);
 
-        if (nativePlayPauseButton != null) {
-            nativePlayPauseButton.requestFocus();
+        Button preferredFocus =
+            "live".equals(nativePlayerMediaType) ? nativePreviousButton : nativePlayPauseButton;
+        if (preferredFocus != null && !preferredFocus.hasFocus()) {
+            preferredFocus.requestFocus();
         }
 
         if (autoHide) {
@@ -2235,6 +2311,13 @@ public class GetSmartProviderPlugin extends Plugin {
         }
 
         int keyCode = event.getKeyCode();
+
+        // Keyboard Backspace/Delete is treated like Android Back so desktop
+        // keyboards, remotes and TV controllers share the same exit behavior.
+        if (keyCode == KeyEvent.KEYCODE_DEL || keyCode == KeyEvent.KEYCODE_FORWARD_DEL) {
+            keyCode = KeyEvent.KEYCODE_BACK;
+        }
+
         int digit = numericDigitFromKeyCode(keyCode);
 
         if (digit >= 0 && "live".equals(nativePlayerMediaType)) {
@@ -2350,7 +2433,12 @@ public class GetSmartProviderPlugin extends Plugin {
             return true;
         }
 
-        if (keyCode == KeyEvent.KEYCODE_DPAD_CENTER || keyCode == KeyEvent.KEYCODE_ENTER) {
+        if (
+            keyCode == KeyEvent.KEYCODE_DPAD_CENTER ||
+            keyCode == KeyEvent.KEYCODE_ENTER ||
+            keyCode == KeyEvent.KEYCODE_NUMPAD_ENTER ||
+            keyCode == KeyEvent.KEYCODE_SPACE
+        ) {
             showNativeOsd(true);
             return true;
         }
