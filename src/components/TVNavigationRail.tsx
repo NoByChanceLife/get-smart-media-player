@@ -52,21 +52,12 @@ export const TVNavigationRail: React.FC<TVNavigationRailProps> = ({
 }) => {
   const [hovered, setHovered] = useState(false);
   const [remoteOpen, setRemoteOpen] = useState(false);
-  const [touchOpen, setTouchOpen] = useState(false);
   const railRef = useRef<HTMLDivElement | null>(null);
 
   const getFocusableItems = () =>
     Array.from(
       railRef.current?.querySelectorAll<HTMLElement>('button:not([disabled]), [tabindex="0"]') ?? []
     ).filter((element) => element.offsetParent !== null);
-
-  const closeTouchRailToContent = () => {
-    setTouchOpen(false);
-    setRemoteOpen(false);
-    setHovered(false);
-    if (isExpanded) onToggleExpanded();
-    requestAnimationFrame(() => requestAnimationFrame(() => onFocusContent?.()));
-  };
 
   const focusRelativeItem = (direction: 1 | -1) => {
     const items = getFocusableItems();
@@ -87,7 +78,7 @@ export const TVNavigationRail: React.FC<TVNavigationRailProps> = ({
 
   // Expansion is controlled only by the explicit rail state or mouse hover.
   // TV focus must not pin the overlay open after focus is handed to content.
-  const effectiveExpanded = isExpanded || hovered || remoteOpen || touchOpen;
+  const effectiveExpanded = isExpanded || hovered || remoteOpen;
 
   const primaryNavItems: Array<{
     id: NavTab;
@@ -154,23 +145,10 @@ export const TVNavigationRail: React.FC<TVNavigationRailProps> = ({
       onFocusCapture={() => setRemoteOpen(true)}
       onKeyDown={handleKeyDown}
       className={`flex flex-col justify-between fixed top-0 left-0 bottom-0 z-[70] bg-[#070b13]/95 backdrop-blur-2xl border-r border-slate-800/80 transition-all duration-300 ease-out select-none shadow-2xl ${
-        effectiveExpanded ? 'w-64' : 'w-[74px] -translate-x-[74px] md:translate-x-0'
+        effectiveExpanded ? 'w-64' : 'w-[74px]'
       }`}
       aria-label="Main Navigation"
     >
-      {/* Touch/phone handle: the TV rail remains available below the desktop breakpoint. */}
-      <button
-        type="button"
-        onClick={() => setTouchOpen((open) => !open)}
-        onMouseEnter={() => {
-          if (touchOpen) closeTouchRailToContent();
-        }}
-        className="md:hidden absolute left-full top-1/2 -translate-y-1/2 w-8 h-16 rounded-r-2xl border border-l-0 border-slate-700/80 bg-[#070b13]/95 text-cyan-300 flex items-center justify-center shadow-xl tv-focus-target"
-        aria-label={touchOpen ? 'Close navigation' : 'Open navigation'}
-        aria-expanded={touchOpen}
-      >
-        {touchOpen ? <ChevronLeft className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
-      </button>
       <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar">
       {/* Top Branding Section */}
       <div className="p-3.5 pb-2">
@@ -208,12 +186,6 @@ export const TVNavigationRail: React.FC<TVNavigationRailProps> = ({
               aria-current={isActive ? 'page' : undefined}
               onClick={() => {
                 onSelectTab(item.id);
-                if (touchOpen) {
-                  requestAnimationFrame(() => {
-                    const active = railRef.current?.querySelector<HTMLElement>('[data-tv-nav-item][aria-current="page"]');
-                    active?.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'auto' });
-                  });
-                }
               }}
               className={`w-full flex items-center gap-3.5 px-3 py-3 rounded-2xl text-sm font-semibold transition-all duration-200 tv-focus-target group relative ${
                 isActive
