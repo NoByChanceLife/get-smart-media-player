@@ -62,8 +62,9 @@ export function parseM3uContent(
   for (let i = 0; i < rawLines.length; i++) {
     const line = rawLines[i].trim();
     if (!line) continue;
+    const upperLine = line.toUpperCase();
 
-    if (line.startsWith('#EXTINF:')) {
+    if (upperLine.startsWith('#EXTINF:')) {
       // Attribute extraction with case-insensitive regex
       const logoMatch = line.match(/tvg-logo="([^"]*)"/i);
       const groupMatch = line.match(/group-title="([^"]*)"/i);
@@ -86,17 +87,17 @@ export function parseM3uContent(
         tvgName: nameAttrMatch ? nameAttrMatch[1] : undefined,
         chno: chnoMatch ? parseInt(chnoMatch[1], 10) : undefined,
       };
-    } else if (line.startsWith('#EXTVLCOPT:http-user-agent=') && currentInfo) {
+    } else if (upperLine.startsWith('#EXTVLCOPT:HTTP-USER-AGENT=') && currentInfo) {
       currentInfo.playbackUserAgent = line.substring('#EXTVLCOPT:http-user-agent='.length).trim();
     } else if (
-      (line.startsWith('#EXTVLCOPT:http-referrer=') || line.startsWith('#EXTVLCOPT:http-referer=')) &&
+      (upperLine.startsWith('#EXTVLCOPT:HTTP-REFERRER=') || upperLine.startsWith('#EXTVLCOPT:HTTP-REFERER=')) &&
       currentInfo
     ) {
       const separator = line.indexOf('=');
       currentInfo.playbackReferer = separator >= 0 ? line.substring(separator + 1).trim() : undefined;
-    } else if (line.startsWith('#EXTVLCOPT:http-cookie=') && currentInfo) {
+    } else if (upperLine.startsWith('#EXTVLCOPT:HTTP-COOKIE=') && currentInfo) {
       currentInfo.playbackCookie = line.substring('#EXTVLCOPT:http-cookie='.length).trim();
-    } else if (line.startsWith('#EXTHTTP:') && currentInfo) {
+    } else if (upperLine.startsWith('#EXTHTTP:') && currentInfo) {
       const rawHeaders = line.substring('#EXTHTTP:'.length).trim();
       try {
         const headers = JSON.parse(rawHeaders) as Record<string, unknown>;
@@ -109,7 +110,7 @@ export function parseM3uContent(
       } catch {
         // Keep playlist parsing resilient when a provider emits malformed EXTHTTP metadata.
       }
-    } else if (line.startsWith('#EXTGRP:') && currentInfo) {
+    } else if (upperLine.startsWith('#EXTGRP:') && currentInfo) {
       // Some providers supply #EXTGRP: tag for category
       const grp = line.replace('#EXTGRP:', '').trim();
       if (grp && !currentInfo.groupTitle) {
