@@ -95,7 +95,7 @@ public class GetSmartProviderPlugin extends Plugin {
     private static final int DIRECT_ADDRESS_CONNECT_TIMEOUT_MS = 6_000;
     private static final int NETWORK_ROUTE_CONNECT_TIMEOUT_MS = 8_000;
     private static final int MAX_REDIRECTS = 5;
-    private static final String TRANSPORT_BUILD = "GS-NATIVE-XCIPTV-HS12";
+    private static final String TRANSPORT_BUILD = "GS-NATIVE-XCIPTV-HS13";
 
     private static final String CREDENTIAL_PREFS = "getsmart_secure_credentials";
     private static final String CREDENTIAL_DRAFT_KEY = "xtream_draft_v1";
@@ -346,6 +346,9 @@ public class GetSmartProviderPlugin extends Plugin {
     private boolean nativeOsdVisible = true;
     private float lastNonZeroVolume = 1.0f;
     private int nativeAspectMode = 0;
+    private String preferredAudioLanguage = "";
+    private String subtitleDefaultMode = "auto";
+    private String preferredSubtitleLanguage = "";
 
     private static final class NativeTrackChoice {
         final TrackGroup group;
@@ -427,6 +430,9 @@ public class GetSmartProviderPlugin extends Plugin {
         final String requestedChannelNumber = safeString(call.getString("channelNumber"));
         final String requestedCurrentProgram = safeString(call.getString("currentProgram"));
         final String requestedNextProgram = safeString(call.getString("nextProgram"));
+        final String requestedAudioLanguage = safeString(call.getString("preferredAudioLanguage"));
+        final String requestedSubtitleMode = safeString(call.getString("subtitleDefaultMode"));
+        final String requestedSubtitleLanguage = safeString(call.getString("preferredSubtitleLanguage"));
         final String requestedUrl = validated.toString();
 
         getActivity().runOnUiThread(() -> {
@@ -438,6 +444,10 @@ public class GetSmartProviderPlugin extends Plugin {
                 nativePlayerChannelNumber = requestedChannelNumber;
                 nativePlayerCurrentProgram = requestedCurrentProgram;
                 nativePlayerNextProgram = requestedNextProgram;
+                preferredAudioLanguage = normalizeLanguageCode(requestedAudioLanguage);
+                subtitleDefaultMode = normalizeSubtitleMode(requestedSubtitleMode);
+                preferredSubtitleLanguage = normalizeLanguageCode(requestedSubtitleLanguage);
+                applyNativeTrackPreferences();
 
                 if (!requestedUrl.equals(nativePlayerUrl)) {
                     nativePlayerUrl = requestedUrl;
@@ -479,6 +489,33 @@ public class GetSmartProviderPlugin extends Plugin {
         getActivity().runOnUiThread(() -> {
             updateNativeOsdText();
             call.resolve(buildPlayerState("metadata"));
+        });
+    }
+
+    @PluginMethod
+    public void setTrackPreferences(PluginCall call) {
+        preferredAudioLanguage = normalizeLanguageCode(call.getString("preferredAudioLanguage"));
+        subtitleDefaultMode = normalizeSubtitleMode(call.getString("subtitleDefaultMode"));
+        preferredSubtitleLanguage = normalizeLanguageCode(call.getString("preferredSubtitleLanguage"));
+
+        if (getActivity() == null || nativePlayer == null) {
+            JSObject result = new JSObject();
+            result.put("applied", false);
+            result.put("reason", "no-active-player");
+            call.resolve(result);
+            return;
+        }
+
+        getActivity().runOnUiThread(() -> {
+            applyNativeTrackPreferences();
+            JSObject result = new JSObject();
+            result.put("applied", true);
+            result.put("preferredAudioLanguage", preferredAudioLanguage);
+            result.put("subtitleDefaultMode", subtitleDefaultMode);
+            result.put("preferredSubtitleLanguage", preferredSubtitleLanguage);
+            call.resolve(result);
+            notifyListeners("playerTracks", buildDetailedTrackSummary(nativePlayer.getCurrentTracks()));
+            emitPlayerState("track-preferences");
         });
     }
 
@@ -988,6 +1025,51 @@ public class GetSmartProviderPlugin extends Plugin {
     private int dp(int value) {
         float density = getContext().getResources().getDisplayMetrics().density;
         return Math.round(value * density);
+    }
+
+    private String normalizeLanguageCode(String value) {
+        String normalized = safeString(value).trim().toLowerCase(Locale.US);
+        return "auto".equals(normalized) ? "" : normalized;
+    }
+
+    private String normalizeSubtitleMode(String value) {
+        String normalized = safeString(value).trim().toLowerCase(Locale.US);
+        if ("off".equals(normalized) || "preferred".equals(normalized)) {
+            return normalized;
+        }
+        return "auto";
+    }
+
+    private void applyNativeTrackPreferences() {
+        if (nativePlayer == null) return;
+
+        TrackSelectionParameters.Builder builder =
+            nativePlayer.getTrackSelectionParameters().buildUpon();
+
+        // Explicit saved preferences control new media selections. Temporary
+        // in-player track overrides are intentionally not promoted to settings.
+        builder.clearOverridesOfType(C.TRACK_TYPE_AUDIO);
+        builder.clearOverridesOfType(C.TRACK_TYPE_TEXT);
+
+        if (preferredAudioLanguage.isEmpty()) {
+            builder.setPreferredAudioLanguages(new String[0]);
+        } else {
+            builder.setPreferredAudioLanguages(preferredAudioLanguage);
+        }
+
+        if ("off".equals(subtitleDefaultMode)) {
+            builder.setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true);
+            builder.setPreferredTextLanguages(new String[0]);
+        } else {
+            builder.setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false);
+            if ("preferred".equals(subtitleDefaultMode) && !preferredSubtitleLanguage.isEmpty()) {
+                builder.setPreferredTextLanguages(preferredSubtitleLanguage);
+            } else {
+                builder.setPreferredTextLanguages(new String[0]);
+            }
+        }
+
+        nativePlayer.setTrackSelectionParameters(builder.build());
     }
 
     private void seekNativeBy(long offsetMs) {
@@ -1616,6 +1698,9 @@ public class GetSmartProviderPlugin extends Plugin {
         state.put("nextProgram", nativePlayerNextProgram);
         state.put("osdVisible", nativeOsdVisible);
         state.put("aspectMode", nativeAspectLabel());
+        state.put("preferredAudioLanguage", preferredAudioLanguage);
+        state.put("subtitleDefaultMode", subtitleDefaultMode);
+        state.put("preferredSubtitleLanguage", preferredSubtitleLanguage);
 
         if (nativePlayer == null) {
             state.put("playbackState", "idle");
@@ -1719,6 +1804,9 @@ public class GetSmartProviderPlugin extends Plugin {
         nativePlayerNextProgram = "";
         nativeOsdVisible = false;
         nativeAspectMode = 0;
+        preferredAudioLanguage = "";
+        subtitleDefaultMode = "auto";
+        preferredSubtitleLanguage = "";
         notifyListeners("playerState", buildPlayerState("stopped"));
     }
 
