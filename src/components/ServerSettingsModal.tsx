@@ -337,11 +337,11 @@ export const ServerSettingsModal: React.FC<ServerSettingsModalProps> = ({
 
   return (
     <div ref={modalRef} className="gs-modal-viewport fixed inset-0 z-[100] flex items-center justify-center bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="gs-modal-shell w-full max-w-3xl rounded-3xl bg-[#0c121e] border border-slate-800 shadow-2xl overflow-hidden flex flex-col">
+      <div className="gs-modal-shell w-full max-w-3xl rounded-lg bg-[#07111d] border border-[#17304a] shadow-2xl overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="gs-modal-pad border-b border-slate-800 flex items-center justify-between bg-[#080d17]">
+        <div className="gs-modal-pad border-b border-[#17304a] flex items-center justify-between bg-[#06101b]">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400">
+            <div className="w-10 h-10 rounded-lg bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-[#4baeff]">
               <Server className="w-5 h-5" />
             </div>
             <div>
@@ -349,7 +349,7 @@ export const ServerSettingsModal: React.FC<ServerSettingsModalProps> = ({
                 <h2 className="text-base font-bold text-white font-heading">
                   Connections & Streaming Sources
                 </h2>
-                <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-cyan-950 text-cyan-400 border border-cyan-800/50">
+                <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-cyan-950 text-[#4baeff] border border-cyan-800/50">
                   {activeCount} Active Simultaneously
                 </span>
               </div>
@@ -360,7 +360,7 @@ export const ServerSettingsModal: React.FC<ServerSettingsModalProps> = ({
           </div>
           <button
             onClick={onClose}
-            className="p-2 rounded-xl bg-slate-800 text-slate-400 hover:text-white transition"
+            className="p-2 rounded-lg bg-[#0d1d2f] text-slate-400 hover:text-white transition"
           >
             <X className="w-5 h-5" />
           </button>
@@ -369,9 +369,9 @@ export const ServerSettingsModal: React.FC<ServerSettingsModalProps> = ({
         {/* Modal Body */}
         <div className="gs-modal-pad flex-1 min-h-0 overflow-y-auto space-y-5 custom-scrollbar">
           {/* Multi-Server Status Banner */}
-          <div className="p-4 rounded-2xl bg-cyan-950/40 border border-cyan-500/30 flex items-center justify-between gap-4">
+          <div className="p-4 rounded-lg bg-[#0a2d57]/45 border border-[#245f98]/55 flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <Layers className="w-5 h-5 text-cyan-400 shrink-0" />
+              <Layers className="w-5 h-5 text-[#4baeff] shrink-0" />
               <div className="text-xs">
                 <p className="font-bold text-white">Multi-Source Aggregation Active</p>
                 <p className="text-slate-300">
@@ -381,7 +381,7 @@ export const ServerSettingsModal: React.FC<ServerSettingsModalProps> = ({
             </div>
             <button
               onClick={() => setIsAddingNew(!isAddingNew)}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-xs font-bold shrink-0 transition shadow-lg shadow-cyan-500/25 active:scale-95 tv-focus-target"
+              className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#0b63f6] hover:bg-[#1677ff] text-white text-xs font-bold shrink-0 transition shadow-lg shadow-cyan-500/25 active:scale-95 tv-focus-target"
             >
               <Plus className="w-4 h-4" />
               <span>Add Connection</span>
@@ -390,9 +390,9 @@ export const ServerSettingsModal: React.FC<ServerSettingsModalProps> = ({
 
           {/* Add New Connection Form */}
           {isAddingNew && (
-            <div className="p-5 rounded-2xl bg-[#070b14] border border-cyan-500/40 space-y-4">
-              <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-cyan-400 flex items-center gap-2 font-heading">
+            <div className="p-5 rounded-lg bg-[#07111d] border border-[#2d87ff]/50 space-y-4">
+              <div className="flex items-center justify-between pb-3 border-b border-[#17304a]">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-[#4baeff] flex items-center gap-2 font-heading">
                   <Plus className="w-4 h-4" />
                   <span>Choose Connection Method</span>
                 </h3>
@@ -409,13 +409,13 @@ export const ServerSettingsModal: React.FC<ServerSettingsModalProps> = ({
                 <button
                   type="button"
                   onClick={() => setNewServerType('xtream')}
-                  className={`p-3 rounded-xl border text-left transition flex flex-col justify-between ${
+                  className={`p-3 rounded-lg border text-left transition flex flex-col justify-between ${
                     newServerType === 'xtream'
                       ? 'bg-cyan-950/80 border-cyan-400 text-white shadow-md'
-                      : 'bg-slate-900/60 border-slate-800 text-slate-400 hover:text-slate-200'
+                      : 'bg-[#091522]/60 border-[#17304a] text-slate-400 hover:text-slate-200'
                   }`}
                 >
-                  <Server className="w-4 h-4 text-cyan-400 mb-2" />
+                  <Server className="w-4 h-4 text-[#4baeff] mb-2" />
                   <div>
                     <p className="text-xs font-bold text-white">Xtream Codes</p>
                     <p className="text-[10px] text-slate-400 mt-0.5">Portal + User + Pass</p>
@@ -425,10 +425,10 @@ export const ServerSettingsModal: React.FC<ServerSettingsModalProps> = ({
                 <button
                   type="button"
                   onClick={() => setNewServerType('stalker')}
-                  className={`p-3 rounded-xl border text-left transition flex flex-col justify-between ${
+                  className={`p-3 rounded-lg border text-left transition flex flex-col justify-between ${
                     newServerType === 'stalker'
                       ? 'bg-amber-950/80 border-amber-400 text-white shadow-md'
-                      : 'bg-slate-900/60 border-slate-800 text-slate-400 hover:text-slate-200'
+                      : 'bg-[#091522]/60 border-[#17304a] text-slate-400 hover:text-slate-200'
                   }`}
                 >
                   <Tv className="w-4 h-4 text-amber-400 mb-2" />
@@ -441,10 +441,10 @@ export const ServerSettingsModal: React.FC<ServerSettingsModalProps> = ({
                 <button
                   type="button"
                   onClick={() => setNewServerType('m3u')}
-                  className={`p-3 rounded-xl border text-left transition flex flex-col justify-between ${
+                  className={`p-3 rounded-lg border text-left transition flex flex-col justify-between ${
                     newServerType === 'm3u'
                       ? 'bg-emerald-950/80 border-emerald-400 text-white shadow-md'
-                      : 'bg-slate-900/60 border-slate-800 text-slate-400 hover:text-slate-200'
+                      : 'bg-[#091522]/60 border-[#17304a] text-slate-400 hover:text-slate-200'
                   }`}
                 >
                   <FileText className="w-4 h-4 text-emerald-400 mb-2" />
@@ -457,10 +457,10 @@ export const ServerSettingsModal: React.FC<ServerSettingsModalProps> = ({
                 <button
                   type="button"
                   onClick={() => setNewServerType('single_stream')}
-                  className={`p-3 rounded-xl border text-left transition flex flex-col justify-between ${
+                  className={`p-3 rounded-lg border text-left transition flex flex-col justify-between ${
                     newServerType === 'single_stream'
                       ? 'bg-purple-950/80 border-purple-400 text-white shadow-md'
-                      : 'bg-slate-900/60 border-slate-800 text-slate-400 hover:text-slate-200'
+                      : 'bg-[#091522]/60 border-[#17304a] text-slate-400 hover:text-slate-200'
                   }`}
                 >
                   <Radio className="w-4 h-4 text-purple-400 mb-2" />
@@ -483,7 +483,7 @@ export const ServerSettingsModal: React.FC<ServerSettingsModalProps> = ({
                         placeholder="e.g. Home, Sports, or Backup"
                         value={xtreamName}
                         onChange={(e) => setXtreamName(e.target.value)}
-                        className="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-cyan-500"
+                        className="w-full bg-[#091522] border border-[#23415d] rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-[#2d87ff]"
                       />
                     </div>
 
@@ -496,7 +496,7 @@ export const ServerSettingsModal: React.FC<ServerSettingsModalProps> = ({
                           placeholder="http://iptv-provider.com:8080"
                           value={xtreamUrl}
                           onChange={(e) => setXtreamUrl(e.target.value)}
-                          className="w-full bg-slate-900 border border-slate-700/80 rounded-xl pl-8 pr-3 py-2 text-white font-mono text-xs focus:outline-none focus:border-cyan-500"
+                          className="w-full bg-[#091522] border border-[#23415d] rounded-lg pl-8 pr-3 py-2 text-white font-mono text-xs focus:outline-none focus:border-[#2d87ff]"
                           required
                         />
                       </div>
@@ -512,7 +512,7 @@ export const ServerSettingsModal: React.FC<ServerSettingsModalProps> = ({
                             placeholder="username"
                             value={xtreamUsername}
                             onChange={(e) => setXtreamUsername(e.target.value)}
-                            className="w-full bg-slate-900 border border-slate-700/80 rounded-xl pl-8 pr-3 py-2 text-white text-xs focus:outline-none focus:border-cyan-500"
+                            className="w-full bg-[#091522] border border-[#23415d] rounded-lg pl-8 pr-3 py-2 text-white text-xs focus:outline-none focus:border-[#2d87ff]"
                             required
                           />
                         </div>
@@ -527,7 +527,7 @@ export const ServerSettingsModal: React.FC<ServerSettingsModalProps> = ({
                             placeholder="••••••••"
                             value={xtreamPassword}
                             onChange={(e) => setXtreamPassword(e.target.value)}
-                            className="w-full bg-slate-900 border border-slate-700/80 rounded-xl pl-8 pr-3 py-2 text-white text-xs focus:outline-none focus:border-cyan-500"
+                            className="w-full bg-[#091522] border border-[#23415d] rounded-lg pl-8 pr-3 py-2 text-white text-xs focus:outline-none focus:border-[#2d87ff]"
                             required
                           />
                         </div>
@@ -546,7 +546,7 @@ export const ServerSettingsModal: React.FC<ServerSettingsModalProps> = ({
                         placeholder="e.g. Home Portal, Living Room, or Backup"
                         value={stbName}
                         onChange={(e) => setStbName(e.target.value)}
-                        className="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-amber-500"
+                        className="w-full bg-[#091522] border border-[#23415d] rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-amber-500"
                       />
                     </div>
 
@@ -559,7 +559,7 @@ export const ServerSettingsModal: React.FC<ServerSettingsModalProps> = ({
                           placeholder="http://portal.domain.com/c/"
                           value={stbPortalUrl}
                           onChange={(e) => setStbPortalUrl(e.target.value)}
-                          className="w-full bg-slate-900 border border-slate-700/80 rounded-xl pl-8 pr-3 py-2 text-white font-mono text-xs focus:outline-none focus:border-amber-500"
+                          className="w-full bg-[#091522] border border-[#23415d] rounded-lg pl-8 pr-3 py-2 text-white font-mono text-xs focus:outline-none focus:border-amber-500"
                           required
                         />
                       </div>
@@ -582,7 +582,7 @@ export const ServerSettingsModal: React.FC<ServerSettingsModalProps> = ({
                         placeholder="00:1A:79:XX:XX:XX"
                         value={stbMacAddress}
                         onChange={(e) => setStbMacAddress(e.target.value.toUpperCase())}
-                        className="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3 py-2 text-white font-mono text-xs focus:outline-none focus:border-amber-500"
+                        className="w-full bg-[#091522] border border-[#23415d] rounded-lg px-3 py-2 text-white font-mono text-xs focus:outline-none focus:border-amber-500"
                         required
                       />
                     </div>
@@ -594,19 +594,19 @@ export const ServerSettingsModal: React.FC<ServerSettingsModalProps> = ({
                         onClick={() => setShowStbAdvanced(!showStbAdvanced)}
                         className="flex items-center gap-1 text-[11px] text-slate-400 hover:text-white"
                       >
-                        <Sliders className="w-3 h-3 text-cyan-400" />
+                        <Sliders className="w-3 h-3 text-[#4baeff]" />
                         <span>Advanced Device Settings</span>
                         {showStbAdvanced ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
                       </button>
 
                       {showStbAdvanced && (
-                        <div className="mt-3 p-3.5 rounded-xl bg-slate-900/90 border border-slate-800 space-y-3">
+                        <div className="mt-3 p-3.5 rounded-lg bg-[#091522]/90 border border-[#17304a] space-y-3">
                           <div>
                             <label className="block text-slate-300 mb-1 font-medium">STB Model</label>
                             <select
                               value={stbModel}
                               onChange={(e) => setStbModel(e.target.value as any)}
-                              className="w-full bg-slate-950 border border-slate-700/80 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-amber-500"
+                              className="w-full bg-[#050d17] border border-[#23415d] rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-amber-500"
                             >
                               <option value="MAG254">MAG 254 (Recommended)</option>
                               <option value="MAG250">MAG 250 (Classic)</option>
@@ -624,7 +624,7 @@ export const ServerSettingsModal: React.FC<ServerSettingsModalProps> = ({
                                 type="text"
                                 value={stbSerial}
                                 onChange={(e) => setStbSerial(e.target.value)}
-                                className="w-full bg-slate-950 border border-slate-700/80 rounded-xl px-3 py-2 text-white font-mono text-xs focus:outline-none focus:border-amber-500"
+                                className="w-full bg-[#050d17] border border-[#23415d] rounded-lg px-3 py-2 text-white font-mono text-xs focus:outline-none focus:border-amber-500"
                               />
                             </div>
                             <div>
@@ -633,7 +633,7 @@ export const ServerSettingsModal: React.FC<ServerSettingsModalProps> = ({
                                 type="text"
                                 value={stbDeviceId}
                                 onChange={(e) => setStbDeviceId(e.target.value)}
-                                className="w-full bg-slate-950 border border-slate-700/80 rounded-xl px-3 py-2 text-white font-mono text-xs focus:outline-none focus:border-amber-500"
+                                className="w-full bg-[#050d17] border border-[#23415d] rounded-lg px-3 py-2 text-white font-mono text-xs focus:outline-none focus:border-amber-500"
                               />
                             </div>
                           </div>
@@ -653,11 +653,11 @@ export const ServerSettingsModal: React.FC<ServerSettingsModalProps> = ({
                         placeholder="e.g. Home Playlist, Sports Line, or Backup"
                         value={m3uName}
                         onChange={(e) => setM3uName(e.target.value)}
-                        className="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-emerald-500"
+                        className="w-full bg-[#091522] border border-[#23415d] rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-emerald-500"
                       />
                     </div>
 
-                    <div className="flex items-center gap-2 p-1 bg-slate-900 rounded-xl border border-slate-800">
+                    <div className="flex items-center gap-2 p-1 bg-[#091522] rounded-lg border border-[#17304a]">
                       <button
                         type="button"
                         onClick={() => setM3uMode('url')}
@@ -688,7 +688,7 @@ export const ServerSettingsModal: React.FC<ServerSettingsModalProps> = ({
                           placeholder="http://iptv.com/get.php?username=...&type=m3u_plus"
                           value={m3uUrl}
                           onChange={(e) => setM3uUrl(e.target.value)}
-                          className="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3 py-2 text-white font-mono text-xs focus:outline-none focus:border-emerald-500"
+                          className="w-full bg-[#091522] border border-[#23415d] rounded-lg px-3 py-2 text-white font-mono text-xs focus:outline-none focus:border-emerald-500"
                           required
                         />
                       </div>
@@ -702,7 +702,7 @@ export const ServerSettingsModal: React.FC<ServerSettingsModalProps> = ({
                           placeholder="#EXTM3U&#10;#EXTINF:-1 tvg-id='NASA' tvg-logo='...' group-title='Docs',NASA HD&#10;https://.../stream.m3u8"
                           value={m3uRawText}
                           onChange={(e) => setM3uRawText(e.target.value)}
-                          className="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3 py-2 text-white font-mono text-[11px] focus:outline-none focus:border-emerald-500"
+                          className="w-full bg-[#091522] border border-[#23415d] rounded-lg px-3 py-2 text-white font-mono text-[11px] focus:outline-none focus:border-emerald-500"
                           required
                         />
                       </div>
@@ -720,7 +720,7 @@ export const ServerSettingsModal: React.FC<ServerSettingsModalProps> = ({
                         placeholder="e.g. 24/7 Action Cinema HD"
                         value={singleName}
                         onChange={(e) => setSingleName(e.target.value)}
-                        className="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-purple-500"
+                        className="w-full bg-[#091522] border border-[#23415d] rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-purple-500"
                         required
                       />
                     </div>
@@ -732,7 +732,7 @@ export const ServerSettingsModal: React.FC<ServerSettingsModalProps> = ({
                         placeholder="https://domain.com/live/ch1/master.m3u8"
                         value={singleUrl}
                         onChange={(e) => setSingleUrl(e.target.value)}
-                        className="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3 py-2 text-white font-mono text-xs focus:outline-none focus:border-purple-500"
+                        className="w-full bg-[#091522] border border-[#23415d] rounded-lg px-3 py-2 text-white font-mono text-xs focus:outline-none focus:border-purple-500"
                         required
                       />
                     </div>
@@ -745,7 +745,7 @@ export const ServerSettingsModal: React.FC<ServerSettingsModalProps> = ({
                           placeholder="e.g. Sports, News, Movies"
                           value={singleCategory}
                           onChange={(e) => setSingleCategory(e.target.value)}
-                          className="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-purple-500"
+                          className="w-full bg-[#091522] border border-[#23415d] rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-purple-500"
                         />
                       </div>
                       <div>
@@ -755,7 +755,7 @@ export const ServerSettingsModal: React.FC<ServerSettingsModalProps> = ({
                           placeholder="https://.../logo.png"
                           value={singleLogo}
                           onChange={(e) => setSingleLogo(e.target.value)}
-                          className="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-purple-500"
+                          className="w-full bg-[#091522] border border-[#23415d] rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-purple-500"
                         />
                       </div>
                     </div>
@@ -764,7 +764,7 @@ export const ServerSettingsModal: React.FC<ServerSettingsModalProps> = ({
 
                 {/* Save Success Banner */}
                 {saveSuccessMsg && (
-                  <div className="p-3 rounded-2xl text-xs flex items-center gap-2.5 bg-emerald-950/80 text-emerald-300 border border-emerald-800 animate-in fade-in">
+                  <div className="p-3 rounded-lg text-xs flex items-center gap-2.5 bg-emerald-950/80 text-emerald-300 border border-emerald-800 animate-in fade-in">
                     <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0" />
                     <span className="font-semibold">{saveSuccessMsg}</span>
                   </div>
@@ -772,10 +772,10 @@ export const ServerSettingsModal: React.FC<ServerSettingsModalProps> = ({
 
                 {/* Real Connection Diagnostics Breakdown Panel */}
                 {diagReport && (
-                  <div className="bg-[#080d18] border border-slate-800 rounded-2xl p-4 space-y-3 animate-in fade-in duration-200">
-                    <div className="flex items-center justify-between pb-2 border-b border-slate-800/80">
+                  <div className="bg-[#07111d] border border-[#17304a] rounded-lg p-4 space-y-3 animate-in fade-in duration-200">
+                    <div className="flex items-center justify-between pb-2 border-b border-[#17304a]">
                       <div className="flex items-center gap-2">
-                        <Activity className="w-4 h-4 text-cyan-400" />
+                        <Activity className="w-4 h-4 text-[#4baeff]" />
                         <span className="text-xs font-bold uppercase tracking-wider text-slate-200 font-heading">
                           Connection Diagnostics
                         </span>
@@ -785,7 +785,7 @@ export const ServerSettingsModal: React.FC<ServerSettingsModalProps> = ({
                           diagReport.success
                             ? 'bg-emerald-950 text-emerald-300 border border-emerald-800'
                             : isTesting
-                            ? 'bg-cyan-950 text-cyan-300 border border-cyan-800'
+                            ? 'bg-[#0a2d57] text-[#78c1ff] border border-[#245f98]'
                             : 'bg-rose-950 text-rose-300 border border-rose-800'
                         }`}
                       >
@@ -798,23 +798,23 @@ export const ServerSettingsModal: React.FC<ServerSettingsModalProps> = ({
                       {diagReport.steps.map((s) => (
                         <div
                           key={s.stage}
-                          className="flex items-center justify-between text-xs p-2 rounded-xl bg-slate-900/60 border border-slate-800/60 transition-all"
+                          className="flex items-center justify-between text-xs p-2 rounded-lg bg-[#091522]/60 border border-[#17304a]/80 transition-all"
                         >
                           <div className="flex items-center gap-2.5 min-w-0 pr-2">
                             {s.status === 'success' && (
                               <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0" />
                             )}
                             {s.status === 'running' && (
-                              <RefreshCw className="w-4 h-4 text-cyan-400 animate-spin shrink-0" />
+                              <RefreshCw className="w-4 h-4 text-[#4baeff] animate-spin shrink-0" />
                             )}
                             {s.status === 'failed' && (
                               <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
                             )}
                             {s.status === 'pending' && (
-                              <span className="w-3.5 h-3.5 rounded-full border border-slate-700 shrink-0" />
+                              <span className="w-3.5 h-3.5 rounded-full border border-[#23415d] shrink-0" />
                             )}
                             {s.status === 'skipped' && (
-                              <span className="w-3.5 h-3.5 rounded-full border border-slate-800 opacity-40 shrink-0" />
+                              <span className="w-3.5 h-3.5 rounded-full border border-[#17304a] opacity-40 shrink-0" />
                             )}
                             <span
                               className={`font-semibold truncate ${
@@ -823,7 +823,7 @@ export const ServerSettingsModal: React.FC<ServerSettingsModalProps> = ({
                                   : s.status === 'success'
                                   ? 'text-slate-200'
                                   : s.status === 'running'
-                                  ? 'text-cyan-300'
+                                  ? 'text-[#78c1ff]'
                                   : 'text-slate-500'
                               }`}
                             >
@@ -838,7 +838,7 @@ export const ServerSettingsModal: React.FC<ServerSettingsModalProps> = ({
                                   ? 'text-rose-400 font-bold'
                                   : s.status === 'success'
                                   ? 'text-slate-400'
-                                  : 'text-cyan-400'
+                                  : 'text-[#4baeff]'
                               }`}
                             >
                               {s.message}
@@ -851,7 +851,7 @@ export const ServerSettingsModal: React.FC<ServerSettingsModalProps> = ({
                     {/* Summary Message & Error Cause Badge */}
                     {diagReport.summaryMessage && (
                       <div
-                        className={`p-3 rounded-xl text-xs font-medium flex items-start gap-2.5 ${
+                        className={`p-3 rounded-lg text-xs font-medium flex items-start gap-2.5 ${
                           diagReport.success
                             ? 'bg-emerald-950/60 text-emerald-200 border border-emerald-900/50'
                             : 'bg-rose-950/60 text-rose-200 border border-rose-900/50'
@@ -882,7 +882,7 @@ export const ServerSettingsModal: React.FC<ServerSettingsModalProps> = ({
                       setIsAddingNew(false);
                       setDiagReport(null);
                     }}
-                    className="px-4 py-2.5 rounded-xl bg-slate-800 text-slate-300 hover:text-white text-xs font-semibold transition active:scale-95"
+                    className="px-4 py-2.5 rounded-lg bg-[#0d1d2f] text-slate-300 hover:text-white text-xs font-semibold transition active:scale-95"
                   >
                     Cancel
                   </button>
@@ -891,7 +891,7 @@ export const ServerSettingsModal: React.FC<ServerSettingsModalProps> = ({
                     type="button"
                     onClick={() => runDiagnostics(false)}
                     disabled={isTesting}
-                    className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-cyan-800/60 text-xs font-bold transition flex items-center gap-2 active:scale-95 tv-focus-target"
+                    className="px-4 py-2.5 rounded-lg bg-[#0d1d2f] hover:bg-slate-700 text-[#78c1ff] border border-cyan-800/60 text-xs font-bold transition flex items-center gap-2 active:scale-95 tv-focus-target"
                   >
                     <Activity className="w-3.5 h-3.5" />
                     <span>{isTesting ? 'Testing...' : 'Test Connection'}</span>
@@ -900,7 +900,7 @@ export const ServerSettingsModal: React.FC<ServerSettingsModalProps> = ({
                   <button
                     type="submit"
                     disabled={isTesting}
-                    className="px-6 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-xs font-bold transition shadow-lg shadow-cyan-500/25 active:scale-95 tv-focus-target flex items-center gap-2"
+                    className="px-6 py-2.5 rounded-lg bg-[#0b63f6] hover:bg-[#1677ff] text-white text-xs font-bold transition shadow-lg shadow-cyan-500/25 active:scale-95 tv-focus-target flex items-center gap-2"
                   >
                     {isTesting && <RefreshCw className="w-3.5 h-3.5 animate-spin" />}
                     <span>{isTesting ? 'Verifying...' : 'Verify & Add Source'}</span>
@@ -923,10 +923,10 @@ export const ServerSettingsModal: React.FC<ServerSettingsModalProps> = ({
                   <div
                     key={p.id}
                     onClick={() => handleToggleActive(p.id)}
-                    className={`flex items-center justify-between p-4 rounded-2xl border transition-all cursor-pointer tv-focus-target ${
+                    className={`flex items-center justify-between p-4 rounded-lg border transition-all cursor-pointer tv-focus-target ${
                       isActive
                         ? 'bg-[#090f1d] border-cyan-500/60 shadow-md shadow-cyan-950/30'
-                        : 'bg-[#06090f] border-slate-800 opacity-60 hover:opacity-100'
+                        : 'bg-[#050d17] border-[#17304a] opacity-60 hover:opacity-100'
                     }`}
                   >
                     <div className="flex items-center gap-3.5 min-w-0 flex-1 pr-3">
@@ -938,7 +938,7 @@ export const ServerSettingsModal: React.FC<ServerSettingsModalProps> = ({
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
                           <h4 className="text-sm font-bold text-white truncate font-heading">{p.name}</h4>
-                          <span className="text-[10px] px-2 py-0.5 rounded-md bg-slate-800 text-slate-300 font-mono">
+                          <span className="text-[10px] px-2 py-0.5 rounded-md bg-[#0d1d2f] text-slate-300 font-mono">
                             {p.type === 'xtream'
                               ? 'Xtream Codes'
                               : p.type === 'stalker'
@@ -962,10 +962,10 @@ export const ServerSettingsModal: React.FC<ServerSettingsModalProps> = ({
                       {/* Active Toggle Switch */}
                       <button
                         onClick={() => handleToggleActive(p.id)}
-                        className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition ${
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition ${
                           isActive
                             ? 'bg-emerald-500 text-slate-950 shadow-md'
-                            : 'bg-slate-800 text-slate-400 hover:text-white'
+                            : 'bg-[#0d1d2f] text-slate-400 hover:text-white'
                         }`}
                       >
                         <Power className="w-3.5 h-3.5" />
@@ -975,7 +975,7 @@ export const ServerSettingsModal: React.FC<ServerSettingsModalProps> = ({
                       {profiles.length > 1 && (
                         <button
                           onClick={(e) => handleDeleteProfile(p.id, e)}
-                          className="p-2 rounded-xl text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 transition"
+                          className="p-2 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 transition"
                           title="Remove Source"
                         >
                           <Trash2 className="w-4 h-4" />
