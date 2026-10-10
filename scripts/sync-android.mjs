@@ -37,10 +37,18 @@ run('npx', ['cap', 'sync', 'android']);
 
 const appBuildGradle = join(root, 'android', 'app', 'build.gradle');
 const originalBuildGradle = readFileSync(appBuildGradle, 'utf8');
-const compatibleBuildGradle = originalBuildGradle.replace(
-  /getDefaultProguardFile\((['"])proguard-android\.txt\1\)/g,
-  "getDefaultProguardFile('proguard-android-optimize.txt')",
-);
+const compatibleBuildGradle = originalBuildGradle
+  .replace(
+    /getDefaultProguardFile\((['"])proguard-android\.txt\1\)/g,
+    "getDefaultProguardFile('proguard-android-optimize.txt')",
+  )
+  // Remove the temporary OkHttp dependency from the earlier transport
+  // experiment. The verified reference Xtream path uses HttpURLConnection.
+  .replace(
+    /^\s*implementation ['"]com\.squareup\.okhttp3:okhttp:3\.12\.11['"]\s*$/gm,
+    '',
+  );
+
 if (compatibleBuildGradle !== originalBuildGradle) {
   writeFileSync(appBuildGradle, compatibleBuildGradle, 'utf8');
   console.log('Updated generated Android build configuration.');
