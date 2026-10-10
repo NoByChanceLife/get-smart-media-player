@@ -191,8 +191,8 @@ export const SeriesView: React.FC<SeriesViewProps> = ({
 
   if (!canAccess) {
     return (
-      <div className="flex flex-col items-center justify-center py-24 text-center bg-[#0d1424] rounded-3xl border border-slate-800 p-8 max-w-lg mx-auto">
-        <div className="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 mb-4">
+      <div className="flex flex-col items-center justify-center py-24 text-center bg-[#091522] rounded-xl border border-[#17304a] p-8 max-w-lg mx-auto">
+        <div className="w-16 h-16 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 mb-4">
           <ShieldAlert className="w-8 h-8" />
         </div>
         <h3 className="text-base font-bold text-white font-heading">TV Series Catalog Restricted</h3>
@@ -267,8 +267,8 @@ export const SeriesView: React.FC<SeriesViewProps> = ({
                 onClick={() => onSelectCategory(cat.category_id)}
                 className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition tv-focus-target ${
                   isSelected
-                    ? 'bg-cyan-600 text-white shadow-md shadow-cyan-950/40 font-bold'
-                    : 'bg-slate-900/80 text-slate-400 hover:text-white border border-slate-800/80 hover:bg-slate-800'
+                    ? 'bg-[#0b63f6] text-white shadow-[0_6px_16px_rgba(0,70,180,.24)] font-semibold'
+                    : 'bg-[#091522]/90 text-slate-400 hover:text-white border border-[#17304a] hover:bg-slate-800'
                 }`}
               >
                 {isCategoryLocked && <Lock className="w-3 h-3 text-rose-400" />}
@@ -286,7 +286,7 @@ export const SeriesView: React.FC<SeriesViewProps> = ({
             placeholder="Search TV series..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-[#0a0f1c] border border-slate-800 rounded-xl pl-9 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 transition tv-focus-target"
+            className="w-full bg-[#07111d] border border-[#17304a] rounded-xl pl-9 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#2d87ff] transition tv-focus-target"
           />
         </div>
       </div>
@@ -306,7 +306,7 @@ export const SeriesView: React.FC<SeriesViewProps> = ({
               aria-label={`Open ${series.name}`}
               onKeyDown={(e) => handlePosterKeyDown(e, seriesIndex, series)}
               onClick={() => handleOpenSeries(series)}
-              className="group relative flex flex-col bg-[#0e1422] rounded-2xl border border-slate-800/80 hover:border-cyan-500/50 overflow-hidden cursor-pointer transition-all duration-200 shadow-md tv-focus-target"
+              className="group relative flex flex-col bg-[#091522] rounded-lg border border-[#17304a] hover:border-[#2d87ff]/70 overflow-hidden cursor-pointer transition-all duration-200 shadow-md tv-focus-target"
             >
               {/* Cover Poster */}
               <div className="relative aspect-[2/3] w-full bg-slate-950 overflow-hidden">
@@ -344,7 +344,7 @@ export const SeriesView: React.FC<SeriesViewProps> = ({
 
               {/* Title & Info */}
               <div className="p-3">
-                <h3 className="text-xs font-bold text-white truncate group-hover:text-cyan-300 transition">
+                <h3 className="text-xs font-bold text-white truncate group-hover:text-[#78c1ff] transition">
                   {series.name}
                 </h3>
                 <div className="flex items-center gap-2 mt-1 text-[10px] text-slate-400">
@@ -360,7 +360,7 @@ export const SeriesView: React.FC<SeriesViewProps> = ({
       {/* Cinematic Series Episodes & Seasons Modal */}
       {selectedSeries && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md p-4 animate-in fade-in duration-200">
-          <div className="w-full max-w-4xl max-h-[92vh] rounded-3xl bg-[#0c121e] border border-slate-800 shadow-2xl overflow-hidden flex flex-col relative">
+          <div className="w-full max-w-4xl max-h-[92vh] rounded-xl bg-[#07111d] border border-[#17304a] shadow-2xl overflow-hidden flex flex-col relative">
             {/* Header with Backdrop */}
             <div className="relative aspect-[21/9] sm:aspect-[24/9] w-full bg-slate-950 overflow-hidden shrink-0">
               <img
@@ -381,7 +381,7 @@ export const SeriesView: React.FC<SeriesViewProps> = ({
                 <div>
                   <div className="flex items-center gap-2 mb-1 text-xs">
                     {selectedSeries.year && (
-                      <span className="font-mono text-cyan-400 font-bold">{selectedSeries.year}</span>
+                      <span className="font-mono text-[#4baeff] font-bold">{selectedSeries.year}</span>
                     )}
                     {selectedSeries.genre && (
                       <span className="text-slate-300">· {selectedSeries.genre}</span>
@@ -400,7 +400,7 @@ export const SeriesView: React.FC<SeriesViewProps> = ({
 
                 <button
                   onClick={() => onToggleFavorite(selectedSeries.series_id)}
-                  className={`p-2.5 rounded-2xl border transition shrink-0 ${
+                  className={`p-2.5 rounded-lg border transition shrink-0 ${
                     selectedSeries.isFavorite
                       ? 'bg-amber-500/20 border-amber-500/50 text-amber-300'
                       : 'bg-black/60 border-slate-700 text-slate-400 hover:text-white'
@@ -418,13 +418,13 @@ export const SeriesView: React.FC<SeriesViewProps> = ({
 
             {/* Plot synopsis */}
             {selectedSeries.plot && (
-              <div className="px-6 pt-4 pb-2 text-xs text-slate-300 leading-relaxed border-b border-slate-800/60">
+              <div className="px-6 pt-4 pb-2 text-xs text-slate-300 leading-relaxed border-b border-[#17304a]/80">
                 {selectedSeries.plot}
               </div>
             )}
 
             {/* Seasons Tabs Selector */}
-            <div className="px-6 py-3 border-b border-slate-800 bg-[#080d17] flex items-center gap-2 overflow-x-auto scrollbar-none shrink-0">
+            <div className="px-6 py-3 border-b border-[#17304a] bg-[#07111d] flex items-center gap-2 overflow-x-auto scrollbar-none shrink-0">
               <span className="text-xs font-bold text-slate-400 mr-2 flex items-center gap-1 font-heading uppercase">
                 <ListOrdered className="w-3.5 h-3.5" />
                 <span>Seasons:</span>
@@ -436,8 +436,8 @@ export const SeriesView: React.FC<SeriesViewProps> = ({
                   onClick={() => setActiveSeasonNum(season.season_num)}
                   className={`px-4 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap tv-focus-target ${
                     activeSeasonNum === season.season_num
-                      ? 'bg-cyan-600 text-white shadow-md'
-                      : 'bg-slate-900 border border-slate-800 text-slate-400 hover:text-white'
+                      ? 'bg-[#0b63f6] text-white shadow-[0_6px_16px_rgba(0,70,180,.24)]'
+                      : 'bg-[#0a1724] border border-[#17304a] text-slate-400 hover:text-white'
                   }`}
                 >
                   {season.name || `Season ${season.season_num}`}
@@ -469,15 +469,15 @@ export const SeriesView: React.FC<SeriesViewProps> = ({
                       onPlayEpisode(selectedSeries, activeSeasonNum, ep);
                       setSelectedSeries(null);
                     }}
-                    className="group flex flex-col sm:flex-row items-start sm:items-center justify-between p-3.5 rounded-2xl bg-[#080d17] border border-slate-800/80 hover:border-cyan-500/50 cursor-pointer transition tv-focus-target gap-3"
+                    className="group flex flex-col sm:flex-row items-start sm:items-center justify-between p-3.5 rounded-lg bg-[#07111d] border border-[#17304a] hover:border-[#2d87ff]/70 cursor-pointer transition tv-focus-target gap-3"
                   >
                     <div className="flex items-center gap-3.5 min-w-0 flex-1">
-                      <div className="w-12 h-12 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center text-cyan-400 shrink-0 font-mono font-bold text-xs">
+                      <div className="w-12 h-12 rounded-xl bg-[#0a1724] border border-[#17304a] flex items-center justify-center text-[#4baeff] shrink-0 font-mono font-bold text-xs">
                         E{ep.episode_num}
                       </div>
 
                       <div className="min-w-0 flex-1">
-                        <h4 className="text-xs font-bold text-white group-hover:text-cyan-300 transition truncate">
+                        <h4 className="text-xs font-bold text-white group-hover:text-[#78c1ff] transition truncate">
                           {ep.title || `Episode ${ep.episode_num}`}
                         </h4>
                         <div className="flex items-center gap-2 mt-0.5 text-[10px] text-slate-400">
@@ -487,7 +487,7 @@ export const SeriesView: React.FC<SeriesViewProps> = ({
                       </div>
                     </div>
 
-                    <button className="px-4 py-2 rounded-xl bg-cyan-600/20 group-hover:bg-cyan-500 text-cyan-400 group-hover:text-slate-950 font-bold text-xs flex items-center gap-1.5 transition shrink-0 self-end sm:self-center">
+                    <button className="px-4 py-2 rounded-xl bg-[#0b63f6]/18 group-hover:bg-[#0b63f6] text-[#78c1ff] group-hover:text-white font-bold text-xs flex items-center gap-1.5 transition shrink-0 self-end sm:self-center">
                       <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
                       <span>Play (Enter)</span>
                     </button>
