@@ -187,7 +187,8 @@ public class GetSmartProviderPlugin extends Plugin {
 
                 // Match the working APK's Xtream WebServicesAdapter as closely
                 // as practical: HttpURLConnection, GET, User-Agent, native
-                // redirect handling, 40s connect timeout, 35s read timeout.
+                // redirect handling. We temporarily allow 60s connect/read
+                // while diagnosing this provider; the reference app uses 40s/35s.
                 phase = "opening";
                 connection = (HttpURLConnection) url.openConnection();
                 connection.setRequestMethod("GET");
