@@ -57,6 +57,7 @@ interface VideoPlayerProps {
   onSelectLiveStream?: (stream: XtreamLiveStream) => void;
   onOpenPerformanceSettings?: () => void;
   onOpenGuide?: () => void;
+  onOpenPlaylist?: () => void;
   isVisuallyHidden?: boolean;
 }
 
@@ -70,6 +71,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   onSelectLiveStream,
   onOpenPerformanceSettings,
   onOpenGuide,
+  onOpenPlaylist,
   isVisuallyHidden = false,
 }) => {
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -101,6 +103,8 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const onCloseRef = useRef(onClose);
   const onStopRef = useRef(onStop);
   const onOpenGuideRef = useRef(onOpenGuide);
+  const onOpenPlaylistRef = useRef(onOpenPlaylist);
+  const onOpenPerformanceSettingsRef = useRef(onOpenPerformanceSettings);
   const allLiveStreamsRef = useRef(allLiveStreams);
   const onSelectLiveStreamRef = useRef(onSelectLiveStream);
   const lastLiveStreamRef = useRef<XtreamLiveStream | null>(null);
@@ -110,6 +114,8 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   useEffect(() => { onCloseRef.current = onClose; }, [onClose]);
   useEffect(() => { onStopRef.current = onStop; }, [onStop]);
   useEffect(() => { onOpenGuideRef.current = onOpenGuide; }, [onOpenGuide]);
+  useEffect(() => { onOpenPlaylistRef.current = onOpenPlaylist; }, [onOpenPlaylist]);
+  useEffect(() => { onOpenPerformanceSettingsRef.current = onOpenPerformanceSettings; }, [onOpenPerformanceSettings]);
   useEffect(() => { allLiveStreamsRef.current = allLiveStreams; }, [allLiveStreams]);
   useEffect(() => { onSelectLiveStreamRef.current = onSelectLiveStream; }, [onSelectLiveStream]);
 
@@ -210,8 +216,23 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
           return;
         }
 
-        if (event.command === 'guide' || event.command === 'back') {
+        if (event.command === 'playlist') {
+          onOpenPlaylistRef.current?.();
+          return;
+        }
+
+        if (event.command === 'epg' || event.command === 'guide') {
           onOpenGuideRef.current?.();
+          return;
+        }
+
+        if (event.command === 'settings') {
+          onOpenPerformanceSettingsRef.current?.();
+          return;
+        }
+
+        if (event.command === 'back') {
+          onCloseRef.current();
           return;
         }
 
@@ -940,7 +961,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         case 'Backspace':
           if (!document.fullscreenElement) {
             e.preventDefault();
-            onOpenGuideRef.current?.();
+            onCloseRef.current();
           }
           break;
         case 'ArrowUp':
@@ -964,10 +985,8 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             e.preventDefault();
             videoRef.current.currentTime = Math.max(0, videoRef.current.currentTime - 10);
           } else if (target.type === 'live') {
-            // TV-first behavior: Left always returns to the guide, whether
-            // playback is healthy, buffering, or failed.
             e.preventDefault();
-            onOpenGuide?.();
+            onOpenPlaylistRef.current?.();
           }
           break;
         case 'ArrowRight':
