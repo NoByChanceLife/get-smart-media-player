@@ -116,6 +116,9 @@ export interface XtreamLiveStream {
   serverId?: string;
   serverName?: string;
   serverBadgeColor?: string;
+  playbackUserAgent?: string;
+  playbackReferer?: string;
+  playbackCookie?: string;
 }
 
 export interface XtreamVodStream {
@@ -138,6 +141,9 @@ export interface XtreamVodStream {
   serverId?: string;
   serverName?: string;
   serverBadgeColor?: string;
+  playbackUserAgent?: string;
+  playbackReferer?: string;
+  playbackCookie?: string;
 }
 
 export interface XtreamSeries {
