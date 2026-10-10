@@ -1208,10 +1208,10 @@ public class GetSmartProviderPlugin extends Plugin {
         Button button = new Button(getActivity());
         button.setText(label);
         button.setTextColor(Color.WHITE);
-        button.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+        button.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
         button.setAllCaps(false);
-        button.setMinWidth(dp(82));
-        button.setPadding(dp(14), 0, dp(14), 0);
+        button.setMinWidth(dp(68));
+        button.setPadding(dp(10), 0, dp(10), 0);
         button.setFocusable(true);
         button.setFocusableInTouchMode(false);
         button.setOnFocusChangeListener((view, hasFocus) -> {
