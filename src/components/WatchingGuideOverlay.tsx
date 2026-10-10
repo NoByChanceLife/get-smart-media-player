@@ -2,6 +2,10 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft, Home, Layers, Star, Tv } from 'lucide-react';
 import { XtreamCategory, XtreamLiveStream } from '../types/xtream';
 
+// Keep only the visible channels mounted; providers can expose 8,000+ entries.
+const ROW_HEIGHT = 58;
+const OVERSCAN = 6;
+
 interface WatchingGuideOverlayProps {
   categories: XtreamCategory[];
   streams: XtreamLiveStream[];
@@ -25,6 +29,9 @@ export const WatchingGuideOverlay: React.FC<WatchingGuideOverlayProps> = ({
   const groupRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const homeButtonRef = useRef<HTMLButtonElement | null>(null);
   const closeButtonRef = useRef<HTMLButtonElement | null>(null);
+  const listRef = useRef<HTMLDivElement | null>(null);
+  const [scrollTop, setScrollTop] = useState(0);
+  const [viewportHeight, setViewportHeight] = useState(360);
 
   const groups = useMemo(() => [
     { id: 'all', name: 'All Channels' },
@@ -39,6 +46,20 @@ export const WatchingGuideOverlay: React.FC<WatchingGuideOverlayProps> = ({
     if (groupId === 'all') return streams;
     return streams.filter((stream) => stream.category_id === groupId);
   }, [groupId, streams]);
+
+  const startIndex = Math.max(0, Math.floor(scrollTop / ROW_HEIGHT) - OVERSCAN);
+  const count = Math.ceil(viewportHeight / ROW_HEIGHT) + OVERSCAN * 2;
+  const windowedStreams = visibleStreams.slice(startIndex, startIndex + count);
+
+  useEffect(() => {
+    const node = listRef.current;
+    if (!node) return;
+    const update = () => setViewportHeight(node.clientHeight || 360);
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     const handleOverlayKeys = (event: KeyboardEvent) => {
@@ -73,24 +94,38 @@ export const WatchingGuideOverlay: React.FC<WatchingGuideOverlayProps> = ({
   }, [groupId, onClose, onOpenAppNavigation]);
 
   useEffect(() => {
-    const id = String(currentStream.stream_id);
+    // On open or group switch, reveal the playing channel (or the first row).
+    // A virtualized row is mounted only after the scroller is moved.
+    if (!visibleStreams.length) return;
+    const selectedIndex = visibleStreams.findIndex(
+      (stream) => String(stream.stream_id) === String(currentStream.stream_id)
+    );
+    const index = selectedIndex >= 0 ? selectedIndex : 0;
+    const id = String(visibleStreams[index].stream_id);
+    const scroller = listRef.current;
+    if (scroller) {
+      scroller.scrollTop = Math.max(0, index * ROW_HEIGHT - scroller.clientHeight / 2);
+      setScrollTop(scroller.scrollTop);
+    }
     setFocusedStreamId(id);
-    requestAnimationFrame(() => {
-      const row = rowRefs.current[id];
-      row?.focus();
-      row?.scrollIntoView({ block: 'center' });
-    });
-  }, [currentStream.stream_id]);
+    requestAnimationFrame(() => requestAnimationFrame(() => rowRefs.current[id]?.focus({ preventScroll: true })));
+  }, [groupId, currentStream.stream_id]);
 
   const focusStream = (index: number) => {
     if (!visibleStreams.length) return;
     const safeIndex = Math.max(0, Math.min(index, visibleStreams.length - 1));
     const id = String(visibleStreams[safeIndex].stream_id);
+    const scroller = listRef.current;
+    if (scroller) {
+      const top = safeIndex * ROW_HEIGHT;
+      if (top < scroller.scrollTop) scroller.scrollTop = top;
+      else if (top + ROW_HEIGHT > scroller.scrollTop + scroller.clientHeight) {
+        scroller.scrollTop = top + ROW_HEIGHT - scroller.clientHeight;
+      }
+      setScrollTop(scroller.scrollTop);
+    }
     setFocusedStreamId(id);
-    requestAnimationFrame(() => {
-      rowRefs.current[id]?.focus();
-      rowRefs.current[id]?.scrollIntoView({ block: 'nearest' });
-    });
+    requestAnimationFrame(() => requestAnimationFrame(() => rowRefs.current[id]?.focus({ preventScroll: true })));
   };
 
   const handleRowKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>, index: number) => {
@@ -220,12 +255,19 @@ export const WatchingGuideOverlay: React.FC<WatchingGuideOverlayProps> = ({
               ))}
             </aside>
 
-            <div className="flex-1 min-w-0 overflow-y-auto custom-scrollbar py-2 pr-2 sm:pr-4">
-              {visibleStreams.map((stream, index) => {
+            <div
+              ref={listRef}
+              onScroll={(event) => setScrollTop(event.currentTarget.scrollTop)}
+              className="flex-1 min-w-0 overflow-y-auto custom-scrollbar pr-2 sm:pr-4"
+            >
+              <div className="relative" style={{ height: visibleStreams.length * ROW_HEIGHT }}>
+              {windowedStreams.map((stream, windowIndex) => {
+                const index = startIndex + windowIndex;
                 const isPlaying = String(stream.stream_id) === String(currentStream.stream_id);
                 return (
                   <button
                     key={stream.stream_id}
+                    style={{ position: 'absolute', left: 0, right: 0, top: index * ROW_HEIGHT, height: ROW_HEIGHT - 2 }}
                     ref={(element) => { rowRefs.current[String(stream.stream_id)] = element; }}
                     data-watching-channel
                     onFocus={() => setFocusedStreamId(String(stream.stream_id))}
@@ -245,6 +287,7 @@ export const WatchingGuideOverlay: React.FC<WatchingGuideOverlayProps> = ({
                   </button>
                 );
               })}
+              </div>
               {!visibleStreams.length && (
                 <div className="p-8 text-sm text-slate-400">No channels in this group.</div>
               )}
