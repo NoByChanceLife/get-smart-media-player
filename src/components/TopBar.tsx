@@ -94,7 +94,7 @@ export const TopBar: React.FC<TopBarProps> = ({
 
   return (
     <header ref={topBarRef} onKeyDownCapture={handleTVNavigation} data-tv-topbar className="sticky top-0 z-40 bg-[#06090f]/90 backdrop-blur-xl border-b border-slate-800/80 px-4 sm:px-6 py-3 transition-colors">
-      <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
+      <div className="w-full flex items-center justify-between gap-4">
         {/* Left Section: Mobile Brand or View Header on Desktop */}
         <div className="flex items-center gap-3">
           {/* Mobile Only Brand Wordmark */}
