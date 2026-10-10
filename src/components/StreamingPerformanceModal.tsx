@@ -23,6 +23,11 @@ import {
   QualityPreference,
   StreamingPerformanceConfig,
 } from '../services/streamingPerformanceService';
+import {
+  playbackPreferencesService,
+  type PlaybackPreferencesConfig,
+  type SubtitleDefaultMode,
+} from '../services/playbackPreferencesService';
 
 interface StreamingPerformanceModalProps {
   isOpen: boolean;
@@ -40,6 +45,9 @@ export const StreamingPerformanceModal: React.FC<StreamingPerformanceModalProps>
   );
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [cacheStatus, setCacheStatus] = useState<string | null>(null);
+  const [playbackPrefs, setPlaybackPrefs] = useState<PlaybackPreferencesConfig>(() =>
+    playbackPreferencesService.getConfig()
+  );
 
   const modalRef = useRef<HTMLDivElement | null>(null);
 
@@ -89,6 +97,12 @@ export const StreamingPerformanceModal: React.FC<StreamingPerformanceModalProps>
     onConfigChanged?.();
   };
 
+  const handleUpdatePlaybackPrefs = (partial: Partial<PlaybackPreferencesConfig>) => {
+    const updated = playbackPreferencesService.saveConfig(partial);
+    setPlaybackPrefs(updated);
+    onConfigChanged?.();
+  };
+
   const handleResetDefaults = () => {
     const defaults = streamingPerformanceService.saveConfig({
       mode: 'auto',
@@ -100,6 +114,7 @@ export const StreamingPerformanceModal: React.FC<StreamingPerformanceModalProps>
       throttleSecondaryStream: true,
     });
     setConfig(defaults);
+    setPlaybackPrefs(playbackPreferencesService.reset());
     onConfigChanged?.();
   };
 
@@ -166,13 +181,11 @@ export const StreamingPerformanceModal: React.FC<StreamingPerformanceModalProps>
             <div className="flex items-center gap-1.5 text-[11px] font-bold text-[#4baeff] uppercase tracking-widest mb-1 font-heading">
               <span>Settings</span>
               <span className="text-slate-600">/</span>
-              <span>Playback</span>
-              <span className="text-slate-600">/</span>
-              <span className="text-white">Streaming Performance</span>
+              <span className="text-white">Player & Playback</span>
             </div>
             <h2 className="text-xl font-black text-white font-heading tracking-tight flex items-center gap-2.5">
               <Activity className="w-5 h-5 text-[#4baeff]" />
-              <span>Streaming Performance & Anti-Buffering</span>
+              <span>Player & Playback Settings</span>
             </h2>
           </div>
 
@@ -189,12 +202,93 @@ export const StreamingPerformanceModal: React.FC<StreamingPerformanceModalProps>
         <div className="px-6 py-2.5 bg-cyan-950/30 border-b border-cyan-900/30 flex items-center gap-2.5 text-xs text-cyan-200/90">
           <Info className="w-4 h-4 text-[#4baeff] shrink-0" />
           <span>
-            Smart Streaming adjusts buffering and recovery behavior to improve resilience, but it cannot eliminate buffering caused by insufficient bandwidth, source outages, or device limitations.
+            Audio/subtitle preferences are explicit and persistent. Temporary track choices during playback do not silently become permanent settings. Streaming controls improve resilience but cannot repair a source outage or unsupported media.
           </span>
         </div>
 
         {/* Scrollable Content */}
         <div className="gs-modal-pad flex-1 min-h-0 overflow-y-auto space-y-5 custom-scrollbar">
+          {/* Explicit Audio & Subtitle Preferences */}
+          <div className="rounded-lg border border-[#17304a] bg-[#050d17]/55 p-4">
+            <div className="mb-3">
+              <div className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                Audio & Subtitles
+              </div>
+              <div className="mt-1 text-[11px] text-slate-500">
+                Saved preferences apply to new playback when matching tracks exist. Choosing a different track in the player is temporary unless you change it here.
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-[#17304a]/80">
+                <div>
+                  <div className="font-bold text-slate-200 text-xs">Preferred Audio Language</div>
+                  <div className="text-[11px] text-slate-400">Use the source default when the preferred language is unavailable.</div>
+                </div>
+                <select
+                  value={playbackPrefs.preferredAudioLanguage}
+                  onChange={(e) => handleUpdatePlaybackPrefs({ preferredAudioLanguage: e.target.value })}
+                  className="bg-[#091522] border border-[#23415d] rounded-lg px-3 py-1.5 text-xs text-[#78c1ff] font-semibold focus:outline-none focus:border-[#2d87ff]"
+                >
+                  <option value="">Auto / Source Default</option>
+                  <option value="en">English</option>
+                  <option value="es">Spanish</option>
+                  <option value="pt">Portuguese</option>
+                  <option value="fr">French</option>
+                  <option value="de">German</option>
+                  <option value="it">Italian</option>
+                  <option value="ar">Arabic</option>
+                  <option value="zh">Chinese</option>
+                  <option value="ja">Japanese</option>
+                  <option value="ko">Korean</option>
+                </select>
+              </div>
+
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-[#17304a]/80">
+                <div>
+                  <div className="font-bold text-slate-200 text-xs">Subtitle Default</div>
+                  <div className="text-[11px] text-slate-400">Auto keeps provider/default subtitle behavior. Off disables text tracks. Preferred chooses a saved language when available.</div>
+                </div>
+                <select
+                  value={playbackPrefs.subtitleDefaultMode}
+                  onChange={(e) =>
+                    handleUpdatePlaybackPrefs({ subtitleDefaultMode: e.target.value as SubtitleDefaultMode })
+                  }
+                  className="bg-[#091522] border border-[#23415d] rounded-lg px-3 py-1.5 text-xs text-[#78c1ff] font-semibold focus:outline-none focus:border-[#2d87ff]"
+                >
+                  <option value="auto">Auto / Source Default</option>
+                  <option value="off">Off</option>
+                  <option value="preferred">Preferred Language</option>
+                </select>
+              </div>
+
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                  <div className="font-bold text-slate-200 text-xs">Preferred Subtitle Language</div>
+                  <div className="text-[11px] text-slate-400">Used only when Subtitle Default is set to Preferred Language.</div>
+                </div>
+                <select
+                  value={playbackPrefs.preferredSubtitleLanguage}
+                  disabled={playbackPrefs.subtitleDefaultMode !== 'preferred'}
+                  onChange={(e) => handleUpdatePlaybackPrefs({ preferredSubtitleLanguage: e.target.value })}
+                  className="bg-[#091522] border border-[#23415d] rounded-lg px-3 py-1.5 text-xs text-[#78c1ff] font-semibold focus:outline-none focus:border-[#2d87ff] disabled:opacity-45"
+                >
+                  <option value="">Choose language</option>
+                  <option value="en">English</option>
+                  <option value="es">Spanish</option>
+                  <option value="pt">Portuguese</option>
+                  <option value="fr">French</option>
+                  <option value="de">German</option>
+                  <option value="it">Italian</option>
+                  <option value="ar">Arabic</option>
+                  <option value="zh">Chinese</option>
+                  <option value="ja">Japanese</option>
+                  <option value="ko">Korean</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
           {/* Mode Selector Cards */}
           <div>
             <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">
