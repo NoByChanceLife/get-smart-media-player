@@ -245,7 +245,7 @@ export const MoviesView: React.FC<MoviesViewProps> = ({
   };
 
   return (
-    <div ref={movieViewRef} onKeyDownCapture={handleMediaViewNavigation} className="flex flex-col h-full space-y-6 animate-in fade-in duration-200">
+    <div ref={movieViewRef} onKeyDownCapture={handleMediaViewNavigation} className="gs-full-canvas flex flex-col h-full space-y-5 animate-in fade-in duration-200">
       {/* Featured Movie Spotlight Banner */}
       {featuredMovie && !searchQuery && selectedCategoryId === 'all' && (
         <div className="relative w-full rounded-3xl overflow-hidden border border-slate-800/80 shadow-2xl group">
@@ -342,7 +342,7 @@ export const MoviesView: React.FC<MoviesViewProps> = ({
       </div>
 
       {/* Movies Poster Grid */}
-      <div ref={movieGridRef} className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+      <div ref={movieGridRef} className="gs-poster-grid">
         {filteredMovies.map((movie, movieIndex) => {
           const isLocked = parentalControlService.isMovieLocked(movie);
 
