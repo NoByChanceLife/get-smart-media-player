@@ -7,6 +7,24 @@
     --surface-hover: #162032;
     --accent-cyan: #06b6d4;
     --accent-glow: rgba(6, 182, 212, 0.25);
+
+
+    /* Get Smart geometry contract: large screens reveal more content instead
+       of simply inflating controls/cards. These are intentionally conservative
+       pre-reskin values and become the shared source of truth for layout. */
+    --gs-main-rail-collapsed: 74px;
+    --gs-main-rail-expanded: 256px;
+    --gs-group-rail-width: clamp(132px, 11vw, 184px);
+    --gs-page-pad-x: clamp(12px, 1.35vw, 24px);
+    --gs-page-pad-y: clamp(12px, 1.1vw, 20px);
+    --gs-card-gap: clamp(10px, 0.9vw, 16px);
+    --gs-poster-min: 132px;
+    --gs-poster-max: 190px;
+    --gs-landscape-min: 190px;
+    --gs-landscape-max: 280px;
+    --gs-channel-tile-min: 150px;
+    --gs-channel-tile-max: 220px;
+    --gs-modal-pad: clamp(14px, 1.4vw, 24px);
   }
 
   body {
@@ -19,6 +37,70 @@
 
   h1, h2, h3, h4, .font-heading {
     font-family: 'Outfit', sans-serif;
+  }
+}
+
+/* Shared pre-reskin layout primitives */
+.gs-full-canvas {
+  width: 100%;
+  max-width: none;
+  min-width: 0;
+}
+
+.gs-page-pad {
+  padding-inline: var(--gs-page-pad-x);
+  padding-block: var(--gs-page-pad-y);
+}
+
+.gs-poster-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--gs-poster-min)), var(--gs-poster-max)));
+  gap: var(--gs-card-gap);
+  align-items: start;
+  justify-content: start;
+}
+
+.gs-landscape-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--gs-landscape-min)), var(--gs-landscape-max)));
+  gap: var(--gs-card-gap);
+  align-items: start;
+  justify-content: start;
+}
+
+.gs-channel-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--gs-channel-tile-min)), var(--gs-channel-tile-max)));
+  gap: var(--gs-card-gap);
+  align-items: start;
+  justify-content: start;
+}
+
+/* Phones use the available width first; TV/desktop stop growing individual
+   cards and use additional room for additional items. */
+@media (max-width: 639px) {
+  :root {
+    --gs-poster-min: 118px;
+    --gs-poster-max: 1fr;
+    --gs-landscape-min: 148px;
+    --gs-landscape-max: 1fr;
+    --gs-channel-tile-min: 136px;
+    --gs-channel-tile-max: 1fr;
+  }
+
+  .gs-poster-grid,
+  .gs-landscape-grid,
+  .gs-channel-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1600px) {
+  :root {
+    --gs-poster-min: 142px;
+    --gs-poster-max: 182px;
+    --gs-landscape-min: 205px;
+    --gs-landscape-max: 270px;
   }
 }
 
