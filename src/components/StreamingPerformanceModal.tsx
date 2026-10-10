@@ -125,7 +125,7 @@ export const StreamingPerformanceModal: React.FC<StreamingPerformanceModalProps>
       description: 'Starts with Balanced playback and adapts when repeated playback stalls are observed.',
       details:
         'Tracks buffer depth, fragment response times, and stalls. Auto can increase the buffer cushion after repeated stalls and return to Balanced settings after playback remains stable.',
-      icon: <Sparkles className="w-5 h-5 text-cyan-400" />,
+      icon: <Sparkles className="w-5 h-5 text-[#4baeff]" />,
     },
     {
       id: 'fast',
@@ -158,12 +158,12 @@ export const StreamingPerformanceModal: React.FC<StreamingPerformanceModalProps>
 
   return (
     <div ref={modalRef} className="gs-modal-viewport fixed inset-0 z-[100] flex items-center justify-center bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="gs-modal-shell bg-[#070b14] border border-cyan-500/30 rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl flex flex-col text-slate-200">
+      <div className="gs-modal-shell bg-[#07111d] border border-[#2d87ff]/40 rounded-lg w-full max-w-2xl overflow-hidden shadow-2xl flex flex-col text-slate-200">
         {/* Header */}
-        <div className="px-6 py-5 border-b border-slate-800/80 flex items-center justify-between bg-[#05080e]/80">
+        <div className="px-6 py-5 border-b border-[#17304a] flex items-center justify-between bg-[#050d17]/80">
           <div>
             {/* Breadcrumb */}
-            <div className="flex items-center gap-1.5 text-[11px] font-bold text-cyan-400 uppercase tracking-widest mb-1 font-heading">
+            <div className="flex items-center gap-1.5 text-[11px] font-bold text-[#4baeff] uppercase tracking-widest mb-1 font-heading">
               <span>Settings</span>
               <span className="text-slate-600">/</span>
               <span>Playback</span>
@@ -171,14 +171,14 @@ export const StreamingPerformanceModal: React.FC<StreamingPerformanceModalProps>
               <span className="text-white">Streaming Performance</span>
             </div>
             <h2 className="text-xl font-black text-white font-heading tracking-tight flex items-center gap-2.5">
-              <Activity className="w-5 h-5 text-cyan-400" />
+              <Activity className="w-5 h-5 text-[#4baeff]" />
               <span>Streaming Performance & Anti-Buffering</span>
             </h2>
           </div>
 
           <button
             onClick={onClose}
-            className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800/80 transition active:scale-95 tv-focus-target"
+            className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-[#0d1d2f]/80 transition active:scale-95 tv-focus-target"
             title="Close Settings (Esc)"
           >
             <X className="w-5 h-5" />
@@ -187,7 +187,7 @@ export const StreamingPerformanceModal: React.FC<StreamingPerformanceModalProps>
 
         {/* Notice Banner */}
         <div className="px-6 py-2.5 bg-cyan-950/30 border-b border-cyan-900/30 flex items-center gap-2.5 text-xs text-cyan-200/90">
-          <Info className="w-4 h-4 text-cyan-400 shrink-0" />
+          <Info className="w-4 h-4 text-[#4baeff] shrink-0" />
           <span>
             Smart Streaming adjusts buffering and recovery behavior to improve resilience, but it cannot eliminate buffering caused by insufficient bandwidth, source outages, or device limitations.
           </span>
@@ -208,18 +208,18 @@ export const StreamingPerformanceModal: React.FC<StreamingPerformanceModalProps>
                   <button
                     key={m.id}
                     onClick={() => handleSelectMode(m.id)}
-                    className={`text-left p-4 rounded-2xl border transition-all duration-200 tv-focus-target group relative flex flex-col justify-between ${
+                    className={`text-left p-4 rounded-lg border transition-all duration-200 tv-focus-target group relative flex flex-col justify-between ${
                       isSelected
                         ? 'bg-gradient-to-br from-cyan-950/60 to-slate-900 border-cyan-400/80 shadow-lg shadow-cyan-950/50 ring-1 ring-cyan-400/30'
-                        : 'bg-slate-900/40 border-slate-800/80 hover:bg-slate-850 hover:border-slate-700'
+                        : 'bg-[#091522]/40 border-[#17304a] hover:bg-slate-850 hover:border-[#23415d]'
                     }`}
                   >
                     <div>
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
                           <div
-                            className={`p-2 rounded-xl ${
-                              isSelected ? 'bg-cyan-500/20' : 'bg-slate-800'
+                            className={`p-2 rounded-lg ${
+                              isSelected ? 'bg-[#0b63f6]/18' : 'bg-[#0d1d2f]'
                             }`}
                           >
                             {m.icon}
@@ -231,8 +231,8 @@ export const StreamingPerformanceModal: React.FC<StreamingPerformanceModalProps>
                             <span
                               className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${
                                 isSelected
-                                  ? 'bg-cyan-400/20 text-cyan-300 border border-cyan-400/40'
-                                  : 'bg-slate-800 text-slate-400'
+                                  ? 'bg-[#0b63f6]/18 text-[#78c1ff] border border-[#2d87ff]/50'
+                                  : 'bg-[#0d1d2f] text-slate-400'
                               }`}
                             >
                               {m.badge}
@@ -241,7 +241,7 @@ export const StreamingPerformanceModal: React.FC<StreamingPerformanceModalProps>
                         </div>
 
                         {isSelected && (
-                          <CheckCircle className="w-5 h-5 text-cyan-400 shrink-0" />
+                          <CheckCircle className="w-5 h-5 text-[#4baeff] shrink-0" />
                         )}
                       </div>
 
@@ -250,7 +250,7 @@ export const StreamingPerformanceModal: React.FC<StreamingPerformanceModalProps>
                       </p>
                     </div>
 
-                    <p className="text-[11px] text-slate-400 leading-normal border-t border-slate-800/60 pt-2 mt-1">
+                    <p className="text-[11px] text-slate-400 leading-normal border-t border-[#17304a]/80 pt-2 mt-1">
                       {m.details}
                     </p>
                   </button>
@@ -260,15 +260,15 @@ export const StreamingPerformanceModal: React.FC<StreamingPerformanceModalProps>
           </div>
 
           {/* Collapsible Advanced Technical Settings */}
-          <div className="pt-2 border-t border-slate-800/80">
+          <div className="pt-2 border-t border-[#17304a]">
             <button
               onClick={() => setShowAdvanced(!showAdvanced)}
-              className="w-full flex items-center justify-between px-4 py-3 rounded-2xl bg-slate-900/70 border border-slate-800 hover:border-slate-700 text-sm font-bold text-slate-200 transition tv-focus-target"
+              className="w-full flex items-center justify-between px-4 py-3 rounded-lg bg-[#091522]/70 border border-[#17304a] hover:border-[#23415d] text-sm font-bold text-slate-200 transition tv-focus-target"
             >
               <div className="flex items-center gap-2.5">
-                <Sliders className="w-4 h-4 text-cyan-400" />
+                <Sliders className="w-4 h-4 text-[#4baeff]" />
                 <span>Advanced Buffer & Recovery Tuning</span>
-                <span className="text-[10px] text-slate-400 uppercase font-mono px-2 py-0.5 rounded bg-slate-800">
+                <span className="text-[10px] text-slate-400 uppercase font-mono px-2 py-0.5 rounded bg-[#0d1d2f]">
                   Technical
                 </span>
               </div>
@@ -280,9 +280,9 @@ export const StreamingPerformanceModal: React.FC<StreamingPerformanceModalProps>
             </button>
 
             {showAdvanced && (
-              <div className="mt-3 p-4 bg-slate-950/60 border border-slate-800/80 rounded-2xl space-y-4 animate-in fade-in duration-200 text-xs">
+              <div className="mt-3 p-4 bg-[#050d17]/60 border border-[#17304a] rounded-lg space-y-4 animate-in fade-in duration-200 text-xs">
                 {/* Adaptive Quality Preference */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-800/60">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-[#17304a]/80">
                   <div>
                     <div className="font-bold text-slate-200">Quality Preference</div>
                     <div className="text-[11px] text-slate-400">
@@ -294,7 +294,7 @@ export const StreamingPerformanceModal: React.FC<StreamingPerformanceModalProps>
                     onChange={(e) =>
                       handleUpdateConfig({ qualityPreference: e.target.value as QualityPreference })
                     }
-                    className="bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-cyan-300 font-semibold focus:outline-none focus:border-cyan-500"
+                    className="bg-[#091522] border border-[#23415d] rounded-lg px-3 py-1.5 text-xs text-[#78c1ff] font-semibold focus:outline-none focus:border-[#2d87ff]"
                   >
                     <option value="auto">Auto (Adaptive Bitrate)</option>
                     <option value="1080p">Prioritize 1080p Full HD</option>
@@ -305,7 +305,7 @@ export const StreamingPerformanceModal: React.FC<StreamingPerformanceModalProps>
                 </div>
 
                 {/* Low Latency Live Catch-up */}
-                <div className="flex items-center justify-between pb-3 border-b border-slate-800/60">
+                <div className="flex items-center justify-between pb-3 border-b border-[#17304a]/80">
                   <div>
                     <div className="font-bold text-slate-200">Low-Latency Live Sync</div>
                     <div className="text-[11px] text-slate-400">
@@ -321,7 +321,7 @@ export const StreamingPerformanceModal: React.FC<StreamingPerformanceModalProps>
                 </div>
 
                 {/* Secondary Multi-View Stream Throttling */}
-                <div className="flex items-center justify-between pb-3 border-b border-slate-800/60">
+                <div className="flex items-center justify-between pb-3 border-b border-[#17304a]/80">
                   <div>
                     <div className="font-bold text-slate-200">
                       Multi-View / PiP Bandwidth Protection
@@ -341,7 +341,7 @@ export const StreamingPerformanceModal: React.FC<StreamingPerformanceModalProps>
                 </div>
 
                 {/* Max Auto Recovery Retries */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-800/60">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-[#17304a]/80">
                   <div>
                     <div className="font-bold text-slate-200">Bounded Error Recovery Retries</div>
                     <div className="text-[11px] text-slate-400">
@@ -353,7 +353,7 @@ export const StreamingPerformanceModal: React.FC<StreamingPerformanceModalProps>
                     onChange={(e) =>
                       handleUpdateConfig({ maxRetryAttempts: parseInt(e.target.value, 10) })
                     }
-                    className="bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-cyan-300 font-semibold focus:outline-none focus:border-cyan-500"
+                    className="bg-[#091522] border border-[#23415d] rounded-lg px-3 py-1.5 text-xs text-[#78c1ff] font-semibold focus:outline-none focus:border-[#2d87ff]"
                   >
                     <option value={2}>2 Attempts (Fast failure)</option>
                     <option value={3}>3 Attempts (Recommended)</option>
@@ -369,14 +369,14 @@ export const StreamingPerformanceModal: React.FC<StreamingPerformanceModalProps>
                       Caches posters and movie data locally. Authenticated stream tokens are never cached.
                     </div>
                     {cacheStatus && (
-                      <div className="text-[11px] text-cyan-400 font-semibold mt-1">
+                      <div className="text-[11px] text-[#4baeff] font-semibold mt-1">
                         {cacheStatus}
                       </div>
                     )}
                   </div>
                   <button
                     onClick={handleClearVodCache}
-                    className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-300 hover:text-white font-semibold flex items-center gap-1.5 transition active:scale-95 text-xs"
+                    className="px-3 py-1.5 rounded-lg bg-[#091522] hover:bg-[#0d1d2f] border border-[#23415d] text-slate-300 hover:text-white font-semibold flex items-center gap-1.5 transition active:scale-95 text-xs"
                   >
                     <HardDrive className="w-3.5 h-3.5" />
                     <span>Clear Cache</span>
@@ -388,10 +388,10 @@ export const StreamingPerformanceModal: React.FC<StreamingPerformanceModalProps>
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-slate-800/80 bg-[#05080e]/90 flex items-center justify-between">
+        <div className="px-6 py-4 border-t border-[#17304a] bg-[#050d17]/90 flex items-center justify-between">
           <button
             onClick={handleResetDefaults}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white hover:bg-slate-800/60 transition active:scale-95 tv-focus-target"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold text-slate-400 hover:text-white hover:bg-[#0d1d2f]/60 transition active:scale-95 tv-focus-target"
             title="Reset to recommended defaults"
           >
             <RotateCcw className="w-3.5 h-3.5" />
@@ -400,7 +400,7 @@ export const StreamingPerformanceModal: React.FC<StreamingPerformanceModalProps>
 
           <button
             onClick={onClose}
-            className="px-6 py-2.5 rounded-2xl bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-sm shadow-lg shadow-cyan-950/60 transition active:scale-95 tv-focus-target"
+            className="px-6 py-2.5 rounded-lg bg-[#0b63f6] hover:bg-[#1677ff] text-white font-bold text-sm shadow-lg shadow-[0_8px_18px_rgba(0,70,180,.28)] transition active:scale-95 tv-focus-target"
           >
             Done
           </button>
