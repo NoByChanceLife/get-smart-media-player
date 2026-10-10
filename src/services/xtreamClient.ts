@@ -866,6 +866,61 @@ class XtreamService {
     return data.streamPath;
   }
 
+  public getNativeAndroidLiveExtensions(serverId?: string): Array<'ts' | 'm3u8'> {
+    const profile = serverId
+      ? this.profiles.find((candidate) => candidate.id === serverId)
+      : this.getActiveProfiles()[0];
+
+    const formats = (profile?.userInfo?.allowed_output_formats || [])
+      .map((value) => String(value).trim().toLowerCase());
+
+    const candidates: Array<'ts' | 'm3u8'> = [];
+
+    // The supplied working XCIPTV-family player and the HS7 external-player
+    // proof both consume direct provider media. For Android native playback,
+    // prefer MPEG-TS when the provider explicitly allows it, then HLS.
+    if (formats.includes('ts')) candidates.push('ts');
+    if (formats.includes('m3u8')) candidates.push('m3u8');
+
+    if (candidates.length === 0) {
+      candidates.push('ts', 'm3u8');
+    } else {
+      if (!candidates.includes('ts')) candidates.push('ts');
+      if (!candidates.includes('m3u8')) candidates.push('m3u8');
+    }
+
+    return candidates;
+  }
+
+  public buildDirectStreamUrl(
+    type: 'live' | 'vod' | 'series',
+    id: number | string,
+    extension?: string,
+    serverId?: string
+  ): string {
+    const profiles = this.getActiveProfiles();
+    const profile = serverId
+      ? profiles.find((candidate) => candidate.id === serverId) || this.profiles.find((candidate) => candidate.id === serverId)
+      : profiles[0];
+
+    if (!profile || profile.isDemo || profile.type !== 'xtream') {
+      return '';
+    }
+
+    const base = this.normalizeUrl(profile.serverUrl || '');
+    const cleanId = String(id).replace(`${profile.id}_`, '');
+    const username = encodeURIComponent(profile.username || '');
+    const password = encodeURIComponent(profile.password || '');
+
+    if (type === 'live') {
+      return `${base}/live/${username}/${password}/${cleanId}.${extension || 'ts'}`;
+    }
+    if (type === 'vod') {
+      return `${base}/movie/${username}/${password}/${cleanId}.${extension || 'mp4'}`;
+    }
+    return `${base}/series/${username}/${password}/${cleanId}.${extension || 'mp4'}`;
+  }
+
   public getPreferredLiveExtension(serverId?: string): 'm3u8' | 'ts' {
     const profile = serverId
       ? this.profiles.find((candidate) => candidate.id === serverId)
