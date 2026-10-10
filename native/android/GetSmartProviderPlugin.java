@@ -20,6 +20,7 @@ import android.graphics.drawable.GradientDrawable;
 import android.graphics.drawable.StateListDrawable;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.SystemClock;
 import android.util.Base64;
 import android.util.TypedValue;
 import android.view.Gravity;
@@ -42,6 +43,7 @@ import androidx.media3.common.TrackSelectionParameters;
 import androidx.media3.common.PlaybackException;
 import androidx.media3.common.Player;
 import androidx.media3.common.Tracks;
+import androidx.media3.exoplayer.DefaultLoadControl;
 import androidx.media3.exoplayer.ExoPlayer;
 import androidx.media3.ui.AspectRatioFrameLayout;
 import androidx.media3.ui.PlayerView;
@@ -95,7 +97,7 @@ public class GetSmartProviderPlugin extends Plugin {
     private static final int DIRECT_ADDRESS_CONNECT_TIMEOUT_MS = 6_000;
     private static final int NETWORK_ROUTE_CONNECT_TIMEOUT_MS = 8_000;
     private static final int MAX_REDIRECTS = 5;
-    private static final String TRANSPORT_BUILD = "GS-NATIVE-XCIPTV-HS13";
+    private static final String TRANSPORT_BUILD = "GS-NATIVE-XCIPTV-HS14";
 
     private static final String CREDENTIAL_PREFS = "getsmart_secure_credentials";
     private static final String CREDENTIAL_DRAFT_KEY = "xtream_draft_v1";
@@ -333,6 +335,17 @@ public class GetSmartProviderPlugin extends Plugin {
             }
         }
     };
+    private final Runnable refreshNativeDiagnosticsRunnable = new Runnable() {
+        @Override
+        public void run() {
+            if (nativePlayer != null) {
+                maybeResetNativeRecoveryAfterHealthyPlayback();
+                maybeRelaxAutoPerformanceMode();
+                notifyListeners("playerDiagnostics", buildNativeDiagnostics());
+                nativeUiHandler.postDelayed(this, 1000L);
+            }
+        }
+    };
     private final StringBuilder nativeNumericEntry = new StringBuilder();
     private final Runnable commitNativeNumericEntryRunnable = this::commitNativeNumericChannelEntry;
 
@@ -349,6 +362,22 @@ public class GetSmartProviderPlugin extends Plugin {
     private String preferredAudioLanguage = "";
     private String subtitleDefaultMode = "auto";
     private String preferredSubtitleLanguage = "";
+
+    private String nativePerformanceMode = "auto";
+    private String nativeEffectivePerformanceMode = "balanced";
+    private String nativeBuiltPerformanceMode = "";
+    private String nativeQualityPreference = "auto";
+    private int nativeMaxRetryAttempts = 3;
+    private int nativeRecoveryAttempt = 0;
+    private int nativeRecoveryStage = 0;
+    private boolean nativeRebuildAttempted = false;
+    private int nativeRebufferCount = 0;
+    private boolean nativeEverReady = false;
+    private boolean nativeBufferingIncident = false;
+    private long nativePlaybackStartedElapsedMs = 0L;
+    private long nativeStartupTimeMs = -1L;
+    private long nativeLastReadyElapsedMs = 0L;
+    private final List<Long> nativeRecentStalls = new ArrayList<>();
 
     private static final class NativeTrackChoice {
         final TrackGroup group;
@@ -367,14 +396,50 @@ public class GetSmartProviderPlugin extends Plugin {
     private final Player.Listener nativePlayerListener = new Player.Listener() {
         @Override
         public void onPlaybackStateChanged(int playbackState) {
+            long now = SystemClock.elapsedRealtime();
+
+            if (playbackState == Player.STATE_BUFFERING) {
+                if (nativeEverReady && !nativeBufferingIncident) {
+                    nativeBufferingIncident = true;
+                    nativeRebufferCount += 1;
+                    nativeRecentStalls.add(now);
+                    pruneNativeStalls(now);
+
+                    if (
+                        "auto".equals(nativePerformanceMode) &&
+                        nativeRecentStalls.size() >= 2 &&
+                        !"stable".equals(nativeEffectivePerformanceMode)
+                    ) {
+                        nativeUiHandler.post(() -> {
+                            if (nativePlayer != null && "auto".equals(nativePerformanceMode)) {
+                                nativeEffectivePerformanceMode = "stable";
+                                rebuildNativePlayerForPerformanceMode("auto-stall-adaptation");
+                            }
+                        });
+                    }
+                }
+            } else if (playbackState == Player.STATE_READY) {
+                nativeBufferingIncident = false;
+                nativeLastReadyElapsedMs = now;
+
+                if (!nativeEverReady) {
+                    nativeEverReady = true;
+                    if (nativePlaybackStartedElapsedMs > 0L) {
+                        nativeStartupTimeMs = Math.max(0L, now - nativePlaybackStartedElapsedMs);
+                    }
+                }
+            }
+
             updateNativeOsdText();
             emitPlayerState("playback-state");
+            notifyListeners("playerDiagnostics", buildNativeDiagnostics());
         }
 
         @Override
         public void onIsPlayingChanged(boolean isPlaying) {
             updateNativeOsdText();
             emitPlayerState("is-playing");
+            notifyListeners("playerDiagnostics", buildNativeDiagnostics());
         }
 
         @Override
@@ -385,21 +450,31 @@ public class GetSmartProviderPlugin extends Plugin {
 
         @Override
         public void onTracksChanged(Tracks tracks) {
+            applyNativeVideoQualityPreference();
             updateNativeOsdText();
             notifyListeners("playerTracks", buildDetailedTrackSummary(tracks));
+            notifyListeners("playerDiagnostics", buildNativeDiagnostics());
             emitPlayerState("tracks");
         }
 
         @Override
         public void onPlayerError(PlaybackException error) {
+            updateNativeOsdText();
+            showNativeOsd(false);
+
+            if (scheduleNativeRecovery(error)) {
+                emitPlayerState("recovering");
+                notifyListeners("playerDiagnostics", buildNativeDiagnostics());
+                return;
+            }
+
             JSObject payload = new JSObject();
             payload.put("errorCode", error.errorCode);
             payload.put("errorCodeName", error.getErrorCodeName());
             payload.put("message", safePlaybackErrorMessage(error));
             notifyListeners("playerError", payload);
-            updateNativeOsdText();
-            showNativeOsd(false);
             emitPlayerState("error");
+            notifyListeners("playerDiagnostics", buildNativeDiagnostics());
         }
     };
 
@@ -433,11 +508,15 @@ public class GetSmartProviderPlugin extends Plugin {
         final String requestedAudioLanguage = safeString(call.getString("preferredAudioLanguage"));
         final String requestedSubtitleMode = safeString(call.getString("subtitleDefaultMode"));
         final String requestedSubtitleLanguage = safeString(call.getString("preferredSubtitleLanguage"));
+        final String requestedPerformanceMode = safeString(call.getString("performanceMode"));
+        final String requestedQualityPreference = safeString(call.getString("qualityPreference"));
+        final Integer requestedMaxRetries = call.getInt("maxRetryAttempts");
+        final boolean requestedRecovery = call.getBoolean("recovery", false);
         final String requestedUrl = validated.toString();
 
         getActivity().runOnUiThread(() -> {
             try {
-                ensureNativePlayer();
+                boolean mediaChanged = !requestedUrl.equals(nativePlayerUrl);
 
                 nativePlayerTitle = requestedTitle;
                 nativePlayerMediaType = requestedMediaType;
@@ -447,10 +526,28 @@ public class GetSmartProviderPlugin extends Plugin {
                 preferredAudioLanguage = normalizeLanguageCode(requestedAudioLanguage);
                 subtitleDefaultMode = normalizeSubtitleMode(requestedSubtitleMode);
                 preferredSubtitleLanguage = normalizeLanguageCode(requestedSubtitleLanguage);
-                applyNativeTrackPreferences();
 
-                if (!requestedUrl.equals(nativePlayerUrl)) {
+                nativePerformanceMode = normalizePerformanceMode(requestedPerformanceMode);
+                nativeEffectivePerformanceMode =
+                    "auto".equals(nativePerformanceMode) ? "balanced" : nativePerformanceMode;
+                nativeQualityPreference = normalizeQualityPreference(requestedQualityPreference);
+                nativeMaxRetryAttempts =
+                    requestedMaxRetries == null ? 3 : Math.max(1, Math.min(5, requestedMaxRetries));
+
+                if (!requestedRecovery && mediaChanged) {
+                    resetNativePlaybackHealth();
+                } else if (requestedRecovery) {
+                    nativeRecoveryStage = Math.max(1, nativeRecoveryStage);
+                    nativeRecoveryAttempt = 0;
+                }
+
+                ensureNativePlayer();
+                applyNativeTrackPreferences();
+                applyNativeVideoQualityPreference();
+
+                if (mediaChanged) {
                     nativePlayerUrl = requestedUrl;
+                    nativePlaybackStartedElapsedMs = SystemClock.elapsedRealtime();
                     nativePlayer.setMediaItem(MediaItem.fromUri(requestedUrl));
                     nativePlayer.prepare();
                     nativePlayer.play();
@@ -465,7 +562,7 @@ public class GetSmartProviderPlugin extends Plugin {
 
                 JSObject result = new JSObject();
                 result.put("started", true);
-                result.put("engine", "androidx-media3-exoplayer-getsmart-osd");
+                result.put("engine", "androidx-media3-exoplayer-resilient");
                 call.resolve(result);
                 emitPlayerState("media-selected");
             } catch (Exception error) {
