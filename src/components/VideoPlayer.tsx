@@ -32,6 +32,7 @@ import {
   playNativeAndroidMedia,
   setNativeAndroidPlayerVisible,
   stopNativeAndroidMedia,
+  updateNativeAndroidPlayerMetadata,
 } from '../services/androidProviderTransport';
 import { resolveStalkerStreamLink } from '../services/stalkerClient';
 import { streamingPerformanceService } from '../services/streamingPerformanceService';
@@ -240,6 +241,24 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     };
   }, [nativeAndroid]);
 
+  // EPG/current-program information can arrive after playback has already
+  // started. Refresh the native Get Smart OSD without restarting the stream.
+  useEffect(() => {
+    if (!nativeAndroid) return;
+
+    const channelNumber =
+      target.type === 'live'
+        ? String(target.stream.num || target.stream.stream_id)
+        : '';
+
+    updateNativeAndroidPlayerMetadata({
+      title,
+      channelNumber,
+      currentProgram: currentProgramTitle,
+      nextProgram: nextProgramTitle || '',
+    }).catch(() => undefined);
+  }, [nativeAndroid, title, currentProgramTitle, nextProgramTitle, target]);
+
   // Browsing/guide presentation hides only the native surface. The Media3
   // session continues underneath so returning to Watch does not restart playback.
   useEffect(() => {
@@ -343,6 +362,12 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             url: nativeUrl,
             title: playbackTitleRef.current,
             mediaType: playbackTarget.type === 'episode' ? 'series' : playbackTarget.type,
+            channelNumber:
+              playbackTarget.type === 'live'
+                ? String(playbackTarget.stream.num || playbackTarget.stream.stream_id)
+                : '',
+            currentProgram: playbackProgramRef.current,
+            nextProgram: playbackTarget.type === 'live' ? (epgList[1]?.title || '') : '',
           });
 
           xtreamService.addToHistory({
