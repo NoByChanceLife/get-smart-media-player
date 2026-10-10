@@ -866,11 +866,27 @@ class XtreamService {
     return data.streamPath;
   }
 
+  public getPreferredLiveExtension(serverId?: string): 'm3u8' | 'ts' {
+    const profile = serverId
+      ? this.profiles.find((candidate) => candidate.id === serverId)
+      : this.getActiveProfiles()[0];
+
+    const formats = (profile?.userInfo?.allowed_output_formats || [])
+      .map((value) => String(value).trim().toLowerCase());
+
+    if (formats.includes('m3u8')) return 'm3u8';
+    if (formats.includes('ts')) return 'ts';
+
+    // HLS remains the safest web/PWA default. Android native playback will
+    // consume this same metadata and can prefer MPEG-TS when appropriate.
+    return 'm3u8';
+  }
+
   // Generate Stream Playback URL
   public buildStreamUrl(
     type: 'live' | 'vod' | 'series',
     id: number | string,
-    extension = 'm3u8',
+    extension?: string,
     directSource?: string,
     serverId?: string
   ): string {
@@ -893,7 +909,8 @@ class XtreamService {
     const cleanId = String(id).replace(`${profile.id}_`, '');
 
     if (type === 'live') {
-      rawStreamUrl = `${base}/live/${profile.username}/${profile.password}/${cleanId}.${extension}`;
+      const liveExtension = extension || this.getPreferredLiveExtension(profile.id);
+      rawStreamUrl = `${base}/live/${profile.username}/${profile.password}/${cleanId}.${liveExtension}`;
     } else if (type === 'vod') {
       rawStreamUrl = `${base}/movie/${profile.username}/${profile.password}/${cleanId}.${
         extension || 'mp4'
