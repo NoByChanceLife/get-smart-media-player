@@ -132,32 +132,47 @@ export default function App() {
     first?.focus();
   }, []);
 
-  // Load all IPTV data across active servers
+  // Load provider data in stages. Large Xtream accounts can contain tens of
+  // thousands of Live/VOD/Series records; requesting every catalog concurrently
+  // causes unnecessary memory pressure on the Android bridge and delays first use.
   const loadData = useCallback(async () => {
     setIsLoadingData(true);
-    try {
-      xtreamService.setServerFilter(serverFilter);
-      const [liveCats, liveStrms, vodCats, vodStrms, sCats, sList] = await Promise.all([
-        xtreamService.getLiveCategories(),
-        xtreamService.getLiveStreams(selectedLiveCat),
-        xtreamService.getVodCategories(),
-        xtreamService.getVodStreams(selectedVodCat),
-        xtreamService.getSeriesCategories(),
-        xtreamService.getSeriesList(selectedSeriesCat),
-      ]);
+    xtreamService.setServerFilter(serverFilter);
 
+    try {
+      setSelectedLiveCat('all');
+      setSelectedVodCat('all');
+      setSelectedSeriesCat('all');
+
+      // Live TV is the primary TV surface, so make it usable first.
+      const [liveCats, liveStrms] = await Promise.all([
+        xtreamService.getLiveCategories(),
+        xtreamService.getLiveStreams('all'),
+      ]);
       setLiveCategories(liveCats);
       setLiveStreams(liveStrms);
+      setIsLoadingData(false);
+
+      // Category taxonomies are small and useful before the heavy media lists.
+      const [vodCats, sCats] = await Promise.all([
+        xtreamService.getVodCategories(),
+        xtreamService.getSeriesCategories(),
+      ]);
       setVodCategories(vodCats);
-      setVodStreams(vodStrms);
       setSeriesCategories(sCats);
+
+      // Warm large libraries sequentially instead of competing for memory/network.
+      const vodStrms = await xtreamService.getVodStreams('all');
+      setVodStreams(vodStrms);
+
+      const sList = await xtreamService.getSeriesList('all');
       setSeriesList(sList);
     } catch (err) {
       console.error('Error loading aggregated IPTV data:', err);
     } finally {
       setIsLoadingData(false);
     }
-  }, [selectedLiveCat, selectedVodCat, selectedSeriesCat, serverFilter]);
+  }, [serverFilter]);
 
   useEffect(() => {
     loadData();
