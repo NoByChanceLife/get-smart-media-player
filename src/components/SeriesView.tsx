@@ -15,6 +15,7 @@ import {
 import { XtreamCategory, XtreamSeries, XtreamSeason, XtreamEpisode } from '../types/xtream';
 import { xtreamService } from '../services/xtreamClient';
 import { parentalControlService } from '../services/parentalControlService';
+import { adultDiscoveryCategoryIds, isPrivateDiscoveryContent } from '../services/discoveryPrivacy';
 
 interface SeriesViewProps {
   categories: XtreamCategory[];
@@ -233,7 +234,9 @@ export const SeriesView: React.FC<SeriesViewProps> = ({
   });
 
   // Filter series
+  const privateCategoryIds = searchQuery.trim() ? adultDiscoveryCategoryIds(categories) : new Set<string>();
   const filteredSeries = seriesList.filter((s) => {
+    if (searchQuery.trim() && isPrivateDiscoveryContent(s, privateCategoryIds)) return false;
     const isCatLocked = parentalControlService.isCategoryLocked(s.category_id, 'series');
     if (isCatLocked && parentalSettings.hideLockedContentCompletely) {
       return false;
