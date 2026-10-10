@@ -37,7 +37,7 @@ run('npx', ['cap', 'sync', 'android']);
 
 const appBuildGradle = join(root, 'android', 'app', 'build.gradle');
 const originalBuildGradle = readFileSync(appBuildGradle, 'utf8');
-const compatibleBuildGradle = originalBuildGradle
+let compatibleBuildGradle = originalBuildGradle
   .replace(
     /getDefaultProguardFile\((['"])proguard-android\.txt\1\)/g,
     "getDefaultProguardFile('proguard-android-optimize.txt')",
@@ -47,16 +47,27 @@ const compatibleBuildGradle = originalBuildGradle
   .replace(
     /^\s*implementation ['"]com\.squareup\.okhttp3:okhttp:3\.12\.11['"]\s*$/gm,
     '',
-  )
-  // Native Android playback: app-owned Media3/ExoPlayer surface.
-  .replace(
-    /dependencies\s*\{/,
-    "dependencies {\n    implementation 'androidx.media3:media3-exoplayer:1.6.1'\n    implementation 'androidx.media3:media3-ui:1.6.1'",
-  )
-  // Give this diagnostic APK an unmistakable Android package version so the
-  // device installer and App Info can prove which build is actually running.
-  .replace(/versionCode\s+\d+/, 'versionCode 2026101009')
-  .replace(/versionName\s+["'][^"']+["']/, 'versionName "2026.10.10-hs9"');
+  );
+
+const media3Dependencies = [
+  "implementation 'androidx.media3:media3-exoplayer:1.6.1'",
+  "implementation 'androidx.media3:media3-ui:1.6.1'",
+];
+
+for (const dependency of media3Dependencies) {
+  if (!compatibleBuildGradle.includes(dependency)) {
+    compatibleBuildGradle = compatibleBuildGradle.replace(
+      /dependencies\s*\{/,
+      `dependencies {\n    ${dependency}`,
+    );
+  }
+}
+
+// Give this diagnostic APK an unmistakable Android package version so the
+// device installer and App Info can prove which build is actually running.
+compatibleBuildGradle = compatibleBuildGradle
+  .replace(/versionCode\s+\d+/, 'versionCode 2026101010')
+  .replace(/versionName\s+["'][^"']+["']/, 'versionName "2026.10.10-hs10"');
 
 if (compatibleBuildGradle !== originalBuildGradle) {
   writeFileSync(appBuildGradle, compatibleBuildGradle, 'utf8');
