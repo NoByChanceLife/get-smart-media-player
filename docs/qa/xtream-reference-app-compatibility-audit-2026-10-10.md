@@ -454,3 +454,24 @@ Remediation on Get Smart:
 - retained credential-safe error messages and encrypted credential-draft storage
 
 This is now a protocol-parity change based on the working APK's actual Xtream request path rather than a library-presence inference.
+
+---
+
+# Root-cause lead: branded XCIPTV hides the actual Xtream portal
+
+Direct DEX tracing of the supplied MegaPlus/XCIPTV APK shows the branded app does not necessarily authenticate against a server URL typed by the user.
+
+Evidence from the APK:
+- `Config.b` is initialized to `no` and has no later assignment in this build.
+- `LoginActivity$f.onClick` only reads the server URL EditText into its Xtream base URL when that config flag enables user-entered portals.
+- With the branded configuration used by this APK, login instead selects stored `portal`, `portal2`, `portal3`, etc. values / panel records.
+- `SplashActivity` contacts the branded control-plane URL `http://isdp.xyz/panel/megaplustv3/api/`.
+- Its license/config response contains panel fields including `portal`, `portal2`, `portal3`, `portal4`, `portal5`; those portal values are decrypted and persisted locally.
+- `LoginActivity$l.doInBackground` then constructs the actual Xtream request as `<selected hidden portal>/player_api.php?username=<user>&password=<pass>`.
+- Immediately before the request, the working app logs the constructed URL under the `XCIPTV_TAG` tag.
+
+Implication:
+The MegaPlus credentials can work in MegaPlus while a manually supplied URL times out in Get Smart if that manually supplied host/port is not the hidden portal MegaPlus actually selected. Before changing networking again, compare Get Smart's target origin with the sanitized host:port from MegaPlus's own `XCIPTV_TAG` login log.
+
+Secondary finding:
+The APK also bundles OpenVPN and supports an `ovpn_auto` preference plus remotely supplied `ovpn_url`. This can alter routing when explicitly enabled. Static analysis does not establish that auto-VPN is enabled on the user's installation, so it remains a secondary check rather than the primary diagnosis.
