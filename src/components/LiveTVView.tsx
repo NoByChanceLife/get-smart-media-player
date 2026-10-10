@@ -260,7 +260,7 @@ export const LiveTVView: React.FC<LiveTVViewProps> = ({
   return (
     <section ref={workspaceRef} className="live-workspace -m-4 sm:-m-6 h-[calc(100dvh-4rem)] min-h-0 overflow-hidden bg-[#05080e]">
       <div className="h-full flex min-w-0">
-        <aside className="hidden md:flex w-52 xl:w-60 shrink-0 flex-col border-r border-slate-800/80 bg-[#080d16]">
+        <aside className="flex w-44 sm:w-52 xl:w-60 shrink-0 flex-col border-r border-slate-800/80 bg-[#080d16]">
           <div className="h-12 px-3 flex items-center gap-2 border-b border-slate-800/80">
             <Layers className="w-4 h-4 text-cyan-400" />
             <span className="text-xs font-bold uppercase tracking-wider text-slate-200">Groups</span>
