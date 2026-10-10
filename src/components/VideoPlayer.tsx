@@ -262,8 +262,10 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       });
       const errorPromise = addNativeAndroidPlayerErrorListener((event) => {
         setIsLoading(false);
-        setErrorMsg('Native playback stopped.');
-        setErrorDetail(`${event.errorCodeName || 'PLAYER_ERROR'} · ${event.message || 'Unknown playback error'}`);
+        setErrorMsg(event.userMessage || 'Native playback stopped.');
+        setErrorDetail(
+          `${event.category || 'unknown'} · ${event.errorCodeName || 'PLAYER_ERROR'} · ${event.message || 'Unknown playback error'}`
+        );
       });
       const diagnosticsPromise = addNativeAndroidPlayerDiagnosticsListener((diagnostics) => {
         const recovering = diagnostics.recoveryStage > 0 || diagnostics.recoveryAttempt > 0;
@@ -483,6 +485,38 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
           const playbackPreferences = playbackPreferencesService.getConfig();
           const performanceConfig = streamingPerformanceService.getConfig();
           const isRecoveryRequest = nativeRecoveryRequestedRef.current;
+
+          const sourceServerId =
+            playbackTarget.type === 'live'
+              ? playbackTarget.stream.serverId
+              : playbackTarget.type === 'vod'
+              ? playbackTarget.movie.serverId
+              : playbackTarget.series.serverId;
+          const sourceProfile = sourceServerId
+            ? xtreamService.getActiveProfiles().find((profile) => profile.id === sourceServerId)
+            : undefined;
+
+          const sourceRequestProfile =
+            playbackTarget.type === 'live'
+              ? {
+                  userAgent: playbackTarget.stream.playbackUserAgent,
+                  referer: playbackTarget.stream.playbackReferer,
+                  cookie: playbackTarget.stream.playbackCookie,
+                }
+              : playbackTarget.type === 'vod'
+              ? {
+                  userAgent: playbackTarget.movie.playbackUserAgent,
+                  referer: playbackTarget.movie.playbackReferer,
+                  cookie: playbackTarget.movie.playbackCookie,
+                }
+              : {};
+
+          const nativeUserAgent =
+            sourceRequestProfile.userAgent ||
+            (sourceProfile?.type === 'stalker'
+              ? sourceProfile.stbConfig?.customUserAgent
+              : undefined);
+
           await playNativeAndroidMedia({
             url: nativeUrl,
             title: playbackTitleRef.current,
@@ -497,6 +531,9 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             qualityPreference: performanceConfig.qualityPreference,
             maxRetryAttempts: performanceConfig.maxRetryAttempts,
             recovery: isRecoveryRequest,
+            userAgent: nativeUserAgent,
+            referer: sourceRequestProfile.referer,
+            cookie: sourceRequestProfile.cookie,
             preferredAudioLanguage: playbackPreferences.preferredAudioLanguage,
             subtitleDefaultMode: playbackPreferences.subtitleDefaultMode,
             preferredSubtitleLanguage: playbackPreferences.preferredSubtitleLanguage,
