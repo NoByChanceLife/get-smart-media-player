@@ -37,14 +37,17 @@ import androidx.media3.common.AudioAttributes;
 import androidx.media3.common.C;
 import androidx.media3.common.Format;
 import androidx.media3.common.MediaItem;
+import androidx.media3.common.MimeTypes;
 import androidx.media3.common.TrackGroup;
 import androidx.media3.common.TrackSelectionOverride;
 import androidx.media3.common.TrackSelectionParameters;
 import androidx.media3.common.PlaybackException;
 import androidx.media3.common.Player;
 import androidx.media3.common.Tracks;
+import androidx.media3.datasource.DefaultHttpDataSource;
 import androidx.media3.exoplayer.DefaultLoadControl;
 import androidx.media3.exoplayer.ExoPlayer;
+import androidx.media3.exoplayer.source.DefaultMediaSourceFactory;
 import androidx.media3.ui.AspectRatioFrameLayout;
 import androidx.media3.ui.PlayerView;
 
@@ -97,7 +100,7 @@ public class GetSmartProviderPlugin extends Plugin {
     private static final int DIRECT_ADDRESS_CONNECT_TIMEOUT_MS = 6_000;
     private static final int NETWORK_ROUTE_CONNECT_TIMEOUT_MS = 8_000;
     private static final int MAX_REDIRECTS = 5;
-    private static final String TRANSPORT_BUILD = "GS-NATIVE-XCIPTV-HS14";
+    private static final String TRANSPORT_BUILD = "GS-NATIVE-XCIPTV-HS15";
 
     private static final String CREDENTIAL_PREFS = "getsmart_secure_credentials";
     private static final String CREDENTIAL_DRAFT_KEY = "xtream_draft_v1";
@@ -370,6 +373,9 @@ public class GetSmartProviderPlugin extends Plugin {
     private String nativeBuiltPerformanceMode = "";
     private String nativeQualityPreference = "auto";
     private int nativeMaxRetryAttempts = 3;
+    private String nativePlaybackUserAgent = "";
+    private String nativePlaybackReferer = "";
+    private String nativePlaybackCookie = "";
     private int nativeRecoveryAttempt = 0;
     private int nativeRecoveryStage = 0;
     private boolean nativeRebuildAttempted = false;
@@ -472,6 +478,8 @@ public class GetSmartProviderPlugin extends Plugin {
             JSObject payload = new JSObject();
             payload.put("errorCode", error.errorCode);
             payload.put("errorCodeName", error.getErrorCodeName());
+            payload.put("category", classifyNativePlaybackError(error));
+            payload.put("userMessage", nativePlaybackErrorUserMessage(error));
             payload.put("message", safePlaybackErrorMessage(error));
             notifyListeners("playerError", payload);
             emitPlayerState("error");
@@ -513,6 +521,9 @@ public class GetSmartProviderPlugin extends Plugin {
         final String requestedQualityPreference = safeString(call.getString("qualityPreference"));
         final Integer requestedMaxRetries = call.getInt("maxRetryAttempts");
         final boolean requestedRecovery = call.getBoolean("recovery", false);
+        final String requestedUserAgent = safeString(call.getString("userAgent"));
+        final String requestedReferer = safeString(call.getString("referer"));
+        final String requestedCookie = safeString(call.getString("cookie"));
         final String requestedUrl = validated.toString();
 
         getActivity().runOnUiThread(() -> {
@@ -534,6 +545,9 @@ public class GetSmartProviderPlugin extends Plugin {
                 nativeQualityPreference = normalizeQualityPreference(requestedQualityPreference);
                 nativeMaxRetryAttempts =
                     requestedMaxRetries == null ? 3 : Math.max(1, Math.min(5, requestedMaxRetries));
+                nativePlaybackUserAgent = requestedUserAgent.trim();
+                nativePlaybackReferer = requestedReferer.trim();
+                nativePlaybackCookie = requestedCookie.trim();
 
                 if (!requestedRecovery && mediaChanged) {
                     resetNativePlaybackHealth();
@@ -549,7 +563,7 @@ public class GetSmartProviderPlugin extends Plugin {
                 if (mediaChanged) {
                     nativePlayerUrl = requestedUrl;
                     nativePlaybackStartedElapsedMs = SystemClock.elapsedRealtime();
-                    nativePlayer.setMediaItem(MediaItem.fromUri(requestedUrl));
+                    nativePlayer.setMediaItem(buildNativeMediaItem(requestedUrl));
                     nativePlayer.prepare();
                     nativePlayer.play();
                 } else if (nativePlayer.getPlaybackState() == Player.STATE_IDLE) {
