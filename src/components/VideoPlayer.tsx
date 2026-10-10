@@ -25,18 +25,23 @@ import { PlaybackTarget, XtreamLiveStream, XtreamEPGProgramme } from '../types/x
 import { xtreamService } from '../services/xtreamClient';
 import {
   addNativeAndroidPlayerCommandListener,
+  addNativeAndroidPlayerDiagnosticsListener,
   addNativeAndroidPlayerErrorListener,
   addNativeAndroidPlayerStateListener,
   controlNativeAndroidMedia,
   isNativeAndroidRuntime,
   playNativeAndroidMedia,
+  setNativeAndroidPerformanceConfig,
   setNativeAndroidPlayerVisible,
   setNativeAndroidTrackPreferences,
   stopNativeAndroidMedia,
   updateNativeAndroidPlayerMetadata,
 } from '../services/androidProviderTransport';
 import { resolveStalkerStreamLink } from '../services/stalkerClient';
-import { streamingPerformanceService } from '../services/streamingPerformanceService';
+import {
+  streamingPerformanceService,
+  type StreamHealthStats,
+} from '../services/streamingPerformanceService';
 import { playbackPreferencesService } from '../services/playbackPreferencesService';
 import { useStreamHealthTracker } from '../hooks/useStreamHealthTracker';
 import { StreamHealthPanel } from './StreamHealthPanel';
@@ -86,6 +91,8 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const [errorDetail, setErrorDetail] = useState<string | null>(null);
   const [epgList, setEpgList] = useState<XtreamEPGProgramme[]>([]);
   const [showHealthPanel, setShowHealthPanel] = useState<boolean>(false);
+  const [nativeHealthStats, setNativeHealthStats] = useState<StreamHealthStats | null>(null);
+  const [nativeRecoveryNonce, setNativeRecoveryNonce] = useState(0);
 
   const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   // Keep callbacks used by the global media-key listener stable. Recreating the
@@ -97,6 +104,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const allLiveStreamsRef = useRef(allLiveStreams);
   const onSelectLiveStreamRef = useRef(onSelectLiveStream);
   const lastLiveStreamRef = useRef<XtreamLiveStream | null>(null);
+  const nativeRecoveryRequestedRef = useRef(false);
 
   useEffect(() => { isVisuallyHiddenRef.current = isVisuallyHidden; }, [isVisuallyHidden]);
   useEffect(() => { onCloseRef.current = onClose; }, [onClose]);
@@ -207,6 +215,12 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
           return;
         }
 
+        if (event.command === 'recoverStream') {
+          nativeRecoveryRequestedRef.current = true;
+          setNativeRecoveryNonce((value) => value + 1);
+          return;
+        }
+
         if (playbackTarget.type !== 'live') return;
 
         const streams = allLiveStreamsRef.current;
@@ -251,8 +265,51 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         setErrorMsg('Native playback stopped.');
         setErrorDetail(`${event.errorCodeName || 'PLAYER_ERROR'} · ${event.message || 'Unknown playback error'}`);
       });
+      const diagnosticsPromise = addNativeAndroidPlayerDiagnosticsListener((diagnostics) => {
+        const recovering = diagnostics.recoveryStage > 0 || diagnostics.recoveryAttempt > 0;
+        const mappedState: StreamHealthStats['state'] =
+          recovering
+            ? 'recovering'
+            : diagnostics.state === 'buffering'
+            ? 'buffering'
+            : diagnostics.state === 'ready'
+            ? 'playing'
+            : diagnostics.state === 'ended'
+            ? 'idle'
+            : 'loading';
 
-      for (const pending of [statePromise, commandPromise, errorPromise]) {
+        setNativeHealthStats({
+          state: mappedState,
+          resolution: diagnostics.resolution || '—',
+          width: diagnostics.width || 0,
+          height: diagnostics.height || 0,
+          bitrateBps: diagnostics.bitrateBps || 0,
+          estimatedBandwidthBps: diagnostics.estimatedBandwidthBps || 0,
+          bufferedSeconds: Number(diagnostics.bufferedSeconds || 0),
+          liveLatencySeconds: null,
+          rebufferCount: diagnostics.rebufferCount || 0,
+          startupTimeMs: diagnostics.startupTimeMs || null,
+          droppedFrames: diagnostics.droppedFrames || 0,
+          totalFrames: diagnostics.totalFrames || 0,
+          protocol: diagnostics.protocol || 'Media3',
+          autoAdaptationLevel: diagnostics.effectivePerformanceMode,
+          healthRating: diagnostics.healthRating,
+          diagnosticMessage: diagnostics.diagnosticMessage,
+          isSecondaryStream: false,
+          availableLevels: (diagnostics.availableLevels || []).map((level) => ({
+            id: level.id,
+            name: level.name,
+            width: level.width,
+            height: level.height,
+            bitrate: level.bitrate,
+          })),
+          selectedLevel:
+            diagnostics.availableLevels?.find((level) => level.selected)?.id ?? -1,
+          lastError: null,
+        });
+      });
+
+      for (const pending of [statePromise, commandPromise, errorPromise, diagnosticsPromise]) {
         if (!pending) continue;
         const handle = await pending;
         if (cancelled) {
@@ -284,6 +341,24 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
     apply();
     return playbackPreferencesService.subscribe((config) => apply(config));
+  }, [nativeAndroid]);
+
+  // Keep native Media3 buffer/quality/recovery settings aligned with the
+  // shared Player & Playback settings. Native changes are controlled rebuilds,
+  // never a silent switch to another provider/feed.
+  useEffect(() => {
+    if (!nativeAndroid) return;
+
+    const apply = (config = streamingPerformanceService.getConfig()) => {
+      setNativeAndroidPerformanceConfig({
+        performanceMode: config.mode,
+        qualityPreference: config.qualityPreference,
+        maxRetryAttempts: config.maxRetryAttempts,
+      }).catch(() => undefined);
+    };
+
+    apply();
+    return streamingPerformanceService.subscribe((config) => apply(config));
   }, [nativeAndroid]);
 
   // EPG/current-program information can arrive after playback has already
@@ -404,6 +479,8 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
           }
 
           const playbackPreferences = playbackPreferencesService.getConfig();
+          const performanceConfig = streamingPerformanceService.getConfig();
+          const isRecoveryRequest = nativeRecoveryRequestedRef.current;
           await playNativeAndroidMedia({
             url: nativeUrl,
             title: playbackTitleRef.current,
@@ -414,10 +491,16 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
                 : '',
             currentProgram: playbackProgramRef.current,
             nextProgram: playbackTarget.type === 'live' ? (epgList[1]?.title || '') : '',
+            performanceMode: performanceConfig.mode,
+            qualityPreference: performanceConfig.qualityPreference,
+            maxRetryAttempts: performanceConfig.maxRetryAttempts,
+            recovery: isRecoveryRequest,
             preferredAudioLanguage: playbackPreferences.preferredAudioLanguage,
             subtitleDefaultMode: playbackPreferences.subtitleDefaultMode,
             preferredSubtitleLanguage: playbackPreferences.preferredSubtitleLanguage,
           });
+
+          nativeRecoveryRequestedRef.current = false;
 
           xtreamService.addToHistory({
             id:
@@ -646,7 +729,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       // Native Media3 persists across media identity changes. It is released
       // only by the dedicated unmount effect above.
     };
-  }, [playbackIdentity]);
+  }, [playbackIdentity, nativeRecoveryNonce]);
 
   // Video event handlers
   const handleTimeUpdate = () => {
@@ -848,6 +931,9 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const handleMouseMove = () => {
     resetControlsTimer();
   };
+
+  const effectiveHealthStats = nativeAndroid && nativeHealthStats ? nativeHealthStats : stats;
+
 
   const formatSeconds = (sec: number): string => {
     if (isNaN(sec) || !isFinite(sec)) return '00:00';
@@ -1200,9 +1286,9 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       {/* Stream Health Diagnostic Panel Overlay */}
       {showHealthPanel && (
         <StreamHealthPanel
-          stats={stats}
+          stats={effectiveHealthStats}
           onClose={() => setShowHealthPanel(false)}
-          onSelectQuality={setQualityLevel}
+          onSelectQuality={nativeAndroid ? undefined : setQualityLevel}
           onOpenPerformanceSettings={onOpenPerformanceSettings}
         />
       )}
