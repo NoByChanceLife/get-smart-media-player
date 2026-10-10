@@ -10,16 +10,21 @@ import {
   Lock,
 } from 'lucide-react';
 import {
+  XtreamCategory,
   XtreamLiveStream,
   XtreamVodStream,
   XtreamSeries,
 } from '../types/xtream';
 import { parentalControlService } from '../services/parentalControlService';
+import { adultDiscoveryCategoryIds, isPrivateDiscoveryContent } from '../services/discoveryPrivacy';
 
 interface GlobalSearchViewProps {
   liveStreams: XtreamLiveStream[];
   movies: XtreamVodStream[];
   seriesList: XtreamSeries[];
+  liveCategories: XtreamCategory[];
+  vodCategories: XtreamCategory[];
+  seriesCategories: XtreamCategory[];
   onPlayLive: (stream: XtreamLiveStream) => void;
   onPlayMovie: (movie: XtreamVodStream) => void;
   onSelectSeries: (series: XtreamSeries) => void;
@@ -31,6 +36,9 @@ export const GlobalSearchView: React.FC<GlobalSearchViewProps> = ({
   liveStreams,
   movies,
   seriesList,
+  liveCategories,
+  vodCategories,
+  seriesCategories,
   onPlayLive,
   onPlayMovie,
   onSelectSeries,
@@ -46,8 +54,12 @@ export const GlobalSearchView: React.FC<GlobalSearchViewProps> = ({
   const results = useMemo(() => {
     if (!cleanQuery) return { live: [], movies: [], series: [] };
 
+    const liveAdultIds = adultDiscoveryCategoryIds(liveCategories);
+    const vodAdultIds = adultDiscoveryCategoryIds(vodCategories);
+    const seriesAdultIds = adultDiscoveryCategoryIds(seriesCategories);
+
     const live = liveStreams
-      .filter((s) => !parentalControlService.isChannelHidden(s))
+      .filter((s) => !parentalControlService.isChannelHidden(s) && !isPrivateDiscoveryContent(s, liveAdultIds))
       .filter(
         (s) =>
           s.name.toLowerCase().includes(cleanQuery) ||
@@ -55,7 +67,7 @@ export const GlobalSearchView: React.FC<GlobalSearchViewProps> = ({
       );
 
     const vod = movies
-      .filter((m) => !parentalControlService.isMovieHidden(m))
+      .filter((m) => !parentalControlService.isMovieHidden(m) && !isPrivateDiscoveryContent(m, vodAdultIds))
       .filter(
         (m) =>
           m.name.toLowerCase().includes(cleanQuery) ||
@@ -63,7 +75,7 @@ export const GlobalSearchView: React.FC<GlobalSearchViewProps> = ({
       );
 
     const sList = seriesList
-      .filter((s) => !parentalControlService.isSeriesHidden(s))
+      .filter((s) => !parentalControlService.isSeriesHidden(s) && !isPrivateDiscoveryContent(s, seriesAdultIds))
       .filter(
         (s) =>
           s.name.toLowerCase().includes(cleanQuery) ||
@@ -71,7 +83,7 @@ export const GlobalSearchView: React.FC<GlobalSearchViewProps> = ({
       );
 
     return { live, movies: vod, series: sList };
-  }, [cleanQuery, liveStreams, movies, seriesList]);
+  }, [cleanQuery, liveStreams, movies, seriesList, liveCategories, vodCategories, seriesCategories]);
 
   const totalResults =
     (filterType === 'all' || filterType === 'live' ? results.live.length : 0) +
