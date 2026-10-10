@@ -62,8 +62,9 @@ public class GetSmartProviderPlugin extends Plugin {
     private static final int CONNECT_TIMEOUT_MS = 40_000;
     private static final int READ_TIMEOUT_MS = 40_000;
     private static final int DIRECT_ADDRESS_CONNECT_TIMEOUT_MS = 6_000;
+    private static final int NETWORK_ROUTE_CONNECT_TIMEOUT_MS = 8_000;
     private static final int MAX_REDIRECTS = 5;
-    private static final String TRANSPORT_BUILD = "GS-NATIVE-XCIPTV-HS5";
+    private static final String TRANSPORT_BUILD = "GS-NATIVE-XCIPTV-HS6";
 
     private static final String CREDENTIAL_PREFS = "getsmart_secure_credentials";
     private static final String CREDENTIAL_DRAFT_KEY = "xtream_draft_v1";
@@ -95,6 +96,29 @@ public class GetSmartProviderPlugin extends Plugin {
             this.resolvedCount = resolvedCount;
             this.ipv4Count = ipv4Count;
             this.ipv6Count = ipv6Count;
+        }
+    }
+
+    private static final class VisibleNetworkRouteFailure extends Exception {
+        final int attemptedNetworks;
+        final int vpnNetworks;
+        final int wifiNetworks;
+        final int cellularNetworks;
+        final int ethernetNetworks;
+
+        VisibleNetworkRouteFailure(
+            int attemptedNetworks,
+            int vpnNetworks,
+            int wifiNetworks,
+            int cellularNetworks,
+            int ethernetNetworks
+        ) {
+            super("No visible Android network completed the provider request.");
+            this.attemptedNetworks = attemptedNetworks;
+            this.vpnNetworks = vpnNetworks;
+            this.wifiNetworks = wifiNetworks;
+            this.cellularNetworks = cellularNetworks;
+            this.ethernetNetworks = ethernetNetworks;
         }
     }
 
@@ -254,20 +278,55 @@ public class GetSmartProviderPlugin extends Plugin {
                 URL url = validateHttpUrl(rawUrl);
                 HttpResult result;
 
-                // Plain HTTP is common in Xtream deployments. Resolve and try
-                // every address Android gives us before falling back to the
-                // normal URLConnection route. This avoids one bad IPv6/first
-                // DNS answer turning into a 40-second opaque timeout.
-                if ("http".equalsIgnoreCase(url.getProtocol())) {
-                    try {
-                        result = performDirectHttpRequest(
-                            url,
-                            userAgent,
-                            mac,
-                            token,
-                            0
-                        );
-                    } catch (DirectRouteFailure directFailure) {
+                // HS6 first tries each Android Network explicitly. This is the
+                // critical comparison with working XCIPTV builds: if a VPN,
+                // Wi-Fi, cellular, or Ethernet network has the route, bind the
+                // provider request to that network's own DNS/socket stack.
+                VisibleNetworkRouteFailure visibleNetworkFailure = null;
+                try {
+                    result = performAcrossVisibleNetworks(
+                        url,
+                        userAgent,
+                        mac,
+                        token
+                    );
+                } catch (VisibleNetworkRouteFailure routeFailure) {
+                    visibleNetworkFailure = routeFailure;
+
+                    // Plain HTTP is common in Xtream deployments. If every
+                    // visible Android network failed, also try every address
+                    // returned by system DNS, preserving the original Host
+                    // header. This catches address-family/order problems.
+                    if ("http".equalsIgnoreCase(url.getProtocol())) {
+                        try {
+                            result = performDirectHttpRequest(
+                                url,
+                                userAgent,
+                                mac,
+                                token,
+                                0
+                            );
+                        } catch (DirectRouteFailure directFailure) {
+                            try {
+                                result = performReferenceUrlConnection(
+                                    url,
+                                    userAgent,
+                                    mac,
+                                    token
+                                );
+                            } catch (Exception referenceFailure) {
+                                call.reject(
+                                    safeMessage(
+                                        referenceFailure,
+                                        "connecting",
+                                        directFailure,
+                                        visibleNetworkFailure
+                                    )
+                                );
+                                return;
+                            }
+                        }
+                    } else {
                         try {
                             result = performReferenceUrlConnection(
                                 url,
@@ -280,26 +339,170 @@ public class GetSmartProviderPlugin extends Plugin {
                                 safeMessage(
                                     referenceFailure,
                                     "connecting",
-                                    directFailure
+                                    null,
+                                    visibleNetworkFailure
                                 )
                             );
                             return;
                         }
                     }
-                } else {
-                    result = performReferenceUrlConnection(
-                        url,
-                        userAgent,
-                        mac,
-                        token
-                    );
                 }
 
                 resolveHttpResult(call, result);
             } catch (Exception error) {
-                call.reject(safeMessage(error, "request", null));
+                call.reject(safeMessage(error, "request", null, null));
             }
         });
+    }
+
+    private HttpResult performAcrossVisibleNetworks(
+        URL url,
+        String userAgent,
+        String mac,
+        String token
+    ) throws Exception {
+        ConnectivityManager cm = (ConnectivityManager) getContext().getSystemService(
+            Context.CONNECTIVITY_SERVICE
+        );
+
+        if (cm == null) {
+            throw new VisibleNetworkRouteFailure(0, 0, 0, 0, 0);
+        }
+
+        Network active = cm.getActiveNetwork();
+        List<Network> networks = new ArrayList<>(Arrays.asList(cm.getAllNetworks()));
+
+        networks.sort((left, right) -> {
+            if (left.equals(active) && !right.equals(active)) {
+                return -1;
+            }
+            if (right.equals(active) && !left.equals(active)) {
+                return 1;
+            }
+
+            NetworkCapabilities leftCaps = cm.getNetworkCapabilities(left);
+            NetworkCapabilities rightCaps = cm.getNetworkCapabilities(right);
+
+            int leftRank = networkPriority(leftCaps);
+            int rightRank = networkPriority(rightCaps);
+            return Integer.compare(leftRank, rightRank);
+        });
+
+        int attempted = 0;
+        int vpn = 0;
+        int wifi = 0;
+        int cellular = 0;
+        int ethernet = 0;
+
+        for (Network network : networks) {
+            NetworkCapabilities caps = cm.getNetworkCapabilities(network);
+            if (caps == null) {
+                continue;
+            }
+
+            boolean isVpn = caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN);
+            boolean isWifi = caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI);
+            boolean isCellular = caps.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR);
+            boolean isEthernet = caps.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET);
+
+            if (isVpn) vpn++;
+            if (isWifi) wifi++;
+            if (isCellular) cellular++;
+            if (isEthernet) ethernet++;
+
+            if (
+                !caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
+                !isVpn
+            ) {
+                continue;
+            }
+
+            attempted++;
+            HttpURLConnection connection = null;
+
+            try {
+                connection = (HttpURLConnection) network.openConnection(url);
+                connection.setRequestMethod("GET");
+                connection.setConnectTimeout(NETWORK_ROUTE_CONNECT_TIMEOUT_MS);
+                connection.setReadTimeout(READ_TIMEOUT_MS);
+                connection.setInstanceFollowRedirects(true);
+                connection.setRequestProperty("Connection", "close");
+
+                if (userAgent != null && !userAgent.trim().isEmpty()) {
+                    connection.setRequestProperty("User-Agent", userAgent.trim());
+                }
+
+                applyPortalHeaders(connection, mac, token);
+
+                connection.connect();
+
+                int status = connection.getResponseCode();
+                String contentType = connection.getContentType();
+                InputStream stream =
+                    status >= 200 && status < 400
+                        ? connection.getInputStream()
+                        : connection.getErrorStream();
+
+                return new HttpResult(
+                    status,
+                    contentType,
+                    readBounded(stream),
+                    "android-network-" + networkLabel(caps)
+                );
+            } catch (Exception ignored) {
+                // Try the next visible Android network.
+            } finally {
+                if (connection != null) {
+                    connection.disconnect();
+                }
+            }
+        }
+
+        throw new VisibleNetworkRouteFailure(
+            attempted,
+            vpn,
+            wifi,
+            cellular,
+            ethernet
+        );
+    }
+
+    private int networkPriority(NetworkCapabilities caps) {
+        if (caps == null) {
+            return 99;
+        }
+        if (caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN)) {
+            return 0;
+        }
+        if (caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) {
+            return 1;
+        }
+        if (caps.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)) {
+            return 2;
+        }
+        if (caps.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)) {
+            return 3;
+        }
+        return 10;
+    }
+
+    private String networkLabel(NetworkCapabilities caps) {
+        if (caps == null) {
+            return "unknown";
+        }
+        if (caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN)) {
+            return "vpn";
+        }
+        if (caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) {
+            return "wifi";
+        }
+        if (caps.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)) {
+            return "ethernet";
+        }
+        if (caps.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)) {
+            return "cellular";
+        }
+        return "other";
     }
 
     private HttpResult performReferenceUrlConnection(
@@ -912,10 +1115,27 @@ public class GetSmartProviderPlugin extends Plugin {
     private String safeMessage(
         Exception error,
         String phase,
-        DirectRouteFailure directFailure
+        DirectRouteFailure directFailure,
+        VisibleNetworkRouteFailure visibleNetworkFailure
     ) {
         String routeDetail = "";
         String networkDetail = " Network path: " + getNetworkPathSummary() + ".";
+        String visibleRouteDetail = "";
+
+        if (visibleNetworkFailure != null) {
+            visibleRouteDetail =
+                " Explicit network attempts=" +
+                visibleNetworkFailure.attemptedNetworks +
+                " (VPN=" +
+                visibleNetworkFailure.vpnNetworks +
+                ", Wi-Fi=" +
+                visibleNetworkFailure.wifiNetworks +
+                ", cellular=" +
+                visibleNetworkFailure.cellularNetworks +
+                ", Ethernet=" +
+                visibleNetworkFailure.ethernetNetworks +
+                "); none completed the request.";
+        }
 
         if (directFailure != null) {
             routeDetail =
@@ -935,7 +1155,8 @@ public class GetSmartProviderPlugin extends Plugin {
                 phase +
                 "." +
                 routeDetail +
-                networkDetail
+                networkDetail +
+                visibleRouteDetail
             );
         }
 
@@ -944,7 +1165,8 @@ public class GetSmartProviderPlugin extends Plugin {
                 TRANSPORT_BUILD +
                 ": Provider refused the network connection." +
                 routeDetail +
-                networkDetail
+                networkDetail +
+                visibleRouteDetail
             );
         }
 
@@ -952,7 +1174,8 @@ public class GetSmartProviderPlugin extends Plugin {
             return (
                 TRANSPORT_BUILD +
                 ": Provider host could not be resolved." +
-                networkDetail
+                networkDetail +
+                visibleRouteDetail
             );
         }
 
@@ -960,7 +1183,8 @@ public class GetSmartProviderPlugin extends Plugin {
             return (
                 TRANSPORT_BUILD +
                 ": Provider TLS/SSL negotiation failed." +
-                networkDetail
+                networkDetail +
+                visibleRouteDetail
             );
         }
 
@@ -977,7 +1201,8 @@ public class GetSmartProviderPlugin extends Plugin {
                 " IPv4, " +
                 direct.ipv6Count +
                 " IPv6)." +
-                networkDetail
+                networkDetail +
+                visibleRouteDetail
             );
         }
 
@@ -996,7 +1221,8 @@ public class GetSmartProviderPlugin extends Plugin {
                 TRANSPORT_BUILD +
                 ": " +
                 error.getMessage() +
-                networkDetail
+                networkDetail +
+                visibleRouteDetail
             );
         }
 
@@ -1006,7 +1232,8 @@ public class GetSmartProviderPlugin extends Plugin {
             phase +
             "." +
             routeDetail +
-            networkDetail
+            networkDetail +
+            visibleRouteDetail
         );
     }
 
