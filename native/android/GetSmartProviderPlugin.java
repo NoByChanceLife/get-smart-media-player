@@ -450,7 +450,6 @@ public class GetSmartProviderPlugin extends Plugin {
 
         @Override
         public void onTracksChanged(Tracks tracks) {
-            applyNativeVideoQualityPreference();
             updateNativeOsdText();
             notifyListeners("playerTracks", buildDetailedTrackSummary(tracks));
             notifyListeners("playerDiagnostics", buildNativeDiagnostics());
@@ -1302,6 +1301,294 @@ public class GetSmartProviderPlugin extends Plugin {
         }
 
         nativePlayer.setTrackSelectionParameters(builder.build());
+    }
+
+    private String normalizePerformanceMode(String value) {
+        String normalized = safeString(value).trim().toLowerCase(Locale.US);
+        if ("fast".equals(normalized) || "balanced".equals(normalized) || "stable".equals(normalized)) {
+            return normalized;
+        }
+        return "auto";
+    }
+
+    private String normalizeQualityPreference(String value) {
+        String normalized = safeString(value).trim().toLowerCase(Locale.US);
+        if (
+            "1080p".equals(normalized) ||
+            "720p".equals(normalized) ||
+            "480p".equals(normalized) ||
+            "low".equals(normalized)
+        ) {
+            return normalized;
+        }
+        return "auto";
+    }
+
+    private void applyNativeVideoQualityPreference() {
+        if (nativePlayer == null) return;
+
+        TrackSelectionParameters.Builder builder =
+            nativePlayer.getTrackSelectionParameters().buildUpon();
+        builder.clearOverridesOfType(C.TRACK_TYPE_VIDEO);
+        builder.setForceLowestBitrate(false);
+        builder.setMaxVideoSize(Integer.MAX_VALUE, Integer.MAX_VALUE);
+
+        switch (nativeQualityPreference) {
+            case "1080p":
+                builder.setMaxVideoSize(1920, 1080);
+                break;
+            case "720p":
+                builder.setMaxVideoSize(1280, 720);
+                break;
+            case "480p":
+                builder.setMaxVideoSize(854, 480);
+                break;
+            case "low":
+                builder.setForceLowestBitrate(true);
+                break;
+            case "auto":
+            default:
+                break;
+        }
+
+        nativePlayer.setTrackSelectionParameters(builder.build());
+    }
+
+    private void resetNativePlaybackHealth() {
+        nativeRecoveryAttempt = 0;
+        nativeRecoveryStage = 0;
+        nativeRebuildAttempted = false;
+        nativeRebufferCount = 0;
+        nativeEverReady = false;
+        nativeBufferingIncident = false;
+        nativePlaybackStartedElapsedMs = SystemClock.elapsedRealtime();
+        nativeStartupTimeMs = -1L;
+        nativeLastReadyElapsedMs = 0L;
+        nativeRecentStalls.clear();
+    }
+
+    private void pruneNativeStalls(long now) {
+        for (int i = nativeRecentStalls.size() - 1; i >= 0; i--) {
+            if (now - nativeRecentStalls.get(i) > 60_000L) {
+                nativeRecentStalls.remove(i);
+            }
+        }
+    }
+
+    private void maybeResetNativeRecoveryAfterHealthyPlayback() {
+        if (nativePlayer == null || nativeRecoveryStage == 0) return;
+        if (!nativePlayer.isPlaying() || nativeLastReadyElapsedMs <= 0L) return;
+
+        long now = SystemClock.elapsedRealtime();
+        if (now - nativeLastReadyElapsedMs >= 30_000L) {
+            nativeRecoveryAttempt = 0;
+            nativeRecoveryStage = 0;
+            nativeRebuildAttempted = false;
+        }
+    }
+
+    private void maybeRelaxAutoPerformanceMode() {
+        if (
+            nativePlayer == null ||
+            !"auto".equals(nativePerformanceMode) ||
+            !"stable".equals(nativeEffectivePerformanceMode) ||
+            !nativePlayer.isPlaying()
+        ) {
+            return;
+        }
+
+        long now = SystemClock.elapsedRealtime();
+        pruneNativeStalls(now);
+
+        if (
+            nativeRecentStalls.isEmpty() &&
+            nativeLastReadyElapsedMs > 0L &&
+            now - nativeLastReadyElapsedMs >= 75_000L
+        ) {
+            nativeEffectivePerformanceMode = "balanced";
+            rebuildNativePlayerForPerformanceMode("auto-stable-recovery");
+        }
+    }
+
+    private boolean scheduleNativeRecovery(PlaybackException error) {
+        if (nativePlayer == null) return false;
+
+        if (nativeRecoveryAttempt < nativeMaxRetryAttempts) {
+            nativeRecoveryAttempt += 1;
+            int attempt = nativeRecoveryAttempt;
+            long delayMs = Math.min(8_000L, 1_000L << Math.min(3, attempt - 1));
+
+            nativeUiHandler.postDelayed(() -> {
+                if (nativePlayer == null) return;
+                try {
+                    nativePlayer.prepare();
+                    nativePlayer.play();
+                    emitPlayerState("recovery-retry-" + attempt);
+                } catch (Exception ignored) {
+                }
+            }, delayMs);
+            return true;
+        }
+
+        if (nativeRecoveryStage == 0) {
+            nativeRecoveryStage = 1;
+            nativeRecoveryAttempt = 0;
+            emitPlayerCommand("recoverStream", "reresolve");
+
+            // If the React/provider resolver cannot answer, do not hang forever.
+            nativeUiHandler.postDelayed(() -> {
+                if (
+                    nativePlayer != null &&
+                    nativeRecoveryStage == 1 &&
+                    nativePlayer.getPlaybackState() == Player.STATE_IDLE
+                ) {
+                    nativeRecoveryStage = 2;
+                    nativeRebuildAttempted = true;
+                    rebuildNativePlayerForPerformanceMode("recovery-fallback-rebuild");
+                }
+            }, 5_000L);
+            return true;
+        }
+
+        if (!nativeRebuildAttempted) {
+            nativeRecoveryStage = 2;
+            nativeRecoveryAttempt = 0;
+            nativeRebuildAttempted = true;
+            nativeUiHandler.post(() ->
+                rebuildNativePlayerForPerformanceMode("recovery-player-rebuild")
+            );
+            return true;
+        }
+
+        return false;
+    }
+
+    private Format getSelectedVideoFormat() {
+        if (nativePlayer == null) return null;
+
+        Tracks tracks = nativePlayer.getCurrentTracks();
+        for (Tracks.Group group : tracks.getGroups()) {
+            if (group.getType() != C.TRACK_TYPE_VIDEO) continue;
+            for (int i = 0; i < group.length; i++) {
+                if (group.isTrackSelected(i)) return group.getTrackFormat(i);
+            }
+        }
+        return null;
+    }
+
+    private String inferNativeProtocol() {
+        String lower = nativePlayerUrl.toLowerCase(Locale.US);
+        if (lower.contains(".m3u8")) return "HLS";
+        if (lower.contains(".mpd")) return "DASH";
+        if (lower.matches(".*\\.ts(?:$|[?#]).*")) return "MPEG-TS";
+        if (lower.contains(".mp4")) return "MP4 / Progressive";
+        if (lower.startsWith("https://")) return "HTTPS media";
+        if (lower.startsWith("http://")) return "HTTP media";
+        return "Media3 source";
+    }
+
+    private String nativeHealthRating(double bufferedSeconds) {
+        if (nativeRecoveryStage > 0 || nativeRecentStalls.size() >= 2) return "poor";
+        if (nativePlayer != null && nativePlayer.getPlaybackState() == Player.STATE_BUFFERING) return "fair";
+        if (bufferedSeconds >= 5.0) return "optimal";
+        if (bufferedSeconds >= 2.0) return "good";
+        return "fair";
+    }
+
+    private String nativeDiagnosticMessage(double bufferedSeconds) {
+        if (nativeRecoveryStage == 1) {
+            return "Re-resolving the same selected stream after bounded player retries.";
+        }
+        if (nativeRecoveryStage >= 2) {
+            return "Rebuilding the Media3 player for the same selected stream.";
+        }
+        if (nativeRecoveryAttempt > 0) {
+            return "Retrying the same selected stream (" + nativeRecoveryAttempt + "/" + nativeMaxRetryAttempts + ").";
+        }
+        if (
+            "auto".equals(nativePerformanceMode) &&
+            "stable".equals(nativeEffectivePerformanceMode)
+        ) {
+            return "Auto mode increased the native buffer after repeated stalls.";
+        }
+        if (nativePlayer != null && nativePlayer.getPlaybackState() == Player.STATE_BUFFERING) {
+            return "Media3 is buffering the selected stream.";
+        }
+        if (bufferedSeconds < 2.0 && nativePlayer != null && nativePlayer.isPlaying()) {
+            return "Playback is active with a small forward buffer.";
+        }
+        return "Native Media3 playback is healthy on the selected stream.";
+    }
+
+    private JSObject buildNativeDiagnostics() {
+        JSObject diagnostics = new JSObject();
+        diagnostics.put("active", nativePlayer != null);
+        diagnostics.put("state", nativePlayer == null ? "idle" : playbackStateName(nativePlayer.getPlaybackState()));
+        diagnostics.put("performanceMode", nativePerformanceMode);
+        diagnostics.put("effectivePerformanceMode", nativeEffectivePerformanceMode);
+        diagnostics.put("qualityPreference", nativeQualityPreference);
+        diagnostics.put("maxRetryAttempts", nativeMaxRetryAttempts);
+        diagnostics.put("recoveryAttempt", nativeRecoveryAttempt);
+        diagnostics.put("recoveryStage", nativeRecoveryStage);
+        diagnostics.put("rebufferCount", nativeRebufferCount);
+        diagnostics.put("startupTimeMs", nativeStartupTimeMs >= 0L ? nativeStartupTimeMs : 0L);
+        diagnostics.put("protocol", inferNativeProtocol());
+        diagnostics.put("estimatedBandwidthBps", 0);
+        diagnostics.put("estimatedBandwidthAvailable", false);
+        diagnostics.put("droppedFrames", 0);
+        diagnostics.put("totalFrames", 0);
+        diagnostics.put("droppedFramesAvailable", false);
+
+        if (nativePlayer == null) {
+            diagnostics.put("bufferedSeconds", 0.0);
+            diagnostics.put("bitrateBps", 0);
+            diagnostics.put("width", 0);
+            diagnostics.put("height", 0);
+            diagnostics.put("resolution", "—");
+            diagnostics.put("healthRating", "good");
+            diagnostics.put("diagnosticMessage", "No active native playback session.");
+            return diagnostics;
+        }
+
+        long position = Math.max(0L, nativePlayer.getCurrentPosition());
+        long bufferedPosition = Math.max(position, nativePlayer.getBufferedPosition());
+        double bufferedSeconds = Math.max(0.0, (bufferedPosition - position) / 1000.0);
+        Format selectedVideo = getSelectedVideoFormat();
+
+        int width = selectedVideo != null && selectedVideo.width > 0 ? selectedVideo.width : 0;
+        int height = selectedVideo != null && selectedVideo.height > 0 ? selectedVideo.height : 0;
+        int bitrate = selectedVideo != null && selectedVideo.bitrate > 0 ? selectedVideo.bitrate : 0;
+
+        diagnostics.put("bufferedSeconds", bufferedSeconds);
+        diagnostics.put("bitrateBps", bitrate);
+        diagnostics.put("width", width);
+        diagnostics.put("height", height);
+        diagnostics.put("resolution", width > 0 && height > 0 ? width + "x" + height : "—");
+        diagnostics.put("healthRating", nativeHealthRating(bufferedSeconds));
+        diagnostics.put("diagnosticMessage", nativeDiagnosticMessage(bufferedSeconds));
+
+        JSONArray levels = new JSONArray();
+        int levelId = 0;
+        for (Tracks.Group group : nativePlayer.getCurrentTracks().getGroups()) {
+            if (group.getType() != C.TRACK_TYPE_VIDEO) continue;
+            for (int i = 0; i < group.length; i++) {
+                Format format = group.getTrackFormat(i);
+                JSONObject level = new JSONObject();
+                try {
+                    level.put("id", levelId++);
+                    level.put("name", format.height > 0 ? format.height + "p" : "Video Track");
+                    level.put("width", format.width > 0 ? format.width : 0);
+                    level.put("height", format.height > 0 ? format.height : 0);
+                    level.put("bitrate", format.bitrate > 0 ? format.bitrate : 0);
+                    level.put("selected", group.isTrackSelected(i));
+                    level.put("supported", group.isTrackSupported(i));
+                    levels.put(level);
+                } catch (JSONException ignored) {
+                }
+            }
+        }
+        diagnostics.put("availableLevels", levels);
+        return diagnostics;
     }
 
     private void seekNativeBy(long offsetMs) {
