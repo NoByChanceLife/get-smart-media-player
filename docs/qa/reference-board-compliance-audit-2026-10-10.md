@@ -571,3 +571,25 @@ Still pending:
 - Profile/PIN small-modal normalization if testing shows a mismatch.
 - legacy EPGView / BottomNavBar file cleanup after final dependency confirmation.
 - final reference-board reskin after geometry freeze.
+
+
+---
+
+# Visual reskin progress — concept pass 1
+
+Snapshot branch:
+- stable-pre-reskin-2026-10-10 = known-good geometry/function baseline.
+- reskin-concept-pass-1-2026-10-10 = first full visual concept pass.
+
+Implemented on main:
+- Global palette changed from generic slate/cyan dashboard styling to deep navy/black layers with electric blue selection states based on the approved concept boards.
+- Global focus treatment changed to a tighter blue outline/glow.
+- Main navigation rail now uses flatter geometry, smaller radii, compact rows, electric-blue active states, and the packaged Get Smart app logo.
+- TopBar is flatter, denser, and aligned with the concept-board shell.
+- Live TV group rail, preview, search/header, EPG header, guide rows, program cells, and favorite column now use the approved visual language.
+- Home hero and content cards use flatter navy panels and blue CTAs.
+- Movies, Series, Search, and Favorites now use the same panel/border/selection language.
+- Video player overlays and channel drawer now use the same palette.
+- Connections, parental controls, streaming performance, profile switcher, and PIN surfaces now use the same compact navy/blue visual system.
+
+Do not alter playback/session architecture, D-pad navigation behavior, virtualization, or stable scaling rules during remaining visual refinement unless device QA exposes a real defect.
