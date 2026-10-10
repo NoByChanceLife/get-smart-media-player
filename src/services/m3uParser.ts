@@ -52,6 +52,9 @@ export function parseM3uContent(
     tvgId?: string;
     tvgName?: string;
     chno?: number;
+    playbackUserAgent?: string;
+    playbackReferer?: string;
+    playbackCookie?: string;
   } | null = null;
 
   let streamCounter = 1;
@@ -83,6 +86,29 @@ export function parseM3uContent(
         tvgName: nameAttrMatch ? nameAttrMatch[1] : undefined,
         chno: chnoMatch ? parseInt(chnoMatch[1], 10) : undefined,
       };
+    } else if (line.startsWith('#EXTVLCOPT:http-user-agent=') && currentInfo) {
+      currentInfo.playbackUserAgent = line.substring('#EXTVLCOPT:http-user-agent='.length).trim();
+    } else if (
+      (line.startsWith('#EXTVLCOPT:http-referrer=') || line.startsWith('#EXTVLCOPT:http-referer=')) &&
+      currentInfo
+    ) {
+      const separator = line.indexOf('=');
+      currentInfo.playbackReferer = separator >= 0 ? line.substring(separator + 1).trim() : undefined;
+    } else if (line.startsWith('#EXTVLCOPT:http-cookie=') && currentInfo) {
+      currentInfo.playbackCookie = line.substring('#EXTVLCOPT:http-cookie='.length).trim();
+    } else if (line.startsWith('#EXTHTTP:') && currentInfo) {
+      const rawHeaders = line.substring('#EXTHTTP:'.length).trim();
+      try {
+        const headers = JSON.parse(rawHeaders) as Record<string, unknown>;
+        const userAgent = headers['User-Agent'] ?? headers['user-agent'];
+        const referer = headers['Referer'] ?? headers['Referrer'] ?? headers['referer'] ?? headers['referrer'];
+        const cookie = headers['Cookie'] ?? headers['cookie'];
+        if (typeof userAgent === 'string') currentInfo.playbackUserAgent = userAgent;
+        if (typeof referer === 'string') currentInfo.playbackReferer = referer;
+        if (typeof cookie === 'string') currentInfo.playbackCookie = cookie;
+      } catch {
+        // Keep playlist parsing resilient when a provider emits malformed EXTHTTP metadata.
+      }
     } else if (line.startsWith('#EXTGRP:') && currentInfo) {
       // Some providers supply #EXTGRP: tag for category
       const grp = line.replace('#EXTGRP:', '').trim();
@@ -126,6 +152,9 @@ export function parseM3uContent(
           serverId,
           serverName,
           serverBadgeColor: badgeColor,
+          playbackUserAgent: currentInfo.playbackUserAgent,
+          playbackReferer: currentInfo.playbackReferer,
+          playbackCookie: currentInfo.playbackCookie,
         });
       } else {
         liveStreams.push({
@@ -141,6 +170,9 @@ export function parseM3uContent(
           serverId,
           serverName,
           serverBadgeColor: badgeColor,
+          playbackUserAgent: currentInfo.playbackUserAgent,
+          playbackReferer: currentInfo.playbackReferer,
+          playbackCookie: currentInfo.playbackCookie,
         });
       }
 
