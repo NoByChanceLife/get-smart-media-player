@@ -187,7 +187,7 @@ export const LiveTVView: React.FC<LiveTVViewProps> = ({
     setSelectedStreamId(String(filteredStreams[safeRow].stream_id));
     ensureRowVisible(safeRow);
 
-    const attempt = () => {
+    const focusRenderedCell = () => {
       const target = workspaceRef.current?.querySelector<HTMLElement>(selectorFor(safeRow, zone));
       if (!target) return false;
       target.focus({ preventScroll: true });
@@ -195,7 +195,13 @@ export const LiveTVView: React.FC<LiveTVViewProps> = ({
       return true;
     };
 
-    if (!attempt()) requestAnimationFrame(() => requestAnimationFrame(attempt));
+    // Rows already inside the virtualization window must hand off immediately.
+    // If scrolling causes a new virtual row to mount, retry after React paints it.
+    if (focusRenderedCell()) return;
+    requestAnimationFrame(() => {
+      if (focusRenderedCell()) return;
+      requestAnimationFrame(focusRenderedCell);
+    });
   };
 
   const zoneRight = (zone: LiveZone): LiveZone => {
