@@ -228,10 +228,35 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             const encoded = nativeUrl.split('?url=')[1] || '';
             nativeUrl = decodeURIComponent(encoded);
           }
+          let previousUrl: string | undefined;
+          let nextUrl: string | undefined;
+
+          if (playbackTarget.type === 'live' && allLiveStreams.length > 1) {
+            const currentIndex = allLiveStreams.findIndex(
+              (stream) => String(stream.stream_id) === String(playbackTarget.stream.stream_id)
+            );
+            if (currentIndex >= 0) {
+              const unwrap = (value: string): string => {
+                if (!value.startsWith('/api/xtream/stream?url=')) return value;
+                return decodeURIComponent(value.split('?url=')[1] || '');
+              };
+              const previous = allLiveStreams[(currentIndex - 1 + allLiveStreams.length) % allLiveStreams.length];
+              const next = allLiveStreams[(currentIndex + 1) % allLiveStreams.length];
+              previousUrl = unwrap(
+                xtreamService.buildStreamUrl('live', previous.stream_id, undefined, undefined, previous.serverId)
+              );
+              nextUrl = unwrap(
+                xtreamService.buildStreamUrl('live', next.stream_id, undefined, undefined, next.serverId)
+              );
+            }
+          }
+
           await playNativeAndroidMedia({
             url: nativeUrl,
             title: playbackTitleRef.current,
             mediaType: playbackTarget.type === 'episode' ? 'series' : playbackTarget.type,
+            previousUrl,
+            nextUrl,
           });
           if (!isCancelled) {
             setIsLoading(false);
