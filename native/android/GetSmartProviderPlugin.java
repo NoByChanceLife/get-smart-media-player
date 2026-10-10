@@ -617,6 +617,54 @@ public class GetSmartProviderPlugin extends Plugin {
     }
 
     @PluginMethod
+    public void setPerformanceConfig(PluginCall call) {
+        final String requestedMode = normalizePerformanceMode(call.getString("performanceMode"));
+        final String requestedQuality = normalizeQualityPreference(call.getString("qualityPreference"));
+        final Integer requestedRetries = call.getInt("maxRetryAttempts");
+
+        if (getActivity() == null) {
+            JSObject result = new JSObject();
+            result.put("applied", false);
+            result.put("reason", "no-activity");
+            call.resolve(result);
+            return;
+        }
+
+        getActivity().runOnUiThread(() -> {
+            String previousBuiltMode = nativeBuiltPerformanceMode;
+            nativePerformanceMode = requestedMode;
+            nativeEffectivePerformanceMode =
+                "auto".equals(nativePerformanceMode) ? "balanced" : nativePerformanceMode;
+            nativeQualityPreference = requestedQuality;
+            nativeMaxRetryAttempts =
+                requestedRetries == null ? nativeMaxRetryAttempts : Math.max(1, Math.min(5, requestedRetries));
+
+            if (
+                nativePlayer != null &&
+                !nativeEffectivePerformanceMode.equals(previousBuiltMode)
+            ) {
+                rebuildNativePlayerForPerformanceMode("settings-change");
+            } else {
+                applyNativeVideoQualityPreference();
+            }
+
+            JSObject result = new JSObject();
+            result.put("applied", nativePlayer != null);
+            result.put("performanceMode", nativePerformanceMode);
+            result.put("effectivePerformanceMode", nativeEffectivePerformanceMode);
+            result.put("qualityPreference", nativeQualityPreference);
+            result.put("maxRetryAttempts", nativeMaxRetryAttempts);
+            call.resolve(result);
+            notifyListeners("playerDiagnostics", buildNativeDiagnostics());
+        });
+    }
+
+    @PluginMethod
+    public void getPlayerDiagnostics(PluginCall call) {
+        call.resolve(buildNativeDiagnostics());
+    }
+
+    @PluginMethod
     public void setPlayerVisible(PluginCall call) {
         nativePlayerVisible = call.getBoolean("visible", true);
 
