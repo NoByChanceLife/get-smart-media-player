@@ -15,6 +15,8 @@ import android.net.ProxyInfo;
 import android.security.keystore.KeyGenParameterSpec;
 import android.security.keystore.KeyProperties;
 import android.util.Base64;
+import android.content.Intent;
+import android.net.Uri;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -64,7 +66,7 @@ public class GetSmartProviderPlugin extends Plugin {
     private static final int DIRECT_ADDRESS_CONNECT_TIMEOUT_MS = 6_000;
     private static final int NETWORK_ROUTE_CONNECT_TIMEOUT_MS = 8_000;
     private static final int MAX_REDIRECTS = 5;
-    private static final String TRANSPORT_BUILD = "GS-NATIVE-XCIPTV-HS6";
+    private static final String TRANSPORT_BUILD = "GS-NATIVE-XCIPTV-HS7";
 
     private static final String CREDENTIAL_PREFS = "getsmart_secure_credentials";
     private static final String CREDENTIAL_DRAFT_KEY = "xtream_draft_v1";
@@ -259,6 +261,37 @@ public class GetSmartProviderPlugin extends Plugin {
             cipher.doFinal(ciphertext),
             StandardCharsets.UTF_8
         );
+    }
+
+    @PluginMethod
+    public void playMedia(PluginCall call) {
+        final String rawUrl = call.getString("url");
+        if (rawUrl == null || rawUrl.trim().isEmpty()) {
+            call.reject("Missing media URL.");
+            return;
+        }
+
+        try {
+            URL validated = validateHttpUrl(rawUrl);
+            Intent intent = new Intent(Intent.ACTION_VIEW);
+            intent.setDataAndType(Uri.parse(validated.toString()), "video/*");
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            getContext().startActivity(intent);
+
+            JSObject result = new JSObject();
+            result.put("started", true);
+            result.put("engine", "android-media-intent");
+            call.resolve(result);
+        } catch (Exception error) {
+            call.reject("No compatible Android media player could open this stream.");
+        }
+    }
+
+    @PluginMethod
+    public void stopMedia(PluginCall call) {
+        JSObject result = new JSObject();
+        result.put("stopped", true);
+        call.resolve(result);
     }
 
     @PluginMethod
