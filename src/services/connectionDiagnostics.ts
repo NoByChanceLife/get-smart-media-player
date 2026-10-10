@@ -296,7 +296,7 @@ export async function diagnoseXtreamConnection(
   } catch (err: unknown) {
     const error = err as Error;
     const msg = sanitizeErrorMessage(error.message || 'Xtream authentication request failed');
-    const diagnosticStamp = `[BUILD GSM-20261010-HS3 | TRANSPORT ${transportLabel}]`;
+    const diagnosticStamp = `[BUILD GSM-20261010-HS4 | TRANSPORT ${transportLabel}]`;
     const stampedMsg = `${msg} ${diagnosticStamp}`;
 
     // Do not collapse HTTP 403 into "bad credentials". A provider can return
