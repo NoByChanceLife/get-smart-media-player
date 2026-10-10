@@ -101,7 +101,7 @@ public class GetSmartProviderPlugin extends Plugin {
     private static final int DIRECT_ADDRESS_CONNECT_TIMEOUT_MS = 6_000;
     private static final int NETWORK_ROUTE_CONNECT_TIMEOUT_MS = 8_000;
     private static final int MAX_REDIRECTS = 5;
-    private static final String TRANSPORT_BUILD = "GS-NATIVE-XCIPTV-HS17";
+    private static final String TRANSPORT_BUILD = "GS-NATIVE-XCIPTV-HS18";
 
     private static final String CREDENTIAL_PREFS = "getsmart_secure_credentials";
     private static final String CREDENTIAL_DRAFT_KEY = "xtream_draft_v1";
@@ -1107,7 +1107,7 @@ public class GetSmartProviderPlugin extends Plugin {
 
         nativeOsdTop = new LinearLayout(getActivity());
         nativeOsdTop.setOrientation(LinearLayout.VERTICAL);
-        nativeOsdTop.setPadding(dp(26), dp(22), dp(26), dp(18));
+        nativeOsdTop.setPadding(dp(22), dp(14), dp(22), dp(12));
         nativeOsdTop.setBackground(makeGradient(
             new int[] { Color.argb(235, 3, 12, 22), Color.argb(165, 3, 12, 22), Color.TRANSPARENT },
             GradientDrawable.Orientation.TOP_BOTTOM
@@ -1119,7 +1119,7 @@ public class GetSmartProviderPlugin extends Plugin {
 
         nativeChannelView = makeText("", 13f, Color.rgb(120, 193, 255), true);
         nativeChannelView.setPadding(0, 0, dp(14), 0);
-        nativeTitleView = makeText("", 21f, Color.WHITE, true);
+        nativeTitleView = makeText("", 18f, Color.WHITE, true);
 
         topTitleRow.addView(nativeChannelView);
         topTitleRow.addView(
@@ -1133,9 +1133,9 @@ public class GetSmartProviderPlugin extends Plugin {
         nativeStatusView.setBackground(makeRounded(Color.rgb(193, 48, 67), dp(7)));
         topTitleRow.addView(nativeStatusView);
 
-        nativeProgramView = makeText("", 14f, Color.rgb(226, 232, 240), true);
+        nativeProgramView = makeText("", 12f, Color.rgb(226, 232, 240), true);
         nativeProgramView.setPadding(0, dp(7), 0, 0);
-        nativeNextProgramView = makeText("", 12f, Color.rgb(148, 163, 184), false);
+        nativeNextProgramView = makeText("", 11f, Color.rgb(148, 163, 184), false);
         nativeNextProgramView.setPadding(0, dp(3), 0, 0);
 
         nativeOsdTop.addView(topTitleRow);
@@ -1164,7 +1164,7 @@ public class GetSmartProviderPlugin extends Plugin {
         nativeOsdBottom = new LinearLayout(getActivity());
         nativeOsdBottom.setOrientation(LinearLayout.VERTICAL);
         nativeOsdBottom.setGravity(Gravity.CENTER);
-        nativeOsdBottom.setPadding(dp(14), dp(14), dp(14), dp(18));
+        nativeOsdBottom.setPadding(dp(12), dp(8), dp(12), dp(10));
         nativeOsdBottom.setBackground(makeGradient(
             new int[] { Color.TRANSPARENT, Color.argb(170, 3, 12, 22), Color.argb(245, 3, 12, 22) },
             GradientDrawable.Orientation.TOP_BOTTOM
@@ -1186,13 +1186,13 @@ public class GetSmartProviderPlugin extends Plugin {
         primaryControls.setGravity(Gravity.CENTER);
 
         nativeGuideButton = makeOsdButton("Guide");
-        nativePreviousButton = makeOsdButton("◀ Channel");
-        nativeSeekBackButton = makeOsdButton("−10s");
+        nativePreviousButton = makeOsdButton("◀");
+        nativeSeekBackButton = makeOsdButton("−10");
         nativePlayPauseButton = makeOsdButton("Pause");
-        nativeSeekForwardButton = makeOsdButton("+10s");
-        nativeNextButton = makeOsdButton("Channel ▶");
+        nativeSeekForwardButton = makeOsdButton("+10");
+        nativeNextButton = makeOsdButton("▶");
         nativeLastButton = makeOsdButton("Last");
-        nativeStopButton = makeOsdButton("Stop");
+        nativeStopButton = makeOsdButton("Exit");
 
         nativeGuideButton.setOnClickListener((v) -> {
             emitPlayerCommand("guide");
@@ -1250,10 +1250,10 @@ public class GetSmartProviderPlugin extends Plugin {
         nativeAudioButton = makeOsdButton("Audio");
         nativeSubtitleButton = makeOsdButton("CC");
         nativeQualityButton = makeOsdButton("Quality");
-        nativeHealthButton = makeOsdButton("Health");
+        nativeHealthButton = makeOsdButton("Info");
         nativeMuteButton = makeOsdButton("Mute");
-        nativeVolumeDownButton = makeOsdButton("Vol −");
-        nativeVolumeUpButton = makeOsdButton("Vol +");
+        nativeVolumeDownButton = makeOsdButton("Vol−");
+        nativeVolumeUpButton = makeOsdButton("Vol+");
         nativeAspectButton = makeOsdButton("Fit");
 
         nativeAudioButton.setOnClickListener((v) -> showNativeTrackDialog(C.TRACK_TYPE_AUDIO, "Audio Track"));
@@ -1278,17 +1278,20 @@ public class GetSmartProviderPlugin extends Plugin {
         });
 
         for (Button button : new Button[] {
+            nativeQualityButton,
             nativeAudioButton,
             nativeSubtitleButton,
-            nativeQualityButton,
-            nativeHealthButton,
-            nativeMuteButton,
-            nativeVolumeDownButton,
-            nativeVolumeUpButton,
             nativeAspectButton
         }) {
             addOsdButton(secondaryControls, button);
         }
+
+        // Keep diagnostics and volume operations available through remote/media
+        // keys and future More settings, but do not crowd the primary OSD.
+        nativeHealthButton.setVisibility(View.GONE);
+        nativeMuteButton.setVisibility(View.GONE);
+        nativeVolumeDownButton.setVisibility(View.GONE);
+        nativeVolumeUpButton.setVisibility(View.GONE);
         addScrollableOsdRow(nativeOsdBottom, secondaryControls);
         wireNativeOsdFocus();
 
@@ -1306,8 +1309,7 @@ public class GetSmartProviderPlugin extends Plugin {
             nativeSeekForwardButton, nativeNextButton, nativeLastButton, nativeStopButton
         };
         Button[] secondary = new Button[] {
-            nativeAudioButton, nativeSubtitleButton, nativeQualityButton, nativeHealthButton,
-            nativeMuteButton, nativeVolumeDownButton, nativeVolumeUpButton, nativeAspectButton
+            nativeQualityButton, nativeAudioButton, nativeSubtitleButton, nativeAspectButton
         };
 
         wireHorizontalFocus(primary);
@@ -1368,9 +1370,9 @@ public class GetSmartProviderPlugin extends Plugin {
     private void addOsdButton(LinearLayout row, Button button) {
         LinearLayout.LayoutParams buttonParams = new LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.WRAP_CONTENT,
-            dp(44)
+            dp(40)
         );
-        buttonParams.setMargins(dp(4), 0, dp(4), 0);
+        buttonParams.setMargins(dp(3), 0, dp(3), 0);
         row.addView(button, buttonParams);
     }
 
@@ -1378,11 +1380,11 @@ public class GetSmartProviderPlugin extends Plugin {
         Button button = new Button(getActivity());
         button.setText(label);
         button.setTextColor(Color.WHITE);
-        button.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
+        button.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10);
         button.setAllCaps(false);
-        button.setMinWidth(dp(76));
-        button.setMinHeight(dp(48));
-        button.setPadding(dp(12), 0, dp(12), 0);
+        button.setMinWidth(dp(54));
+        button.setMinHeight(dp(40));
+        button.setPadding(dp(10), 0, dp(10), 0);
         button.setFocusable(true);
         button.setFocusableInTouchMode(true);
         button.setClickable(true);
@@ -1971,9 +1973,16 @@ public class GetSmartProviderPlugin extends Plugin {
 
             if (nativeQualityButton != null && nativePlayer != null) {
                 int count = countTracks(nativePlayer.getCurrentTracks(), C.TRACK_TYPE_VIDEO);
-                nativeQualityButton.setText(count > 1 ? "Quality (" + count + ")" : "Quality");
+                Format selectedVideo = getSelectedVideoFormat();
+                String qualityLabel = "Quality";
+                if (selectedVideo != null && selectedVideo.height > 0) {
+                    qualityLabel += " " + selectedVideo.height + "p";
+                } else if ("auto".equals(nativeQualityPreference)) {
+                    qualityLabel += " Auto";
+                }
+                nativeQualityButton.setText(qualityLabel);
                 nativeQualityButton.setEnabled(count > 1);
-                nativeQualityButton.setAlpha(count > 1 ? 1f : 0.45f);
+                nativeQualityButton.setAlpha(count > 1 ? 1f : 0.70f);
             }
         });
     }
@@ -1984,7 +1993,7 @@ public class GetSmartProviderPlugin extends Plugin {
         nativeOsdVisible = true;
         if (nativeOsdOverlay != null) {
             nativeOsdOverlay.setVisibility(View.VISIBLE);
-            nativeOsdOverlay.setClickable(true);
+            nativeOsdOverlay.setClickable(false);
         }
         updateNativeOsdText();
         nativeUiHandler.post(refreshNativeProgressRunnable);
