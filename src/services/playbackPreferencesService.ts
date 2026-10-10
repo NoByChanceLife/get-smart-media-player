@@ -42,11 +42,6 @@ class PlaybackPreferencesService {
   public saveConfig(partial: Partial<PlaybackPreferencesConfig>): PlaybackPreferencesConfig {
     this.config = { ...this.config, ...partial };
 
-    if (this.config.subtitleDefaultMode !== 'preferred') {
-      // Keep the remembered preferred language for later, but do not make it
-      // active unless the customer explicitly chooses Preferred Language.
-    }
-
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(this.config));
     } catch (error) {
