@@ -16,6 +16,7 @@ import { xtreamService } from './xtreamClient';
 import { testStalkerPortal, fetchStalkerChannels, resolveStalkerStreamLink } from './stalkerClient';
 import { parseM3uContent } from './m3uParser';
 import { sanitizeErrorMessage } from './sanitizer';
+import { getProviderTransportLabel } from './providerTransport';
 
 export type DiagnosticStage =
   | 'connecting'
@@ -279,7 +280,12 @@ export async function diagnoseXtreamConnection(
   // response itself is the authoritative connectivity + protocol test.
   const authUrl = `${base}/player_api.php?username=${encodeURIComponent(creds.username)}&password=${encodeURIComponent(creds.password)}`;
 
-  updateStep('connecting', 'running', 'Contacting Xtream player_api.php...');
+  const transportLabel = getProviderTransportLabel();
+  updateStep(
+    'connecting',
+    'running',
+    `Contacting Xtream player_api.php via ${transportLabel}...`
+  );
   updateStep('authenticating', 'running', 'Validating Xtream account response...');
 
   const authStartedAt = Date.now();
