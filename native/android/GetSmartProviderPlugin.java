@@ -848,18 +848,13 @@ public class GetSmartProviderPlugin extends Plugin {
 
     private void ensureNativePlayer() {
         if (nativePlayer != null && nativePlayerView != null && nativePlayerOverlay != null) {
+            if (!nativeEffectivePerformanceMode.equals(nativeBuiltPerformanceMode)) {
+                rebuildNativePlayerForPerformanceMode("ensure-mode-change");
+            }
             return;
         }
 
-        nativePlayer = new ExoPlayer.Builder(getActivity()).build();
-        nativePlayer.setAudioAttributes(
-            new AudioAttributes.Builder()
-                .setUsage(C.USAGE_MEDIA)
-                .setContentType(C.AUDIO_CONTENT_TYPE_MOVIE)
-                .build(),
-            true
-        );
-        nativePlayer.addListener(nativePlayerListener);
+        nativePlayer = createNativeExoPlayer();
 
         nativePlayerView = new PlayerView(getActivity());
         nativePlayerView.setUseController(false);
@@ -904,8 +899,100 @@ public class GetSmartProviderPlugin extends Plugin {
             handleNativePlayerKeyEvent(event)
         );
 
+        nativeUiHandler.removeCallbacks(refreshNativeDiagnosticsRunnable);
+        nativeUiHandler.post(refreshNativeDiagnosticsRunnable);
+
         applyNativePlayerVisibility();
         updateNativeOsdText();
+    }
+
+    private ExoPlayer createNativeExoPlayer() {
+        ExoPlayer player = new ExoPlayer.Builder(getActivity())
+            .setLoadControl(buildNativeLoadControl())
+            .build();
+
+        player.setAudioAttributes(
+            new AudioAttributes.Builder()
+                .setUsage(C.USAGE_MEDIA)
+                .setContentType(C.AUDIO_CONTENT_TYPE_MOVIE)
+                .build(),
+            true
+        );
+        player.addListener(nativePlayerListener);
+        nativeBuiltPerformanceMode = nativeEffectivePerformanceMode;
+        return player;
+    }
+
+    private DefaultLoadControl buildNativeLoadControl() {
+        boolean live = "live".equals(nativePlayerMediaType);
+
+        int minBufferMs;
+        int maxBufferMs;
+        int bufferForPlaybackMs;
+        int bufferAfterRebufferMs;
+
+        switch (nativeEffectivePerformanceMode) {
+            case "fast":
+                minBufferMs = live ? 2_000 : 8_000;
+                maxBufferMs = live ? 6_000 : 25_000;
+                bufferForPlaybackMs = 500;
+                bufferAfterRebufferMs = 1_000;
+                break;
+            case "stable":
+                minBufferMs = live ? 18_000 : 35_000;
+                maxBufferMs = live ? 35_000 : 90_000;
+                bufferForPlaybackMs = live ? 2_500 : 3_000;
+                bufferAfterRebufferMs = live ? 5_000 : 6_000;
+                break;
+            case "balanced":
+            default:
+                minBufferMs = live ? 7_000 : 18_000;
+                maxBufferMs = live ? 15_000 : 45_000;
+                bufferForPlaybackMs = live ? 1_200 : 1_500;
+                bufferAfterRebufferMs = live ? 2_500 : 3_000;
+                break;
+        }
+
+        return new DefaultLoadControl.Builder()
+            .setBufferDurationsMs(
+                minBufferMs,
+                maxBufferMs,
+                bufferForPlaybackMs,
+                bufferAfterRebufferMs
+            )
+            .setPrioritizeTimeOverSizeThresholds(true)
+            .build();
+    }
+
+    private void rebuildNativePlayerForPerformanceMode(String reason) {
+        if (nativePlayer == null || getActivity() == null) return;
+
+        MediaItem mediaItem = nativePlayer.getCurrentMediaItem();
+        long position = Math.max(0L, nativePlayer.getCurrentPosition());
+        boolean playWhenReady = nativePlayer.getPlayWhenReady();
+        float volume = nativePlayer.getVolume();
+
+        nativePlayer.removeListener(nativePlayerListener);
+        nativePlayer.release();
+        nativePlayer = createNativeExoPlayer();
+
+        if (nativePlayerView != null) {
+            nativePlayerView.setPlayer(nativePlayer);
+        }
+
+        nativePlayer.setVolume(volume);
+        applyNativeTrackPreferences();
+        applyNativeVideoQualityPreference();
+
+        if (mediaItem != null) {
+            nativePlaybackStartedElapsedMs = SystemClock.elapsedRealtime();
+            nativePlayer.setMediaItem(mediaItem, position);
+            nativePlayer.prepare();
+            if (playWhenReady) nativePlayer.play();
+        }
+
+        emitPlayerState("performance-rebuild-" + reason);
+        notifyListeners("playerDiagnostics", buildNativeDiagnostics());
     }
 
     private void buildNativeOsd() {
