@@ -94,6 +94,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const onOpenGuideRef = useRef(onOpenGuide);
   const allLiveStreamsRef = useRef(allLiveStreams);
   const onSelectLiveStreamRef = useRef(onSelectLiveStream);
+  const lastLiveStreamRef = useRef<XtreamLiveStream | null>(null);
 
   useEffect(() => { isVisuallyHiddenRef.current = isVisuallyHidden; }, [isVisuallyHidden]);
   useEffect(() => { onCloseRef.current = onClose; }, [onClose]);
@@ -158,7 +159,17 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const getStreamUrlRef = useRef(getStreamUrl);
   const playbackTitleRef = useRef(title);
   const playbackProgramRef = useRef(currentProgramTitle);
-  useEffect(() => { playbackTargetRef.current = target; }, [target]);
+  useEffect(() => {
+    const previous = playbackTargetRef.current;
+    if (
+      target.type === 'live' &&
+      previous.type === 'live' &&
+      String(previous.stream.stream_id) !== String(target.stream.stream_id)
+    ) {
+      lastLiveStreamRef.current = previous.stream;
+    }
+    playbackTargetRef.current = target;
+  }, [target]);
   useEffect(() => { getStreamUrlRef.current = getStreamUrl; }, [getStreamUrl]);
   useEffect(() => { playbackTitleRef.current = title; }, [title]);
   useEffect(() => { playbackProgramRef.current = currentProgramTitle; }, [currentProgramTitle]);
@@ -194,14 +205,33 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
           return;
         }
 
-        if (
-          playbackTarget.type === 'live' &&
-          (event.command === 'channelPrevious' || event.command === 'channelNext')
-        ) {
-          const streams = allLiveStreamsRef.current;
-          const selectStream = onSelectLiveStreamRef.current;
-          if (!selectStream || streams.length === 0) return;
+        if (playbackTarget.type !== 'live') return;
 
+        const streams = allLiveStreamsRef.current;
+        const selectStream = onSelectLiveStreamRef.current;
+        if (!selectStream || streams.length === 0) return;
+
+        if (event.command === 'lastChannel') {
+          const last = lastLiveStreamRef.current;
+          if (last) selectStream(last);
+          return;
+        }
+
+        if (event.command === 'numericChannel') {
+          const requested = String(event.value || '').replace(/^0+(?=\d)/, '');
+          if (!requested) return;
+
+          const exactProviderNumber = streams.find(
+            (stream) => String(stream.num).replace(/^0+(?=\d)/, '') === requested
+          );
+          const byVisiblePosition = streams[Number(requested) - 1];
+          const match = exactProviderNumber || byVisiblePosition;
+
+          if (match) selectStream(match);
+          return;
+        }
+
+        if (event.command === 'channelPrevious' || event.command === 'channelNext') {
           const currentIndex = streams.findIndex(
             (stream) => String(stream.stream_id) === String(playbackTarget.stream.stream_id)
           );
