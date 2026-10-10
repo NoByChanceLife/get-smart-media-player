@@ -514,7 +514,7 @@ export default function App() {
       {/* Main Layout Container */}
       <div
         className={`${playbackTarget && !isBrowsingDuringPlayback && !isFloatingPiP ? 'invisible pointer-events-none' : ''} flex-1 flex flex-col transition-all duration-300 ${
-          isRailExpanded ? 'md:ml-64' : 'md:ml-[74px]'
+          isRailExpanded ? 'ml-64' : 'ml-[74px]'
         } ${playbackTarget && isBrowsingDuringPlayback ? 'relative z-[55] bg-transparent' : ''}`}
       >
         {/* Top Header */}
