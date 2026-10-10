@@ -51,7 +51,6 @@ export const TVNavigationRail: React.FC<TVNavigationRailProps> = ({
   onToggleExpanded,
   onFocusContent,
 }) => {
-  const [hovered, setHovered] = useState(false);
   const [remoteOpen, setRemoteOpen] = useState(false);
   const railRef = useRef<HTMLDivElement | null>(null);
 
@@ -77,9 +76,9 @@ export const TVNavigationRail: React.FC<TVNavigationRailProps> = ({
     next?.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'auto' });
   };
 
-  // Expansion is controlled only by the explicit rail state or mouse hover.
-  // TV focus must not pin the overlay open after focus is handed to content.
-  const effectiveExpanded = isExpanded || hovered || remoteOpen;
+  // Expansion is explicit only. Hover/focus must never grow the rail over
+  // content because that was cutting off screens and making mouse use unstable.
+  const effectiveExpanded = isExpanded || remoteOpen;
 
   const primaryNavItems: Array<{
     id: NavTab;
@@ -118,7 +117,6 @@ export const TVNavigationRail: React.FC<TVNavigationRailProps> = ({
       e.stopPropagation();
       // Right always means "leave the rail and enter the page". Close every
       // temporary/explicit expansion source before moving focus.
-      setHovered(false);
       setRemoteOpen(false);
       if (isExpanded) onToggleExpanded();
       requestAnimationFrame(() => {
@@ -141,10 +139,9 @@ export const TVNavigationRail: React.FC<TVNavigationRailProps> = ({
   return (
     <aside
       ref={railRef}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      onFocusCapture={() => setRemoteOpen(true)}
+      onFocusCapture={() => setRemoteOpen(false)}
       onKeyDown={handleKeyDown}
+      data-tv-navigation-rail
       className={`flex flex-col justify-between fixed top-0 left-0 bottom-0 z-[70] bg-[#06101b]/97 backdrop-blur-xl border-r border-[#17304a] transition-all duration-300 ease-out select-none shadow-[10px_0_32px_rgba(0,0,0,0.26)] ${
         effectiveExpanded ? 'w-64' : 'w-[74px]'
       }`}
@@ -325,7 +322,6 @@ export const TVNavigationRail: React.FC<TVNavigationRailProps> = ({
         <button
           onClick={() => {
             setRemoteOpen(false);
-            setHovered(false);
             if (isExpanded) onToggleExpanded();
           }}
           onKeyDown={(e) => {
@@ -333,7 +329,6 @@ export const TVNavigationRail: React.FC<TVNavigationRailProps> = ({
               e.preventDefault();
               e.stopPropagation();
               setRemoteOpen(false);
-              setHovered(false);
               if (isExpanded) onToggleExpanded();
               requestAnimationFrame(() => requestAnimationFrame(() => onFocusContent()));
             }
