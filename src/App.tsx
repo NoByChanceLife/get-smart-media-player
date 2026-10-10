@@ -502,8 +502,8 @@ export default function App() {
       <div
         className={`${playbackTarget && !isBrowsingDuringPlayback && !isFloatingPiP ? 'invisible pointer-events-none' : ''} flex-1 min-w-0 flex flex-col overflow-x-hidden transition-all duration-300 ${
           isRailExpanded
-            ? 'ml-64 w-[calc(100%-256px)]'
-            : 'ml-[74px] w-[calc(100%-74px)]'
+            ? 'ml-64 w-[calc(100%_-_256px)]'
+            : 'ml-[74px] w-[calc(100%_-_74px)]'
         } ${playbackTarget && isBrowsingDuringPlayback ? 'relative z-[55] bg-transparent' : ''}`}
       >
         {/* The persistent left rail is the single app navigation surface. */}
