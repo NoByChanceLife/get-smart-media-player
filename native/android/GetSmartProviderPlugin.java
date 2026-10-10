@@ -825,6 +825,13 @@ public class GetSmartProviderPlugin extends Plugin {
         button.setPadding(dp(14), 0, dp(14), 0);
         button.setFocusable(true);
         button.setFocusableInTouchMode(false);
+        button.setOnFocusChangeListener((view, hasFocus) -> {
+            if (hasFocus) {
+                nativeUiHandler.removeCallbacks(hideNativeOsdRunnable);
+            } else if (nativeOsdVisible) {
+                scheduleNativeOsdHide();
+            }
+        });
 
         StateListDrawable states = new StateListDrawable();
         states.addState(
@@ -1113,7 +1120,12 @@ public class GetSmartProviderPlugin extends Plugin {
             return "Track " + (index + 1);
         }
 
-        return String.join(" • ", parts);
+        StringBuilder label = new StringBuilder();
+        for (String part : parts) {
+            if (label.length() > 0) label.append(" • ");
+            label.append(part);
+        }
+        return label.toString();
     }
 
     private JSObject buildDetailedTrackSummary(Tracks tracks) {
