@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { SavedProfile, UserProfile } from '../types/xtream';
 import { PWAInstallButton } from './PWAInstallButton';
+import appLogo from '../assets/images/app_logo_icon_1791054530181.jpg';
 
 export type NavTab = 'home' | 'live' | 'movies' | 'series' | 'favorites' | 'search';
 
@@ -144,7 +145,7 @@ export const TVNavigationRail: React.FC<TVNavigationRailProps> = ({
       onMouseLeave={() => setHovered(false)}
       onFocusCapture={() => setRemoteOpen(true)}
       onKeyDown={handleKeyDown}
-      className={`flex flex-col justify-between fixed top-0 left-0 bottom-0 z-[70] bg-[#070b13]/95 backdrop-blur-2xl border-r border-slate-800/80 transition-all duration-300 ease-out select-none shadow-2xl ${
+      className={`flex flex-col justify-between fixed top-0 left-0 bottom-0 z-[70] bg-[#06101b]/97 backdrop-blur-xl border-r border-[#17304a] transition-all duration-300 ease-out select-none shadow-[10px_0_32px_rgba(0,0,0,0.26)] ${
         effectiveExpanded ? 'w-64' : 'w-[74px]'
       }`}
       aria-label="Main Navigation"
@@ -154,21 +155,21 @@ export const TVNavigationRail: React.FC<TVNavigationRailProps> = ({
       <div className="p-3.5 pb-2">
         <div
           onClick={onToggleExpanded}
-          className="flex items-center gap-3 p-2 rounded-2xl hover:bg-slate-800/60 cursor-pointer transition-all active:scale-95 group"
+          className="flex items-center gap-3 p-1.5 rounded-lg hover:bg-[#0d1d2f] cursor-pointer transition-all active:scale-95 group"
           title={effectiveExpanded ? 'Collapse Navigation (Left Arrow)' : 'Expand Navigation (Right Arrow)'}
         >
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-cyan-500/25 shrink-0 text-white group-hover:scale-105 transition-transform">
-            <Radio className="w-5 h-5 animate-pulse" />
+          <div className="w-10 h-10 rounded-lg bg-[#071728] border border-[#1a4266] flex items-center justify-center overflow-hidden shrink-0 shadow-[0_6px_18px_rgba(0,70,170,0.24)] group-hover:border-[#2d87ff] transition">
+            <img src={appLogo} alt="" className="w-full h-full object-cover" />
           </div>
 
           {effectiveExpanded && (
             <div className="overflow-hidden whitespace-nowrap animate-in fade-in duration-200">
-              <div className="font-heading font-extrabold text-base text-white tracking-tight leading-none">
+              <div className="font-heading font-extrabold text-[15px] text-white tracking-[0.01em] leading-none">
                 Get Smart
               </div>
-              <div className="text-[11px] font-semibold text-cyan-400 tracking-wider uppercase mt-1 flex items-center gap-1.5">
+              <div className="text-[9px] font-semibold text-[#5aaeff] tracking-[0.24em] uppercase mt-1 flex items-center gap-1.5">
                 <span>Media Player</span>
-                <span className="w-1.5 h-1.5 rounded-full bg-cyan-400" />
+                <span className="w-1.5 h-1.5 rounded-full bg-[#1681ff]" />
               </div>
             </div>
           )}
@@ -176,7 +177,7 @@ export const TVNavigationRail: React.FC<TVNavigationRailProps> = ({
       </div>
 
       {/* Center Navigation Links */}
-      <nav className="px-3 py-2 space-y-1.5">
+      <nav className="px-2.5 py-2 space-y-1">
         {primaryNavItems.map((item) => {
           const isActive = currentTab === item.id;
           return (
@@ -187,21 +188,21 @@ export const TVNavigationRail: React.FC<TVNavigationRailProps> = ({
               onClick={() => {
                 onSelectTab(item.id);
               }}
-              className={`w-full flex items-center gap-3.5 px-3 py-3 rounded-2xl text-sm font-semibold transition-all duration-200 tv-focus-target group relative ${
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-medium transition-all duration-200 tv-focus-target group relative ${
                 isActive
-                  ? 'bg-gradient-to-r from-cyan-600/90 to-cyan-500 text-white shadow-lg shadow-cyan-950/60 font-bold'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                  ? 'bg-gradient-to-r from-[#0b63f6] to-[#1677ff] text-white shadow-[0_6px_18px_rgba(0,70,180,0.28)] font-semibold'
+                  : 'text-[#a7b8c8] hover:text-white hover:bg-[#0d1d2f]'
               }`}
               title={`${item.label} [${item.keyHint}]`}
             >
               {/* Active Indicator Bar on Left */}
               {isActive && (
-                <span className="absolute -left-1 top-2 bottom-2 w-1.5 rounded-full bg-cyan-300 shadow-md shadow-cyan-300/80" />
+                <span className="absolute -left-0.5 top-2 bottom-2 w-1 rounded-full bg-[#8bd3ff] shadow-[0_0_10px_rgba(90,174,255,.8)]" />
               )}
 
               <span
                 className={`transition-transform group-hover:scale-110 ${
-                  isActive ? 'text-white' : 'text-slate-400 group-hover:text-cyan-400'
+                  isActive ? 'text-white' : 'text-[#93a9bd] group-hover:text-[#64b8ff]'
                 }`}
               >
                 {item.icon}
@@ -216,7 +217,7 @@ export const TVNavigationRail: React.FC<TVNavigationRailProps> = ({
               {effectiveExpanded && (
                 <span
                   className={`text-[10px] font-mono px-1.5 py-0.5 rounded transition ${
-                    isActive ? 'bg-cyan-800/80 text-cyan-100' : 'bg-slate-800 text-slate-400 group-hover:text-slate-300'
+                    isActive ? 'bg-[#0749b7] text-blue-50' : 'bg-[#0d1b2a] text-[#6f879e] group-hover:text-[#b8c7d6]'
                   }`}
                 >
                   {item.keyHint}
@@ -228,11 +229,11 @@ export const TVNavigationRail: React.FC<TVNavigationRailProps> = ({
       </nav>
 
       {/* Utility navigation continues in the same menu flow. */}
-      <div className="px-3 pb-3 pt-2 space-y-1.5">
+      <div className="px-2.5 pb-3 pt-2 space-y-1">
         {/* Connections / Server Manager Button */}
         <button
           onClick={onOpenConnections}
-          className="w-full flex items-center gap-3.5 px-3 py-2.5 rounded-2xl text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800/70 transition-all tv-focus-target group"
+          className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-[11px] font-medium text-[#9fb1c2] hover:text-white hover:bg-[#0d1d2f] transition-all tv-focus-target group"
           title="Connections & Streaming Lines (S)"
         >
           <div className="relative shrink-0">
@@ -259,7 +260,7 @@ export const TVNavigationRail: React.FC<TVNavigationRailProps> = ({
         {/* Profiles Button */}
         <button
           onClick={onOpenProfiles}
-          className="w-full flex items-center gap-3.5 px-3 py-2.5 rounded-2xl text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800/70 transition-all tv-focus-target group"
+          className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-[11px] font-medium text-[#9fb1c2] hover:text-white hover:bg-[#0d1d2f] transition-all tv-focus-target group"
           title={`Active Profile: ${userProfile.name} (U)`}
         >
           <div
@@ -293,7 +294,7 @@ export const TVNavigationRail: React.FC<TVNavigationRailProps> = ({
         {onOpenPlaybackSettings && (
           <button
             onClick={onOpenPlaybackSettings}
-            className="w-full flex items-center gap-3.5 px-3 py-2.5 rounded-2xl text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800/70 transition-all tv-focus-target group"
+            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-[11px] font-medium text-[#9fb1c2] hover:text-white hover:bg-[#0d1d2f] transition-all tv-focus-target group"
             title="Streaming Performance & Smart Playback (P)"
           >
             <Activity className="w-5 h-5 text-amber-400 shrink-0 group-hover:scale-110 transition-transform" />
@@ -309,7 +310,7 @@ export const TVNavigationRail: React.FC<TVNavigationRailProps> = ({
         {/* Settings / Parental Controls Button */}
         <button
           onClick={onOpenSettings}
-          className="w-full flex items-center gap-3.5 px-3 py-2.5 rounded-2xl text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800/70 transition-all tv-focus-target group"
+          className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-[11px] font-medium text-[#9fb1c2] hover:text-white hover:bg-[#0d1d2f] transition-all tv-focus-target group"
           title="Parental Controls & Privileges"
         >
           <Shield className="w-5 h-5 text-cyan-400 shrink-0 group-hover:scale-110 transition-transform" />
@@ -337,7 +338,7 @@ export const TVNavigationRail: React.FC<TVNavigationRailProps> = ({
               requestAnimationFrame(() => requestAnimationFrame(() => onFocusContent()));
             }
           }}
-          className="w-full flex items-center justify-center py-2 text-slate-500 hover:text-slate-200 hover:bg-slate-800/40 rounded-xl transition tv-focus-target"
+          className="w-full flex items-center justify-center py-2 text-[#607890] hover:text-white hover:bg-[#0d1d2f] rounded-lg transition tv-focus-target"
           title={effectiveExpanded ? 'Collapse Rail' : 'Expand Rail'}
         >
           {effectiveExpanded ? (
