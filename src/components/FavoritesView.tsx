@@ -104,7 +104,7 @@ export const FavoritesView: React.FC<FavoritesViewProps> = ({
   };
 
   return (
-    <div ref={viewRef} onKeyDownCapture={handleTVNavigation} className="flex flex-col h-full space-y-6">
+    <div ref={viewRef} onKeyDownCapture={handleTVNavigation} className="gs-full-canvas flex flex-col h-full space-y-5">
       {/* Sub-Tabs: Favorites vs History */}
       <div className="flex items-center justify-between">
         <div className="flex items-center p-1 bg-slate-900 border border-slate-800 rounded-2xl">
@@ -167,7 +167,7 @@ export const FavoritesView: React.FC<FavoritesViewProps> = ({
                   <Tv className="w-4 h-4" />
                   <span>Live TV Channels ({favoriteLive.length})</span>
                 </h3>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                <div className="gs-channel-grid">
                   {favoriteLive.map((stream) => (
                     <div
                       key={stream.stream_id}
@@ -205,7 +205,7 @@ export const FavoritesView: React.FC<FavoritesViewProps> = ({
                   <Film className="w-4 h-4" />
                   <span>Movies ({favoriteMovies.length})</span>
                 </h3>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                <div className="gs-poster-grid">
                   {favoriteMovies.map((movie) => (
                     <div
                       key={movie.stream_id}
