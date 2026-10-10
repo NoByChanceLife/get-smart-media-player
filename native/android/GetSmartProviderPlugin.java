@@ -1193,6 +1193,7 @@ public class GetSmartProviderPlugin extends Plugin {
         nativeSeekForwardButton = makeOsdButton("+10");
         nativeNextButton = makeOsdButton("▶");
         nativeLastButton = makeOsdButton("Last");
+        nativeHealthButton = makeOsdButton("More");
         nativeStopButton = makeOsdButton("Back");
 
         nativeGuideButton.setOnClickListener((v) -> {
@@ -1252,7 +1253,6 @@ public class GetSmartProviderPlugin extends Plugin {
         nativeAudioButton = makeOsdButton("Audio");
         nativeSubtitleButton = makeOsdButton("CC");
         nativeQualityButton = makeOsdButton("Quality");
-        nativeHealthButton = makeOsdButton("More");
         nativeMuteButton = makeOsdButton("Mute");
         nativeVolumeDownButton = makeOsdButton("Vol−");
         nativeVolumeUpButton = makeOsdButton("Vol+");
