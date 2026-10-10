@@ -56,7 +56,7 @@ export const FloatingPiPPlayer: React.FC<FloatingPiPPlayerProps> = ({
         xtreamService.buildStreamUrl(
           'live',
           target.stream.stream_id,
-          'm3u8',
+          undefined,
           undefined,
           target.stream.serverId
         );
