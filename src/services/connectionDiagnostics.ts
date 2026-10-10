@@ -7,6 +7,7 @@
 import {
   ServerType,
   XtreamCredentials,
+  XtreamServerInfo,
   StbPortalConfig,
   M3uConfig,
   SingleStreamConfig,
@@ -26,6 +27,7 @@ export type DiagnosticStage =
   | 'ready';
 
 export type DiagnosticErrorCategory =
+  | 'ACCESS_FORBIDDEN'
   | 'INVALID_CREDENTIALS'
   | 'SERVER_UNREACHABLE'
   | 'DNS_FAILURE'
@@ -63,6 +65,12 @@ export interface ConnectionDiagnosticReport {
     sampleStreamId?: string;
     latencyMs?: number;
     playbackStatus?: 'verified' | 'unverified';
+    rawExpiryDate?: string;
+    activeConnections?: string;
+    isTrial?: string;
+    createdAt?: string;
+    allowedOutputFormats?: string[];
+    serverInfo?: XtreamServerInfo;
   };
 }
 
@@ -454,6 +462,17 @@ export async function diagnoseXtreamConnection(
     streamsCount,
     sampleStreamId: sampleStreamId || undefined,
     playbackStatus: playbackVerified ? 'verified' : 'unverified',
+    rawExpiryDate: u.exp_date ? String(u.exp_date) : undefined,
+    activeConnections: u.active_cons ? String(u.active_cons) : undefined,
+    isTrial: u.is_trial ? String(u.is_trial) : undefined,
+    createdAt: u.created_at ? String(u.created_at) : undefined,
+    allowedOutputFormats: Array.isArray(u.allowed_output_formats)
+      ? u.allowed_output_formats.map((value: unknown) => String(value))
+      : undefined,
+    serverInfo:
+      authData?.server_info && typeof authData.server_info === 'object'
+        ? (authData.server_info as XtreamServerInfo)
+        : undefined,
   };
 
   onProgress?.({ ...report, steps: [...steps] });
