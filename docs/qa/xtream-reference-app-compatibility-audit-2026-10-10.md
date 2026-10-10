@@ -475,3 +475,36 @@ The MegaPlus credentials can work in MegaPlus while a manually supplied URL time
 
 Secondary finding:
 The APK also bundles OpenVPN and supports an `ovpn_auto` preference plus remotely supplied `ovpn_url`. This can alter routing when explicitly enabled. Static analysis does not establish that auto-VPN is enabled on the user's installation, so it remains a secondary check rather than the primary diagnosis.
+
+---
+
+# Second working control app: XCIPTV Player v5.0.1
+
+Artifact reviewed: user-supplied XCIPTV Player v5.0.1 APK archive.
+
+Key direct DEX findings:
+- Xtream login constructs `/player_api.php?username=...&password=...` directly.
+- The login path calls the app's WebServicesAdapter; that adapter uses Android `HttpURLConnection`, not OkHttp.
+- Request method is `GET`.
+- Both connect and read timeout constants are 40000 ms in this v5.0.1 adapter.
+- The v5.0.1 adapter explicitly sends `Connection: close`.
+- The adapter calls `connect()`, then `getInputStream()`, and reads the body line-by-line.
+- The app's native Config builds an application agent string from `XCIPTV` + `-v` + `5.0.1`, although this particular WebServicesAdapter method does not itself set that agent header.
+- OpenVPN code is bundled, but SplashActivity only takes the auto-VPN branch when the `ovpn_auto` preference exists and equals `on`; otherwise it proceeds to login.
+- The v5 control app also stores an `ovpn_url` from configuration, so VPN remains a supported optional route rather than evidence that every Xtream login requires VPN.
+
+Comparison with working MegaPlus v4.0.3:
+- Both use native Android HttpURLConnection for Xtream JSON.
+- Both use GET against the standard Xtream player_api endpoint.
+- Both use approximately 40-second network timeouts.
+- MegaPlus v4.0.3 sets `User-Agent: MEGAPLUSTV-v4.0.3`, read timeout 35s, connect timeout 40s.
+- XCIPTV v5.0.1 sets `Connection: close`, read timeout 40s, connect timeout 40s.
+- Therefore OkHttp, HLS.js, browser proxying, or a proprietary alternate Xtream protocol are not required for authentication.
+
+HS4 remediation based on the two-app comparison:
+- Reference-parity URLConnection remains available.
+- Plain-HTTP providers now first resolve all Android DNS answers and attempt direct native socket routes, preferring IPv4, with the original Host header preserved.
+- Direct HTTP supports standard status/header parsing, content-length, chunked transfer encoding, redirects, JSON arrays/objects, Xtream auth query strings, optional Portal cookies, and Bearer auth.
+- If no direct address completes, the app falls back to the reference-style HttpURLConnection request.
+- Failure messages report resolved-address counts and IPv4/IPv6 mix without exposing credentials or provider IP addresses.
+- This specifically distinguishes an address-family / DNS-route problem from a true per-app/VPN/network reachability problem.
