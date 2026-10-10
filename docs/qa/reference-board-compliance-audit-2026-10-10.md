@@ -540,3 +540,34 @@ Do not begin final visual reskin until:
 - cross-input navigation still passes.
 
 After this freeze, the visual reskin can safely address final branding, color, gradients, artwork, shadows, typography finish, animation, and micro-interactions without preserving broken geometry.
+
+
+---
+
+# Implementation progress — geometry pass 1
+
+Implemented on main after this audit:
+
+- Removed unused BottomNavBar import from App.
+- TopBar now uses the full app canvas instead of an independent max-w-7xl centered wrapper.
+- Added shared Get Smart geometry tokens for rails, page padding, guide widths, card density, modal padding, and media sizing.
+- Added shared full-canvas, poster-grid, landscape-grid, channel-grid, and modal geometry utilities.
+- Movies and Series now use the shared capped poster grid instead of breakpoint-count-only 2/3/4/5/6 layouts.
+- Global Search now uses the full content canvas and shared media grids.
+- Favorites now uses shared channel/poster density.
+- Home sections now share the same landscape/channel/poster density primitives.
+- Live TV group rail is clamped through the shared rail token instead of growing through w-36/sm/w-44/lg/w-52/xl/w-60.
+- Live TV guide channel width now uses one shared token.
+- Live TV row height reduced from 58px to 52px to better match approved compact guide density.
+- Live TV preview now has a clamped dynamic-height footprint and appears from lg rather than relying on an oversized xl-only minimum.
+- WatchingGuideOverlay now uses dynamic viewport clamps and shared group-rail sizing; the old 18vw right-padding hack is removed.
+- Floating PiP dimensions now clamp to viewport size.
+- Video player OSD padding is denser and the channel drawer width is clamped.
+- Server Settings, Parental Controls, and Streaming Performance now share a 100dvh-safe modal shell and padding contract.
+
+Still pending:
+- real-device visual QA of this geometry pass.
+- TopBar compact/TV composition refinement after visual QA.
+- Profile/PIN small-modal normalization if testing shows a mismatch.
+- legacy EPGView / BottomNavBar file cleanup after final dependency confirmation.
+- final reference-board reskin after geometry freeze.
