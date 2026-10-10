@@ -336,10 +336,10 @@ export const ServerSettingsModal: React.FC<ServerSettingsModalProps> = ({
   };
 
   return (
-    <div ref={modalRef} className="fixed inset-0 z-[100] flex items-center justify-center bg-black/85 backdrop-blur-md p-4 animate-in fade-in duration-200">
-      <div className="w-full max-w-3xl max-h-[92vh] rounded-3xl bg-[#0c121e] border border-slate-800 shadow-2xl overflow-hidden flex flex-col">
+    <div ref={modalRef} className="gs-modal-viewport fixed inset-0 z-[100] flex items-center justify-center bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
+      <div className="gs-modal-shell w-full max-w-3xl rounded-3xl bg-[#0c121e] border border-slate-800 shadow-2xl overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="p-6 border-b border-slate-800 flex items-center justify-between bg-[#080d17]">
+        <div className="gs-modal-pad border-b border-slate-800 flex items-center justify-between bg-[#080d17]">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400">
               <Server className="w-5 h-5" />
@@ -367,7 +367,7 @@ export const ServerSettingsModal: React.FC<ServerSettingsModalProps> = ({
         </div>
 
         {/* Modal Body */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
+        <div className="gs-modal-pad flex-1 min-h-0 overflow-y-auto space-y-5 custom-scrollbar">
           {/* Multi-Server Status Banner */}
           <div className="p-4 rounded-2xl bg-cyan-950/40 border border-cyan-500/30 flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
