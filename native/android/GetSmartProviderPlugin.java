@@ -40,8 +40,9 @@ public class GetSmartProviderPlugin extends Plugin {
 
     // Verified from the supplied known-working XCIPTV-family APK's
     // WebServicesAdapter used by player_api.php.
-    private static final int CONNECT_TIMEOUT_MS = 40_000;
-    private static final int READ_TIMEOUT_MS = 35_000;
+    private static final int CONNECT_TIMEOUT_MS = 60_000;
+    private static final int READ_TIMEOUT_MS = 60_000;
+    private static final String TRANSPORT_BUILD = "GS-NATIVE-URLCONNECTION-60S";
 
     private static final String CREDENTIAL_PREFS = "getsmart_secure_credentials";
     private static final String CREDENTIAL_DRAFT_KEY = "xtream_draft_v1";
@@ -334,24 +335,24 @@ public class GetSmartProviderPlugin extends Plugin {
     private String safeMessage(Exception error, String phase) {
         if (error instanceof java.net.SocketTimeoutException) {
             if ("connecting".equals(phase)) {
-                return "Provider TCP connection timed out after 40 seconds.";
+                return TRANSPORT_BUILD + ": Provider TCP connection timed out after 60 seconds.";
             }
             if ("reading".equals(phase)) {
-                return "Provider connected, but the server did not return data within 35 seconds.";
+                return TRANSPORT_BUILD + ": Provider connected, but the server did not return data within 60 seconds.";
             }
-            return "Provider connection timed out.";
+            return TRANSPORT_BUILD + ": Provider connection timed out during " + phase + ".";
         }
 
         if (error instanceof java.net.ConnectException) {
-            return "Provider refused the network connection.";
+            return TRANSPORT_BUILD + ": Provider refused the network connection.";
         }
 
         if (error instanceof java.net.UnknownHostException) {
-            return "Provider host could not be resolved.";
+            return TRANSPORT_BUILD + ": Provider host could not be resolved.";
         }
 
         if (error instanceof SSLException) {
-            return "Provider TLS/SSL negotiation failed.";
+            return TRANSPORT_BUILD + ": Provider TLS/SSL negotiation failed.";
         }
 
         if (
@@ -368,7 +369,7 @@ public class GetSmartProviderPlugin extends Plugin {
             return error.getMessage();
         }
 
-        return "Native provider request failed during " + phase + ".";
+        return TRANSPORT_BUILD + ": Native provider request failed during " + phase + ".";
     }
 
     @Override
