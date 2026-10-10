@@ -38,6 +38,7 @@ export interface NativePlayerCommand {
     | 'channelNext'
     | 'lastChannel'
     | 'numericChannel'
+    | 'recoverStream'
     | 'guide'
     | 'back';
   value?: string;
