@@ -15,6 +15,8 @@
     --gs-main-rail-collapsed: 74px;
     --gs-main-rail-expanded: 256px;
     --gs-group-rail-width: clamp(132px, 11vw, 184px);
+    --gs-guide-channel-width: clamp(156px, 13vw, 216px);
+    --gs-guide-row-height: 52px;
     --gs-page-pad-x: clamp(12px, 1.35vw, 24px);
     --gs-page-pad-y: clamp(12px, 1.1vw, 20px);
     --gs-card-gap: clamp(10px, 0.9vw, 16px);
