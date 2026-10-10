@@ -40,6 +40,9 @@ export interface NativePlayerCommand {
     | 'numericChannel'
     | 'recoverStream'
     | 'guide'
+    | 'playlist'
+    | 'epg'
+    | 'settings'
     | 'back';
   value?: string;
 }
@@ -192,7 +195,7 @@ interface NativeProviderPlugin {
   }): Promise<{ status: number; contentType?: string; route?: string; data: unknown }>;
 }
 
-const EXPECTED_TRANSPORT_MARKER = 'GS-NATIVE-XCIPTV-HS21';
+const EXPECTED_TRANSPORT_MARKER = 'GS-NATIVE-XCIPTV-HS22';
 const NativeProvider = registerPlugin<NativeProviderPlugin>('GetSmartProvider');
 
 export class AndroidProviderTransport implements ProviderTransport {
