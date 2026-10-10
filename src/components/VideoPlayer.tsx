@@ -482,6 +482,33 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             nativeUrl = decodeURIComponent(encoded);
           }
 
+          // Xtream Android playback must use a real direct provider media URL.
+          // The browser/PWA helper intentionally defaults live playback toward
+          // HLS, but Android providers commonly expose a working MPEG-TS route
+          // even when the HLS route is empty/black. HS17 therefore selects the
+          // provider-declared Android candidate order and starts with TS when
+          // available. Native recovery can retry the same selected source.
+          if (
+            playbackTarget.type === 'live' &&
+            !playbackTarget.stream.direct_source &&
+            playbackTarget.stream.serverId
+          ) {
+            const sourceProfile = xtreamService
+              .getActiveProfiles()
+              .find((profile) => profile.id === playbackTarget.stream.serverId);
+
+            if (sourceProfile?.type === 'xtream') {
+              const extensions = xtreamService.getNativeAndroidLiveExtensions(sourceProfile.id);
+              const directXtreamUrl = xtreamService.buildDirectStreamUrl(
+                'live',
+                playbackTarget.stream.stream_id,
+                extensions[0],
+                sourceProfile.id
+              );
+              if (directXtreamUrl) nativeUrl = directXtreamUrl;
+            }
+          }
+
           const playbackPreferences = playbackPreferencesService.getConfig();
           const performanceConfig = streamingPerformanceService.getConfig();
           const isRecoveryRequest = nativeRecoveryRequestedRef.current;
