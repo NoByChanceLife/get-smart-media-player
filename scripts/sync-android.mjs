@@ -41,9 +41,26 @@ const compatibleBuildGradle = originalBuildGradle.replace(
   /getDefaultProguardFile\((['"])proguard-android\.txt\1\)/g,
   "getDefaultProguardFile('proguard-android-optimize.txt')",
 );
-if (compatibleBuildGradle !== originalBuildGradle) {
-  writeFileSync(appBuildGradle, compatibleBuildGradle, 'utf8');
-  console.log('Updated generated Android ProGuard default for the current Android Gradle toolchain.');
+let patchedBuildGradle = compatibleBuildGradle;
+
+const okHttpDependency = "implementation 'com.squareup.okhttp3:okhttp:3.12.11'";
+if (!patchedBuildGradle.includes(okHttpDependency)) {
+  const dependenciesMatch = patchedBuildGradle.match(/dependencies\s*\{/);
+  if (!dependenciesMatch || dependenciesMatch.index === undefined) {
+    throw new Error('Unable to locate Android dependencies block for native provider transport.');
+  }
+
+  const insertAt = dependenciesMatch.index + dependenciesMatch[0].length;
+  patchedBuildGradle =
+    patchedBuildGradle.slice(0, insertAt) +
+    `\n    ${okHttpDependency}` +
+    patchedBuildGradle.slice(insertAt);
+  console.log('Added OkHttp 3.12.11 for native Xtream/provider networking.');
+}
+
+if (patchedBuildGradle !== originalBuildGradle) {
+  writeFileSync(appBuildGradle, patchedBuildGradle, 'utf8');
+  console.log('Updated generated Android build configuration.');
 }
 
 console.log('Get Smart Android shell synchronized.');
