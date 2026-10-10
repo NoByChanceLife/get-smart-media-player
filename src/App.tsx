@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { TopBar } from './components/TopBar';
 import { TVNavigationRail, NavTab } from './components/TVNavigationRail';
-import { BottomNavBar } from './components/BottomNavBar';
 import { HomeView } from './components/HomeView';
 import { LiveTVView } from './components/LiveTVView';
 import { MoviesView } from './components/MoviesView';
