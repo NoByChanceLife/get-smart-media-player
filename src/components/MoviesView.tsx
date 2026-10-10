@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { XtreamCategory, XtreamVodStream } from '../types/xtream';
 import { parentalControlService } from '../services/parentalControlService';
+import { adultDiscoveryCategoryIds, isPrivateDiscoveryContent } from '../services/discoveryPrivacy';
 
 interface MoviesViewProps {
   categories: XtreamCategory[];
@@ -239,7 +240,9 @@ export const MoviesView: React.FC<MoviesViewProps> = ({
   });
 
   // Filter movies
+  const privateCategoryIds = searchQuery.trim() ? adultDiscoveryCategoryIds(categories) : new Set<string>();
   const filteredMovies = movies.filter((m) => {
+    if (searchQuery.trim() && isPrivateDiscoveryContent(m, privateCategoryIds)) return false;
     const isLocked = parentalControlService.isMovieLocked(m);
     if (isLocked && parentalSettings.hideLockedContentCompletely) {
       return false;
