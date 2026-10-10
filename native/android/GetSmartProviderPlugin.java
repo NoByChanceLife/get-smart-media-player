@@ -8,6 +8,10 @@ import com.getcapacitor.annotation.CapacitorPlugin;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.net.ConnectivityManager;
+import android.net.Network;
+import android.net.NetworkCapabilities;
+import android.net.ProxyInfo;
 import android.security.keystore.KeyGenParameterSpec;
 import android.security.keystore.KeyProperties;
 import android.util.Base64;
@@ -59,7 +63,7 @@ public class GetSmartProviderPlugin extends Plugin {
     private static final int READ_TIMEOUT_MS = 40_000;
     private static final int DIRECT_ADDRESS_CONNECT_TIMEOUT_MS = 6_000;
     private static final int MAX_REDIRECTS = 5;
-    private static final String TRANSPORT_BUILD = "GS-NATIVE-XCIPTV-HS4";
+    private static final String TRANSPORT_BUILD = "GS-NATIVE-XCIPTV-HS5";
 
     private static final String CREDENTIAL_PREFS = "getsmart_secure_credentials";
     private static final String CREDENTIAL_DRAFT_KEY = "xtream_draft_v1";
@@ -835,12 +839,83 @@ public class GetSmartProviderPlugin extends Plugin {
         body.write(buffer, 0, read);
     }
 
+    private String getNetworkPathSummary() {
+        try {
+            ConnectivityManager cm = (ConnectivityManager) getContext().getSystemService(
+                Context.CONNECTIVITY_SERVICE
+            );
+
+            if (cm == null) {
+                return "network=unknown";
+            }
+
+            Network active = cm.getActiveNetwork();
+            NetworkCapabilities activeCaps =
+                active == null ? null : cm.getNetworkCapabilities(active);
+
+            String activeTransport = "none";
+            if (activeCaps != null) {
+                if (activeCaps.hasTransport(NetworkCapabilities.TRANSPORT_VPN)) {
+                    activeTransport = "vpn";
+                } else if (activeCaps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) {
+                    activeTransport = "wifi";
+                } else if (activeCaps.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)) {
+                    activeTransport = "cellular";
+                } else if (activeCaps.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)) {
+                    activeTransport = "ethernet";
+                } else {
+                    activeTransport = "other";
+                }
+            }
+
+            int visibleVpnNetworks = 0;
+            int visibleWifiNetworks = 0;
+            int visibleCellNetworks = 0;
+
+            for (Network network : cm.getAllNetworks()) {
+                NetworkCapabilities caps = cm.getNetworkCapabilities(network);
+                if (caps == null) {
+                    continue;
+                }
+
+                if (caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN)) {
+                    visibleVpnNetworks++;
+                }
+                if (caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) {
+                    visibleWifiNetworks++;
+                }
+                if (caps.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)) {
+                    visibleCellNetworks++;
+                }
+            }
+
+            ProxyInfo proxy = cm.getDefaultProxy();
+            String proxyState =
+                proxy != null &&
+                proxy.getHost() != null &&
+                !proxy.getHost().trim().isEmpty()
+                    ? "configured"
+                    : "none";
+
+            return (
+                "active=" + activeTransport +
+                ", visibleVpn=" + visibleVpnNetworks +
+                ", visibleWifi=" + visibleWifiNetworks +
+                ", visibleCell=" + visibleCellNetworks +
+                ", proxy=" + proxyState
+            );
+        } catch (Exception ignored) {
+            return "network=unavailable";
+        }
+    }
+
     private String safeMessage(
         Exception error,
         String phase,
         DirectRouteFailure directFailure
     ) {
         String routeDetail = "";
+        String networkDetail = " Network path: " + getNetworkPathSummary() + ".";
 
         if (directFailure != null) {
             routeDetail =
@@ -859,7 +934,8 @@ public class GetSmartProviderPlugin extends Plugin {
                 ": Provider connection timed out during " +
                 phase +
                 "." +
-                routeDetail
+                routeDetail +
+                networkDetail
             );
         }
 
@@ -867,21 +943,24 @@ public class GetSmartProviderPlugin extends Plugin {
             return (
                 TRANSPORT_BUILD +
                 ": Provider refused the network connection." +
-                routeDetail
+                routeDetail +
+                networkDetail
             );
         }
 
         if (error instanceof java.net.UnknownHostException) {
             return (
                 TRANSPORT_BUILD +
-                ": Provider host could not be resolved."
+                ": Provider host could not be resolved." +
+                networkDetail
             );
         }
 
         if (error instanceof SSLException) {
             return (
                 TRANSPORT_BUILD +
-                ": Provider TLS/SSL negotiation failed."
+                ": Provider TLS/SSL negotiation failed." +
+                networkDetail
             );
         }
 
@@ -897,7 +976,8 @@ public class GetSmartProviderPlugin extends Plugin {
                 direct.ipv4Count +
                 " IPv4, " +
                 direct.ipv6Count +
-                " IPv6)."
+                " IPv6)." +
+                networkDetail
             );
         }
 
@@ -915,7 +995,8 @@ public class GetSmartProviderPlugin extends Plugin {
             return (
                 TRANSPORT_BUILD +
                 ": " +
-                error.getMessage()
+                error.getMessage() +
+                networkDetail
             );
         }
 
@@ -924,7 +1005,8 @@ public class GetSmartProviderPlugin extends Plugin {
             ": Native provider request failed during " +
             phase +
             "." +
-            routeDetail
+            routeDetail +
+            networkDetail
         );
     }
 
