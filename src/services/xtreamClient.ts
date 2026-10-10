@@ -227,7 +227,7 @@ class XtreamService {
       url,
       mac,
       token,
-      userAgent: mac ? undefined : 'okhttp/3.12.11',
+      userAgent: mac ? undefined : 'MEGAPLUSTV-v4.0.3',
     });
   }
 
