@@ -2012,11 +2012,18 @@ public class GetSmartProviderPlugin extends Plugin {
         }
 
         int checked = 0;
-        boolean disabled = nativePlayer
-            .getTrackSelectionParameters()
-            .getTrackTypeDisabled(trackType);
-
-        if (allowOff && disabled) checked = 1;
+        boolean disabled = false;
+        if (allowOff) {
+            boolean anyTextSelected = false;
+            for (NativeTrackChoice choice : choices) {
+                if (choice.selected) {
+                    anyTextSelected = true;
+                    break;
+                }
+            }
+            disabled = !anyTextSelected;
+            if (disabled) checked = 1;
+        }
 
         for (int i = 0; i < choices.size(); i++) {
             NativeTrackChoice choice = choices.get(i);
