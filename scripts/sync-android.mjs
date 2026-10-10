@@ -75,8 +75,8 @@ for (const dependency of media3Dependencies) {
 // Give this diagnostic APK an unmistakable Android package version so the
 // device installer and App Info can prove which build is actually running.
 compatibleBuildGradle = compatibleBuildGradle
-  .replace(/versionCode\s+\d+/, 'versionCode 2026101016')
-  .replace(/versionName\s+["'][^"']+["']/, 'versionName "2026.10.10-hs16"');
+  .replace(/versionCode\s+\d+/, 'versionCode 2026101017')
+  .replace(/versionName\s+["'][^"']+["']/, 'versionName "2026.10.10-hs17"');
 
 if (compatibleBuildGradle !== originalBuildGradle) {
   writeFileSync(appBuildGradle, compatibleBuildGradle, 'utf8');
