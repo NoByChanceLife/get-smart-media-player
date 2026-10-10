@@ -31,11 +31,13 @@ import {
   isNativeAndroidRuntime,
   playNativeAndroidMedia,
   setNativeAndroidPlayerVisible,
+  setNativeAndroidTrackPreferences,
   stopNativeAndroidMedia,
   updateNativeAndroidPlayerMetadata,
 } from '../services/androidProviderTransport';
 import { resolveStalkerStreamLink } from '../services/stalkerClient';
 import { streamingPerformanceService } from '../services/streamingPerformanceService';
+import { playbackPreferencesService } from '../services/playbackPreferencesService';
 import { useStreamHealthTracker } from '../hooks/useStreamHealthTracker';
 import { StreamHealthPanel } from './StreamHealthPanel';
 import { Activity, CheckCircle } from 'lucide-react';
@@ -271,6 +273,19 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     };
   }, [nativeAndroid]);
 
+  // Persisted audio/subtitle preferences are explicit settings. Apply them
+  // to Media3 without learning from temporary in-player track selections.
+  useEffect(() => {
+    if (!nativeAndroid) return;
+
+    const apply = (config = playbackPreferencesService.getConfig()) => {
+      setNativeAndroidTrackPreferences(config).catch(() => undefined);
+    };
+
+    apply();
+    return playbackPreferencesService.subscribe((config) => apply(config));
+  }, [nativeAndroid]);
+
   // EPG/current-program information can arrive after playback has already
   // started. Refresh the native Get Smart OSD without restarting the stream.
   useEffect(() => {
@@ -388,6 +403,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             nativeUrl = decodeURIComponent(encoded);
           }
 
+          const playbackPreferences = playbackPreferencesService.getConfig();
           await playNativeAndroidMedia({
             url: nativeUrl,
             title: playbackTitleRef.current,
@@ -398,6 +414,9 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
                 : '',
             currentProgram: playbackProgramRef.current,
             nextProgram: playbackTarget.type === 'live' ? (epgList[1]?.title || '') : '',
+            preferredAudioLanguage: playbackPreferences.preferredAudioLanguage,
+            subtitleDefaultMode: playbackPreferences.subtitleDefaultMode,
+            preferredSubtitleLanguage: playbackPreferences.preferredSubtitleLanguage,
           });
 
           xtreamService.addToHistory({
