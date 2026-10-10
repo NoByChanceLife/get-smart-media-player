@@ -32,6 +32,7 @@ import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.HorizontalScrollView;
 import android.widget.LinearLayout;
+import android.widget.SeekBar;
 import android.widget.TextView;
 
 import androidx.media3.common.AudioAttributes;
@@ -101,7 +102,7 @@ public class GetSmartProviderPlugin extends Plugin {
     private static final int DIRECT_ADDRESS_CONNECT_TIMEOUT_MS = 6_000;
     private static final int NETWORK_ROUTE_CONNECT_TIMEOUT_MS = 8_000;
     private static final int MAX_REDIRECTS = 5;
-    private static final String TRANSPORT_BUILD = "GS-NATIVE-XCIPTV-HS19";
+    private static final String TRANSPORT_BUILD = "GS-NATIVE-XCIPTV-HS20";
 
     private static final String CREDENTIAL_PREFS = "getsmart_secure_credentials";
     private static final String CREDENTIAL_DRAFT_KEY = "xtream_draft_v1";
@@ -312,6 +313,9 @@ public class GetSmartProviderPlugin extends Plugin {
     private TextView nativeNextProgramView;
     private TextView nativeStatusView;
     private TextView nativeProgressView;
+    private SeekBar nativeProgressSeekBar;
+    private TextView nativeProgressStartView;
+    private TextView nativeProgressEndView;
     private TextView nativeNumericChannelView;
     private Button nativeGuideButton;
     private Button nativePreviousButton;
@@ -366,6 +370,7 @@ public class GetSmartProviderPlugin extends Plugin {
     private boolean nativeControlsVisible = false;
     private float lastNonZeroVolume = 1.0f;
     private int nativeAspectMode = 0;
+    private float nativePlaybackSpeed = 1.0f;
     private String preferredAudioLanguage = "";
     private String subtitleDefaultMode = "auto";
     private String preferredSubtitleLanguage = "";
@@ -542,6 +547,7 @@ public class GetSmartProviderPlugin extends Plugin {
 
                 nativePlayerTitle = requestedTitle;
                 nativePlayerMediaType = requestedMediaType;
+                if (mediaChanged) nativePlaybackSpeed = 1.0f;
                 nativePlayerChannelNumber = requestedChannelNumber;
                 nativePlayerCurrentProgram = requestedCurrentProgram;
                 nativePlayerNextProgram = requestedNextProgram;
@@ -1106,49 +1112,35 @@ public class GetSmartProviderPlugin extends Plugin {
         nativeOsdOverlay.setClickable(false);
         nativeOsdOverlay.setFocusable(false);
 
+        // Compact information banner. It stays visually separate from the controls
+        // so live channel zapping can show metadata without summoning the OSD.
         nativeOsdTop = new LinearLayout(getActivity());
         nativeOsdTop.setOrientation(LinearLayout.VERTICAL);
-        nativeOsdTop.setPadding(dp(22), dp(14), dp(22), dp(12));
+        nativeOsdTop.setPadding(dp(26), dp(12), dp(26), dp(10));
         nativeOsdTop.setBackground(makeGradient(
-            new int[] { Color.argb(235, 3, 12, 22), Color.argb(165, 3, 12, 22), Color.TRANSPARENT },
+            new int[] { Color.TRANSPARENT, Color.argb(185, 4, 12, 23), Color.argb(235, 4, 12, 23) },
             GradientDrawable.Orientation.TOP_BOTTOM
         ));
 
-        LinearLayout topTitleRow = new LinearLayout(getActivity());
-        topTitleRow.setOrientation(LinearLayout.HORIZONTAL);
-        topTitleRow.setGravity(Gravity.CENTER_VERTICAL);
-
-        nativeChannelView = makeText("", 13f, Color.rgb(120, 193, 255), true);
-        nativeChannelView.setPadding(0, 0, dp(14), 0);
-        nativeTitleView = makeText("", 18f, Color.WHITE, true);
-
-        topTitleRow.addView(nativeChannelView);
-        topTitleRow.addView(
-            nativeTitleView,
-            new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
-        );
-
+        nativeChannelView = makeText("", 12f, Color.rgb(155, 170, 190), false);
+        nativeTitleView = makeText("", 28f, Color.WHITE, true);
+        nativeProgramView = makeText("", 14f, Color.rgb(190, 201, 217), false);
+        nativeNextProgramView = makeText("", 12f, Color.rgb(130, 145, 165), false);
         nativeStatusView = makeText("LIVE", 11f, Color.WHITE, true);
-        nativeStatusView.setGravity(Gravity.CENTER);
-        nativeStatusView.setPadding(dp(10), dp(4), dp(10), dp(4));
-        nativeStatusView.setBackground(makeRounded(Color.rgb(193, 48, 67), dp(7)));
-        topTitleRow.addView(nativeStatusView);
+        nativeStatusView.setVisibility(View.GONE);
 
-        nativeProgramView = makeText("", 12f, Color.rgb(226, 232, 240), true);
-        nativeProgramView.setPadding(0, dp(7), 0, 0);
-        nativeNextProgramView = makeText("", 11f, Color.rgb(148, 163, 184), false);
-        nativeNextProgramView.setPadding(0, dp(3), 0, 0);
-
-        nativeOsdTop.addView(topTitleRow);
+        nativeOsdTop.addView(nativeChannelView);
+        nativeOsdTop.addView(nativeTitleView);
         nativeOsdTop.addView(nativeProgramView);
         nativeOsdTop.addView(nativeNextProgramView);
 
-        FrameLayout.LayoutParams topParams = new FrameLayout.LayoutParams(
+        FrameLayout.LayoutParams infoParams = new FrameLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT,
             ViewGroup.LayoutParams.WRAP_CONTENT,
-            Gravity.TOP
+            Gravity.BOTTOM
         );
-        nativeOsdOverlay.addView(nativeOsdTop, topParams);
+        infoParams.setMargins(dp(70), 0, dp(70), dp(252));
+        nativeOsdOverlay.addView(nativeOsdTop, infoParams);
 
         nativeNumericChannelView = makeText("", 34f, Color.WHITE, true);
         nativeNumericChannelView.setGravity(Gravity.CENTER);
@@ -1162,51 +1154,108 @@ public class GetSmartProviderPlugin extends Plugin {
         );
         nativeOsdOverlay.addView(nativeNumericChannelView, numericParams);
 
+        // Modern Minimal / Formuler-inspired control deck.
         nativeOsdBottom = new LinearLayout(getActivity());
         nativeOsdBottom.setOrientation(LinearLayout.VERTICAL);
-        nativeOsdBottom.setGravity(Gravity.CENTER);
-        nativeOsdBottom.setPadding(dp(12), dp(8), dp(12), dp(10));
+        nativeOsdBottom.setGravity(Gravity.CENTER_HORIZONTAL);
+        nativeOsdBottom.setPadding(dp(70), dp(10), dp(70), dp(22));
         nativeOsdBottom.setBackground(makeGradient(
-            new int[] { Color.TRANSPARENT, Color.argb(170, 3, 12, 22), Color.argb(245, 3, 12, 22) },
+            new int[] { Color.TRANSPARENT, Color.argb(205, 4, 12, 23), Color.argb(248, 4, 12, 23) },
             GradientDrawable.Orientation.TOP_BOTTOM
         ));
 
-        nativeProgressView = makeText("", 12f, Color.rgb(203, 213, 225), false);
-        nativeProgressView.setGravity(Gravity.CENTER);
-        nativeProgressView.setPadding(0, 0, 0, dp(8));
+        LinearLayout progressRow = new LinearLayout(getActivity());
+        progressRow.setOrientation(LinearLayout.HORIZONTAL);
+        progressRow.setGravity(Gravity.CENTER_VERTICAL);
+        progressRow.setPadding(dp(10), 0, dp(10), dp(12));
+
+        nativeProgressStartView = makeText("", 12f, Color.WHITE, true);
+        nativeProgressEndView = makeText("", 12f, Color.WHITE, true);
+        nativeProgressSeekBar = new SeekBar(getActivity());
+        nativeProgressSeekBar.setMax(1000);
+        nativeProgressSeekBar.setFocusable(true);
+        nativeProgressSeekBar.setFocusableInTouchMode(true);
+        nativeProgressSeekBar.setPadding(dp(10), 0, dp(10), 0);
+        nativeProgressSeekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            private boolean userSeeking = false;
+
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                if (!fromUser || nativePlayer == null) return;
+                long duration = nativePlayer.getDuration();
+                if (duration > 0L && duration != C.TIME_UNSET) {
+                    long target = Math.round((progress / 1000.0) * duration);
+                    nativeProgressStartView.setText(formatNativeTime(target));
+                }
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+                userSeeking = true;
+                nativeUiHandler.removeCallbacks(hideNativeOsdRunnable);
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+                if (nativePlayer != null) {
+                    long duration = nativePlayer.getDuration();
+                    if (duration > 0L && duration != C.TIME_UNSET) {
+                        long target = Math.round((seekBar.getProgress() / 1000.0) * duration);
+                        nativePlayer.seekTo(target);
+                    }
+                }
+                userSeeking = false;
+                scheduleNativeOsdHide();
+            }
+        });
+
+        progressRow.addView(nativeProgressStartView);
+        progressRow.addView(
+            nativeProgressSeekBar,
+            new LinearLayout.LayoutParams(0, dp(34), 1f)
+        );
+        progressRow.addView(nativeProgressEndView);
         nativeOsdBottom.addView(
-            nativeProgressView,
+            progressRow,
             new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT
             )
         );
 
+        nativeProgressView = makeText("", 1f, Color.TRANSPARENT, false);
+        nativeProgressView.setVisibility(View.GONE);
+
         LinearLayout primaryControls = new LinearLayout(getActivity());
         primaryControls.setOrientation(LinearLayout.HORIZONTAL);
         primaryControls.setGravity(Gravity.CENTER);
+        primaryControls.setPadding(0, 0, 0, dp(14));
 
-        nativeGuideButton = makeOsdButton("Guide");
-        nativePreviousButton = makeOsdButton("◀");
-        nativeSeekBackButton = makeOsdButton("−10");
-        nativePlayPauseButton = makeOsdButton("Pause");
-        nativeSeekForwardButton = makeOsdButton("+10");
-        nativeNextButton = makeOsdButton("▶");
-        nativeLastButton = makeOsdButton("Last");
-        nativeHealthButton = makeOsdButton("More");
-        nativeStopButton = makeOsdButton("Back");
+        nativeGuideButton = makeRoundOsdButton("☰", false);
+        nativePreviousButton = makeRoundOsdButton("◀|", false);
+        nativePlayPauseButton = makeRoundOsdButton("Ⅱ", true);
+        nativeNextButton = makeRoundOsdButton("|▶", false);
+        nativeLastButton = makeRoundOsdButton("↻", false);
+        nativeHealthButton = makeRoundOsdButton("▣", false);
+        nativeStopButton = makeRoundOsdButton("⚙", false);
+
+        nativeSeekBackButton = makeRoundOsdButton("−10", false);
+        nativeSeekForwardButton = makeRoundOsdButton("+10", false);
+        nativeSeekBackButton.setVisibility(View.GONE);
+        nativeSeekForwardButton.setVisibility(View.GONE);
 
         nativeGuideButton.setOnClickListener((v) -> {
             emitPlayerCommand("guide");
-            scheduleNativeOsdHide();
+            hideNativeOsd();
         });
         nativePreviousButton.setOnClickListener((v) -> {
-            emitPlayerCommand("channelPrevious");
-            showNativeInfoBanner();
-        });
-        nativeSeekBackButton.setOnClickListener((v) -> {
-            seekNativeBy(-10_000L);
-            showNativeOsd(true);
+            if ("live".equals(nativePlayerMediaType)) {
+                emitPlayerCommand("channelPrevious");
+                showNativeInfoBanner();
+            } else {
+                seekNativeBy(-10_000L);
+                showNativeOsd(true);
+            }
         });
         nativePlayPauseButton.setOnClickListener((v) -> {
             if (nativePlayer != null) {
@@ -1216,79 +1265,97 @@ public class GetSmartProviderPlugin extends Plugin {
                 scheduleNativeOsdHide();
             }
         });
-        nativeSeekForwardButton.setOnClickListener((v) -> {
-            seekNativeBy(10_000L);
-            showNativeOsd(true);
-        });
         nativeNextButton.setOnClickListener((v) -> {
-            emitPlayerCommand("channelNext");
-            showNativeInfoBanner();
+            if ("live".equals(nativePlayerMediaType)) {
+                emitPlayerCommand("channelNext");
+                showNativeInfoBanner();
+            } else {
+                seekNativeBy(10_000L);
+                showNativeOsd(true);
+            }
         });
         nativeLastButton.setOnClickListener((v) -> {
-            emitPlayerCommand("lastChannel");
-            showNativeInfoBanner();
+            if (nativePlayer == null) return;
+            if ("live".equals(nativePlayerMediaType)) {
+                nativePlayer.seekToDefaultPosition();
+                nativePlayer.play();
+            } else {
+                nativePlayer.seekTo(0L);
+                nativePlayer.play();
+            }
+            showNativeOsd(true);
         });
-        nativeStopButton.setOnClickListener((v) -> emitPlayerCommand("back"));
+        nativeHealthButton.setOnClickListener((v) -> {
+            emitPlayerCommand("guide");
+            hideNativeOsd();
+        });
+        nativeStopButton.setOnClickListener((v) -> showNativeMoreDialog());
 
-        for (Button button : new Button[] {
-            nativeGuideButton,
-            nativePreviousButton,
-            nativeSeekBackButton,
-            nativePlayPauseButton,
-            nativeSeekForwardButton,
-            nativeNextButton,
-            nativeLastButton,
-            nativeHealthButton,
-            nativeStopButton
-        }) {
-            addOsdButton(primaryControls, button);
-        }
-        addScrollableOsdRow(nativeOsdBottom, primaryControls);
+        addRoundOsdControl(primaryControls, nativeGuideButton, "Playlist");
+        addRoundOsdControl(primaryControls, nativePreviousButton, "Prev");
+        addRoundOsdControl(primaryControls, nativePlayPauseButton, "Play/Pause");
+        addRoundOsdControl(primaryControls, nativeNextButton, "Next");
+        addRoundOsdControl(primaryControls, nativeLastButton, "Restart");
+        addRoundOsdControl(primaryControls, nativeHealthButton, "EPG");
+        addRoundOsdControl(primaryControls, nativeStopButton, "Settings");
 
-        LinearLayout secondaryControls = new LinearLayout(getActivity());
-        secondaryControls.setOrientation(LinearLayout.HORIZONTAL);
-        secondaryControls.setGravity(Gravity.CENTER);
-        secondaryControls.setPadding(0, dp(7), 0, 0);
+        nativeOsdBottom.addView(
+            primaryControls,
+            new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+        );
 
-        nativeAudioButton = makeOsdButton("Audio");
-        nativeSubtitleButton = makeOsdButton("CC");
-        nativeQualityButton = makeOsdButton("Quality");
-        nativeMuteButton = makeOsdButton("Mute");
+        LinearLayout settingsStrip = new LinearLayout(getActivity());
+        settingsStrip.setOrientation(LinearLayout.HORIZONTAL);
+        settingsStrip.setGravity(Gravity.CENTER);
+        settingsStrip.setPadding(dp(8), dp(8), dp(8), dp(8));
+        settingsStrip.setBackground(makeOutlinedRounded(
+            Color.argb(225, 14, 25, 39),
+            Color.rgb(56, 72, 91),
+            dp(18),
+            dp(1)
+        ));
+
+        nativeQualityButton = makeSettingButton("Quality\nAuto");
+        nativeAudioButton = makeSettingButton("Audio\nAuto");
+        nativeSubtitleButton = makeSettingButton("Subtitles\nOff");
+        nativeAspectButton = makeSettingButton("Aspect Ratio\nFit");
+        nativeMuteButton = makeSettingButton("Playback Speed\nNormal");
+
         nativeVolumeDownButton = makeOsdButton("Vol−");
         nativeVolumeUpButton = makeOsdButton("Vol+");
-        nativeAspectButton = makeOsdButton("Fit");
+        nativeVolumeDownButton.setVisibility(View.GONE);
+        nativeVolumeUpButton.setVisibility(View.GONE);
 
+        nativeQualityButton.setOnClickListener((v) -> showNativeTrackDialog(C.TRACK_TYPE_VIDEO, "Video Quality"));
         nativeAudioButton.setOnClickListener((v) -> showNativeTrackDialog(C.TRACK_TYPE_AUDIO, "Audio Track"));
         nativeSubtitleButton.setOnClickListener((v) -> showNativeTrackDialog(C.TRACK_TYPE_TEXT, "Subtitles & Captions"));
-        nativeQualityButton.setOnClickListener((v) -> showNativeTrackDialog(C.TRACK_TYPE_VIDEO, "Video Quality"));
-        nativeHealthButton.setOnClickListener((v) -> showNativeMoreDialog());
-        nativeMuteButton.setOnClickListener((v) -> {
-            toggleNativeMute();
-            showNativeOsd(true);
-        });
-        nativeVolumeDownButton.setOnClickListener((v) -> {
-            changeNativeVolume(-0.10f);
-            showNativeOsd(true);
-        });
-        nativeVolumeUpButton.setOnClickListener((v) -> {
-            changeNativeVolume(0.10f);
-            showNativeOsd(true);
-        });
         nativeAspectButton.setOnClickListener((v) -> {
             cycleNativeAspectRatio();
             showNativeOsd(true);
         });
+        nativeMuteButton.setOnClickListener((v) -> {
+            cycleNativePlaybackSpeed();
+            showNativeOsd(true);
+        });
 
-        // Secondary playback settings live behind More so the watching
-        // surface stays one compact row. The same dialogs work with D-pad/Enter,
-        // mouse, and touch.
-        nativeQualityButton.setVisibility(View.GONE);
-        nativeAudioButton.setVisibility(View.GONE);
-        nativeSubtitleButton.setVisibility(View.GONE);
-        nativeAspectButton.setVisibility(View.GONE);
-        nativeMuteButton.setVisibility(View.GONE);
-        nativeVolumeDownButton.setVisibility(View.GONE);
-        nativeVolumeUpButton.setVisibility(View.GONE);
+        addSettingCell(settingsStrip, nativeQualityButton);
+        addSettingCell(settingsStrip, nativeAudioButton);
+        addSettingCell(settingsStrip, nativeSubtitleButton);
+        addSettingCell(settingsStrip, nativeAspectButton);
+        addSettingCell(settingsStrip, nativeMuteButton);
+
+        nativeOsdBottom.addView(
+            settingsStrip,
+            new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                dp(78)
+            )
+        );
+
+        wireNativeOsdFocus();
 
         FrameLayout.LayoutParams bottomParams = new FrameLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT,
@@ -1300,11 +1367,12 @@ public class GetSmartProviderPlugin extends Plugin {
 
     private void wireNativeOsdFocus() {
         Button[] primary = new Button[] {
-            nativeGuideButton, nativePreviousButton, nativeSeekBackButton, nativePlayPauseButton,
-            nativeSeekForwardButton, nativeNextButton, nativeLastButton, nativeStopButton
+            nativeGuideButton, nativePreviousButton, nativePlayPauseButton,
+            nativeNextButton, nativeLastButton, nativeHealthButton, nativeStopButton
         };
         Button[] secondary = new Button[] {
-            nativeQualityButton, nativeAudioButton, nativeSubtitleButton, nativeAspectButton
+            nativeQualityButton, nativeAudioButton, nativeSubtitleButton,
+            nativeAspectButton, nativeMuteButton
         };
 
         wireHorizontalFocus(primary);
@@ -1339,36 +1407,105 @@ public class GetSmartProviderPlugin extends Plugin {
         }
     }
 
-    private void addScrollableOsdRow(LinearLayout parent, LinearLayout row) {
-        HorizontalScrollView scroller = new HorizontalScrollView(getActivity());
-        scroller.setFillViewport(true);
-        scroller.setHorizontalScrollBarEnabled(false);
-        scroller.setFocusable(false);
-        scroller.setFocusableInTouchMode(false);
-        scroller.addView(
-            row,
-            new HorizontalScrollView.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT,
-                Gravity.CENTER_HORIZONTAL
-            )
+    private void addRoundOsdControl(LinearLayout row, Button button, String label) {
+        LinearLayout item = new LinearLayout(getActivity());
+        item.setOrientation(LinearLayout.VERTICAL);
+        item.setGravity(Gravity.CENTER);
+
+        item.addView(
+            button,
+            new LinearLayout.LayoutParams(dp(60), dp(60))
         );
-        parent.addView(
-            scroller,
+
+        TextView caption = makeText(label, 11f, Color.WHITE, false);
+        caption.setGravity(Gravity.CENTER);
+        caption.setPadding(0, dp(5), 0, 0);
+        item.addView(
+            caption,
             new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT
             )
         );
+
+        LinearLayout.LayoutParams itemParams = new LinearLayout.LayoutParams(0, dp(90), 1f);
+        itemParams.setMargins(dp(5), 0, dp(5), 0);
+        row.addView(item, itemParams);
     }
 
-    private void addOsdButton(LinearLayout row, Button button) {
-        LinearLayout.LayoutParams buttonParams = new LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.WRAP_CONTENT,
-            dp(40)
+    private void addSettingCell(LinearLayout row, Button button) {
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f);
+        params.setMargins(dp(3), 0, dp(3), 0);
+        row.addView(button, params);
+    }
+
+    private Button makeRoundOsdButton(String glyph, boolean primary) {
+        Button button = new Button(getActivity());
+        button.setText(glyph);
+        button.setTextColor(Color.WHITE);
+        button.setTextSize(TypedValue.COMPLEX_UNIT_SP, primary ? 22 : 18);
+        button.setAllCaps(false);
+        button.setPadding(0, 0, 0, 0);
+        button.setMinWidth(0);
+        button.setMinHeight(0);
+        button.setFocusable(true);
+        button.setFocusableInTouchMode(true);
+        button.setClickable(true);
+
+        StateListDrawable states = new StateListDrawable();
+        states.addState(
+            new int[] { android.R.attr.state_focused },
+            makeCircle(Color.rgb(14, 120, 246), Color.rgb(78, 183, 255), dp(2))
         );
-        buttonParams.setMargins(dp(3), 0, dp(3), 0);
-        row.addView(button, buttonParams);
+        states.addState(
+            new int[] { android.R.attr.state_pressed },
+            makeCircle(Color.rgb(30, 145, 255), Color.rgb(120, 210, 255), dp(2))
+        );
+        states.addState(
+            new int[] {},
+            primary
+                ? makeCircle(Color.rgb(9, 117, 246), Color.rgb(58, 180, 255), dp(2))
+                : makeCircle(Color.argb(235, 20, 28, 39), Color.rgb(74, 87, 105), dp(1))
+        );
+        button.setBackground(states);
+        button.setOnFocusChangeListener((view, hasFocus) -> {
+            if (hasFocus) nativeUiHandler.removeCallbacks(hideNativeOsdRunnable);
+            else if (nativeControlsVisible) scheduleNativeOsdHide();
+        });
+        return button;
+    }
+
+    private Button makeSettingButton(String label) {
+        Button button = new Button(getActivity());
+        button.setText(label);
+        button.setTextColor(Color.WHITE);
+        button.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
+        button.setAllCaps(false);
+        button.setGravity(Gravity.CENTER_VERTICAL | Gravity.LEFT);
+        button.setPadding(dp(18), 0, dp(12), 0);
+        button.setFocusable(true);
+        button.setFocusableInTouchMode(true);
+        button.setClickable(true);
+
+        StateListDrawable states = new StateListDrawable();
+        states.addState(
+            new int[] { android.R.attr.state_focused },
+            makeOutlinedRounded(Color.rgb(15, 45, 76), Color.rgb(27, 164, 255), dp(11), dp(2))
+        );
+        states.addState(
+            new int[] { android.R.attr.state_pressed },
+            makeOutlinedRounded(Color.rgb(18, 55, 90), Color.rgb(70, 190, 255), dp(11), dp(2))
+        );
+        states.addState(
+            new int[] {},
+            makeRounded(Color.TRANSPARENT, dp(11))
+        );
+        button.setBackground(states);
+        button.setOnFocusChangeListener((view, hasFocus) -> {
+            if (hasFocus) nativeUiHandler.removeCallbacks(hideNativeOsdRunnable);
+            else if (nativeControlsVisible) scheduleNativeOsdHide();
+        });
+        return button;
     }
 
     private Button makeOsdButton(String label) {
@@ -1377,35 +1514,30 @@ public class GetSmartProviderPlugin extends Plugin {
         button.setTextColor(Color.WHITE);
         button.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10);
         button.setAllCaps(false);
-        button.setMinWidth(dp(54));
-        button.setMinHeight(dp(40));
-        button.setPadding(dp(10), 0, dp(10), 0);
         button.setFocusable(true);
         button.setFocusableInTouchMode(true);
         button.setClickable(true);
-        button.setOnFocusChangeListener((view, hasFocus) -> {
-            if (hasFocus) {
-                nativeUiHandler.removeCallbacks(hideNativeOsdRunnable);
-            } else if (nativeOsdVisible) {
-                scheduleNativeOsdHide();
-            }
-        });
-
-        StateListDrawable states = new StateListDrawable();
-        states.addState(
-            new int[] { android.R.attr.state_focused },
-            makeRounded(Color.rgb(11, 99, 246), dp(9))
-        );
-        states.addState(
-            new int[] { android.R.attr.state_pressed },
-            makeRounded(Color.rgb(45, 135, 255), dp(9))
-        );
-        states.addState(
-            new int[] {},
-            makeRounded(Color.argb(205, 18, 35, 52), dp(9))
-        );
-        button.setBackground(states);
+        button.setBackground(makeRounded(Color.argb(205, 18, 35, 52), dp(9)));
         return button;
+    }
+
+    private GradientDrawable makeCircle(int fill, int stroke, int strokeWidth) {
+        GradientDrawable drawable = new GradientDrawable();
+        drawable.setShape(GradientDrawable.OVAL);
+        drawable.setColor(fill);
+        drawable.setStroke(strokeWidth, stroke);
+        return drawable;
+    }
+
+    private GradientDrawable makeOutlinedRounded(
+        int fill,
+        int stroke,
+        int radiusPx,
+        int strokeWidth
+    ) {
+        GradientDrawable drawable = makeRounded(fill, radiusPx);
+        drawable.setStroke(strokeWidth, stroke);
+        return drawable;
     }
 
     private TextView makeText(String text, float sp, int color, boolean bold) {
@@ -1829,6 +1961,23 @@ public class GetSmartProviderPlugin extends Plugin {
         return "Fit";
     }
 
+    private void cycleNativePlaybackSpeed() {
+        if (nativePlayer == null) return;
+        if (nativePlaybackSpeed < 1.1f) nativePlaybackSpeed = 1.25f;
+        else if (nativePlaybackSpeed < 1.4f) nativePlaybackSpeed = 1.5f;
+        else if (nativePlaybackSpeed < 1.8f) nativePlaybackSpeed = 2.0f;
+        else nativePlaybackSpeed = 1.0f;
+        nativePlayer.setPlaybackSpeed(nativePlaybackSpeed);
+        updateNativeOsdText();
+    }
+
+    private String nativePlaybackSpeedLabel() {
+        if (Math.abs(nativePlaybackSpeed - 1.0f) < 0.01f) return "Normal";
+        if (Math.abs(nativePlaybackSpeed - 1.25f) < 0.01f) return "1.25x";
+        if (Math.abs(nativePlaybackSpeed - 1.5f) < 0.01f) return "1.5x";
+        return "2x";
+    }
+
     private String formatNativeTime(long ms) {
         if (ms < 0L || ms == C.TIME_UNSET) return "00:00";
         long totalSeconds = ms / 1000L;
@@ -1842,22 +1991,29 @@ public class GetSmartProviderPlugin extends Plugin {
     }
 
     private void updateNativeProgressText() {
-        if (nativeProgressView == null || nativePlayer == null) return;
-        boolean isLive = "live".equals(nativePlayerMediaType);
+        if (nativePlayer == null) return;
         long duration = nativePlayer.getDuration();
+        long position = Math.max(0L, nativePlayer.getCurrentPosition());
+        boolean seekable = duration > 0L && duration != C.TIME_UNSET;
 
-        if (isLive || duration <= 0L || duration == C.TIME_UNSET) {
-            nativeProgressView.setText("");
-            nativeProgressView.setVisibility(View.GONE);
-            return;
+        if (nativeProgressSeekBar != null) {
+            nativeProgressSeekBar.setEnabled(seekable);
+            nativeProgressSeekBar.setAlpha(seekable ? 1f : 0.45f);
+            nativeProgressSeekBar.setProgress(
+                seekable ? (int) Math.min(1000L, Math.max(0L, (position * 1000L) / duration)) : 0
+            );
         }
 
-        nativeProgressView.setVisibility(View.VISIBLE);
-        nativeProgressView.setText(
-            formatNativeTime(nativePlayer.getCurrentPosition()) +
-            "  /  " +
-            formatNativeTime(duration)
-        );
+        if (nativeProgressStartView != null) {
+            nativeProgressStartView.setText(seekable ? formatNativeTime(position) : "LIVE");
+        }
+        if (nativeProgressEndView != null) {
+            nativeProgressEndView.setText(seekable ? formatNativeTime(duration) : "");
+        }
+        if (nativeProgressView != null) {
+            nativeProgressView.setText("");
+            nativeProgressView.setVisibility(View.GONE);
+        }
     }
 
     private int numericDigitFromKeyCode(int keyCode) {
@@ -1940,28 +2096,29 @@ public class GetSmartProviderPlugin extends Plugin {
             if (nativeSeekForwardButton != null) nativeSeekForwardButton.setVisibility(liveControls ? View.GONE : View.VISIBLE);
 
             if (nativePlayPauseButton != null && nativePlayer != null) {
-                nativePlayPauseButton.setText(nativePlayer.isPlaying() ? "Pause" : "Play");
-            }
-
-            if (nativeMuteButton != null && nativePlayer != null) {
-                int percent = Math.round(nativePlayer.getVolume() * 100f);
-                nativeMuteButton.setText(percent == 0 ? "Unmute" : "Mute " + percent + "%");
+                nativePlayPauseButton.setText(nativePlayer.isPlaying() ? "Ⅱ" : "▶");
             }
 
             if (nativeAspectButton != null) {
-                nativeAspectButton.setText(nativeAspectLabel());
+                nativeAspectButton.setText("Aspect Ratio\n" + nativeAspectLabel());
+            }
+
+            if (nativeMuteButton != null) {
+                nativeMuteButton.setText("Playback Speed\n" + nativePlaybackSpeedLabel());
+                nativeMuteButton.setEnabled(!"live".equals(nativePlayerMediaType));
+                nativeMuteButton.setAlpha("live".equals(nativePlayerMediaType) ? 0.45f : 1f);
             }
 
             updateNativeProgressText();
 
             if (nativeAudioButton != null && nativePlayer != null) {
                 int count = countTracks(nativePlayer.getCurrentTracks(), C.TRACK_TYPE_AUDIO);
-                nativeAudioButton.setText(count > 1 ? "Audio (" + count + ")" : "Audio");
+                nativeAudioButton.setText(count > 1 ? "Audio\n" + count + " tracks" : "Audio\nAuto");
             }
 
             if (nativeSubtitleButton != null && nativePlayer != null) {
                 int count = countTracks(nativePlayer.getCurrentTracks(), C.TRACK_TYPE_TEXT);
-                nativeSubtitleButton.setText(count > 0 ? "CC (" + count + ")" : "CC");
+                nativeSubtitleButton.setText(count > 0 ? "Subtitles\nAvailable" : "Subtitles\nOff");
                 nativeSubtitleButton.setEnabled(count > 0);
                 nativeSubtitleButton.setAlpha(count > 0 ? 1f : 0.45f);
             }
@@ -1969,11 +2126,9 @@ public class GetSmartProviderPlugin extends Plugin {
             if (nativeQualityButton != null && nativePlayer != null) {
                 int count = countTracks(nativePlayer.getCurrentTracks(), C.TRACK_TYPE_VIDEO);
                 Format selectedVideo = getSelectedVideoFormat();
-                String qualityLabel = "Quality";
+                String qualityLabel = "Quality\nAuto";
                 if (selectedVideo != null && selectedVideo.height > 0) {
-                    qualityLabel += " " + selectedVideo.height + "p";
-                } else if ("auto".equals(nativeQualityPreference)) {
-                    qualityLabel += " Auto";
+                    qualityLabel = "Quality\n" + selectedVideo.height + "p";
                 }
                 nativeQualityButton.setText(qualityLabel);
                 nativeQualityButton.setEnabled(count > 1);
@@ -2715,6 +2870,9 @@ public class GetSmartProviderPlugin extends Plugin {
         nativeNextProgramView = null;
         nativeStatusView = null;
         nativeProgressView = null;
+        nativeProgressSeekBar = null;
+        nativeProgressStartView = null;
+        nativeProgressEndView = null;
         nativeNumericChannelView = null;
         nativeGuideButton = null;
         nativePreviousButton = null;
@@ -2740,6 +2898,7 @@ public class GetSmartProviderPlugin extends Plugin {
         nativePlayerNextProgram = "";
         nativeOsdVisible = false;
         nativeAspectMode = 0;
+        nativePlaybackSpeed = 1.0f;
         preferredAudioLanguage = "";
         subtitleDefaultMode = "auto";
         preferredSubtitleLanguage = "";
