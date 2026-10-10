@@ -2391,7 +2391,10 @@ public class GetSmartProviderPlugin extends Plugin {
         if (error == null) return "unknown";
         String name = safeString(error.getErrorCodeName()).toUpperCase(Locale.US);
 
-        if (name.contains("NETWORK") || name.contains("HTTP") || name.contains("TIMEOUT")) {
+        if (name.contains("IO_BAD_HTTP_STATUS") || name.contains("ACCESS_DENIED")) {
+            return "source-http";
+        }
+        if (name.contains("NETWORK") || name.contains("TIMEOUT") || name.contains("CONNECTION")) {
             return "network";
         }
         if (name.contains("DECOD") || name.contains("AUDIO_TRACK") || name.contains("VIDEO_FRAME")) {
@@ -2405,9 +2408,6 @@ public class GetSmartProviderPlugin extends Plugin {
         }
         if (name.contains("BEHIND_LIVE_WINDOW")) {
             return "live-window";
-        }
-        if (name.contains("IO_BAD_HTTP_STATUS") || name.contains("ACCESS_DENIED")) {
-            return "source-denied";
         }
         return "unknown";
     }
@@ -2426,8 +2426,8 @@ public class GetSmartProviderPlugin extends Plugin {
                 return "This stream requires DRM handling that is not currently available for this source.";
             case "live-window":
                 return "The live stream moved past the available playback window.";
-            case "source-denied":
-                return "The source rejected or denied the media request.";
+            case "source-http":
+                return "The selected source returned an HTTP error after recovery attempts.";
             case "unknown":
             default:
                 return "Playback stopped after Get Smart exhausted recovery for the selected stream.";
