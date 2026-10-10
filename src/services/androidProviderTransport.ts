@@ -18,7 +18,7 @@ interface NativeProviderPlugin {
   }): Promise<{ status: number; contentType?: string; route?: string; data: unknown }>;
 }
 
-const EXPECTED_TRANSPORT_MARKER = 'GS-NATIVE-XCIPTV-HS4';
+const EXPECTED_TRANSPORT_MARKER = 'GS-NATIVE-XCIPTV-HS5';
 const NativeProvider = registerPlugin<NativeProviderPlugin>('GetSmartProvider');
 
 export class AndroidProviderTransport implements ProviderTransport {
