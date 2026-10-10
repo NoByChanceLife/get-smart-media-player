@@ -184,11 +184,14 @@ export const ServerSettingsModal: React.FC<ServerSettingsModalProps> = ({
               username: xtreamUsername.trim(),
               auth: 1,
               status: (report.meta?.accountStatus as any) || 'Active',
-              exp_date: report.meta?.expiryDate || 'Unlimited',
-              is_trial: '0',
-              active_cons: '0',
+              exp_date: report.meta?.rawExpiryDate || 'null',
+              is_trial: report.meta?.isTrial || '0',
+              active_cons: report.meta?.activeConnections || '0',
               max_connections: report.meta?.maxConnections || '1',
+              created_at: report.meta?.createdAt,
+              allowed_output_formats: report.meta?.allowedOutputFormats,
             },
+            serverInfo: report.meta?.serverInfo,
           };
           const updated = [...profiles, newProfile];
           xtreamService.saveProfiles(updated);
