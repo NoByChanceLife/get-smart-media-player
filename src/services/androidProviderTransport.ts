@@ -47,6 +47,8 @@ export interface NativePlayerCommand {
 export interface NativePlayerError {
   errorCode: number;
   errorCodeName: string;
+  category?: 'network' | 'decoder' | 'format' | 'drm' | 'live-window' | 'source-denied' | 'unknown' | string;
+  userMessage?: string;
   message: string;
 }
 
@@ -107,6 +109,9 @@ export interface NativePlayerDiagnostics {
   healthRating: 'optimal' | 'good' | 'fair' | 'poor';
   diagnosticMessage: string;
   availableLevels: NativePlayerDiagnosticLevel[];
+  customUserAgent?: boolean;
+  refererHeader?: boolean;
+  cookieHeader?: boolean;
 }
 
 interface NativeProviderPlugin {
@@ -121,6 +126,9 @@ interface NativeProviderPlugin {
     qualityPreference?: 'auto' | '1080p' | '720p' | '480p' | 'low';
     maxRetryAttempts?: number;
     recovery?: boolean;
+    userAgent?: string;
+    referer?: string;
+    cookie?: string;
     preferredAudioLanguage?: string;
     subtitleDefaultMode?: 'auto' | 'off' | 'preferred';
     preferredSubtitleLanguage?: string;
@@ -184,7 +192,7 @@ interface NativeProviderPlugin {
   }): Promise<{ status: number; contentType?: string; route?: string; data: unknown }>;
 }
 
-const EXPECTED_TRANSPORT_MARKER = 'GS-NATIVE-XCIPTV-HS14';
+const EXPECTED_TRANSPORT_MARKER = 'GS-NATIVE-XCIPTV-HS15';
 const NativeProvider = registerPlugin<NativeProviderPlugin>('GetSmartProvider');
 
 export class AndroidProviderTransport implements ProviderTransport {
@@ -251,6 +259,9 @@ export async function playNativeAndroidMedia(options: {
   qualityPreference?: 'auto' | '1080p' | '720p' | '480p' | 'low';
   maxRetryAttempts?: number;
   recovery?: boolean;
+  userAgent?: string;
+  referer?: string;
+  cookie?: string;
   preferredAudioLanguage?: string;
   subtitleDefaultMode?: 'auto' | 'off' | 'preferred';
   preferredSubtitleLanguage?: string;
