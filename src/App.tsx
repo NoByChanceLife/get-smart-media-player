@@ -537,7 +537,7 @@ export default function App() {
         <main
           ref={mainContentRef}
           tabIndex={-1}
-          className={`flex-1 w-full mx-auto p-4 sm:p-6 pb-24 md:pb-8 outline-none focus-visible:outline-none ${playbackTarget && isBrowsingDuringPlayback ? 'bg-transparent' : ''}`}
+          className={`flex-1 w-full mx-auto p-3 sm:p-4 lg:p-6 pb-6 outline-none focus-visible:outline-none ${playbackTarget && isBrowsingDuringPlayback ? 'bg-transparent' : ''}`}
         >
           {isLoadingData ? (
             <div className="flex flex-col items-center justify-center py-32 text-center">
@@ -758,7 +758,7 @@ export default function App() {
       />
 
       {/* Mobile Bottom Navigation Bar */}
-      <BottomNavBar currentTab={currentTab} onSelectTab={setCurrentTab} />
+      {/* The unified left rail is the primary navigation on every Android form factor. */}
 
       {/* Offline Toast */}
       <OfflineIndicator />
