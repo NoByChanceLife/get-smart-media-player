@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Film,
   Star,
@@ -38,6 +38,7 @@ export const MoviesView: React.FC<MoviesViewProps> = ({
   const [selectedMovie, setSelectedMovie] = useState<XtreamVodStream | null>(null);
   const movieGridRef = useRef<HTMLDivElement | null>(null);
   const movieViewRef = useRef<HTMLDivElement | null>(null);
+  const movieDialogRef = useRef<HTMLDivElement | null>(null);
 
   const focusNavigationRailFromMedia = () => {
     const rail = document.querySelector<HTMLElement>(
@@ -47,10 +48,7 @@ export const MoviesView: React.FC<MoviesViewProps> = ({
   };
 
   const focusTopBarFromMedia = () => {
-    const target = document.querySelector<HTMLElement>(
-      '[data-tv-topbar] .tv-focus-target, [data-tv-topbar] button:not([disabled]), [data-tv-topbar] select:not([disabled])'
-    );
-    target?.focus();
+    focusNavigationRailFromMedia();
   };
 
   const focusZoneItem = (zone: string, preferredIndex = 0) => {
@@ -191,6 +189,27 @@ export const MoviesView: React.FC<MoviesViewProps> = ({
     cards[next]?.focus();
     cards[next]?.scrollIntoView({ behavior: 'auto', block: 'nearest', inline: 'nearest' });
   };
+
+  useEffect(() => {
+    if (!selectedMovie) return;
+
+    const previousFocus = document.activeElement as HTMLElement | null;
+    const dialog = movieDialogRef.current;
+    const first = dialog?.querySelector<HTMLElement>('[data-movie-primary-action]');
+    requestAnimationFrame(() => first?.focus());
+
+    const handleDialogKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' || event.key === 'Backspace') {
+        event.preventDefault();
+        event.stopPropagation();
+        setSelectedMovie(null);
+        requestAnimationFrame(() => previousFocus?.focus());
+      }
+    };
+
+    window.addEventListener('keydown', handleDialogKey, true);
+    return () => window.removeEventListener('keydown', handleDialogKey, true);
+  }, [selectedMovie]);
 
   const canAccess = parentalControlService.canAccessSection('movies');
   const parentalSettings = parentalControlService.getSettings();
@@ -421,8 +440,8 @@ export const MoviesView: React.FC<MoviesViewProps> = ({
 
       {/* Cinematic Movie Details Modal */}
       {selectedMovie && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md p-4 animate-in fade-in duration-200">
-          <div className="w-full max-w-2xl rounded-xl bg-[#07111d] border border-[#17304a] shadow-2xl overflow-hidden relative">
+        <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/90 backdrop-blur-md p-4 animate-in fade-in duration-200">
+          <div ref={movieDialogRef} className="w-full max-w-2xl max-h-[92vh] rounded-xl bg-[#07111d] border border-[#17304a] shadow-2xl overflow-y-auto relative custom-scrollbar">
             <button
               onClick={() => setSelectedMovie(null)}
               className="absolute top-4 right-4 z-20 p-2 rounded-xl bg-black/60 text-slate-400 hover:text-white backdrop-blur-md transition tv-focus-target"
@@ -467,6 +486,7 @@ export const MoviesView: React.FC<MoviesViewProps> = ({
 
               <div className="flex items-center gap-3 pt-2">
                 <button
+                  data-movie-primary-action
                   onClick={() => {
                     handleMoviePlayRequest(selectedMovie);
                     setSelectedMovie(null);
