@@ -52,6 +52,7 @@ export const TVNavigationRail: React.FC<TVNavigationRailProps> = ({
 }) => {
   const [hovered, setHovered] = useState(false);
   const [remoteOpen, setRemoteOpen] = useState(false);
+  const [touchOpen, setTouchOpen] = useState(false);
   const railRef = useRef<HTMLDivElement | null>(null);
 
   const getFocusableItems = () =>
@@ -78,7 +79,7 @@ export const TVNavigationRail: React.FC<TVNavigationRailProps> = ({
 
   // Expansion is controlled only by the explicit rail state or mouse hover.
   // TV focus must not pin the overlay open after focus is handed to content.
-  const effectiveExpanded = isExpanded || hovered || remoteOpen;
+  const effectiveExpanded = isExpanded || hovered || remoteOpen || touchOpen;
 
   const primaryNavItems: Array<{
     id: NavTab;
@@ -144,11 +145,21 @@ export const TVNavigationRail: React.FC<TVNavigationRailProps> = ({
       onMouseLeave={() => setHovered(false)}
       onFocusCapture={() => setRemoteOpen(true)}
       onKeyDown={handleKeyDown}
-      className={`hidden md:flex flex-col justify-between fixed top-0 left-0 bottom-0 z-[70] bg-[#070b13]/95 backdrop-blur-2xl border-r border-slate-800/80 transition-all duration-300 ease-out select-none shadow-2xl ${
-        effectiveExpanded ? 'w-64' : 'w-[74px]'
+      className={`flex flex-col justify-between fixed top-0 left-0 bottom-0 z-[70] bg-[#070b13]/95 backdrop-blur-2xl border-r border-slate-800/80 transition-all duration-300 ease-out select-none shadow-2xl ${
+        effectiveExpanded ? 'w-64' : 'w-[74px] -translate-x-[74px] md:translate-x-0'
       }`}
       aria-label="Main Navigation"
     >
+      {/* Touch/phone handle: the TV rail remains available below the desktop breakpoint. */}
+      <button
+        type="button"
+        onClick={() => setTouchOpen((open) => !open)}
+        className="md:hidden absolute left-full top-1/2 -translate-y-1/2 w-8 h-16 rounded-r-2xl border border-l-0 border-slate-700/80 bg-[#070b13]/95 text-cyan-300 flex items-center justify-center shadow-xl tv-focus-target"
+        aria-label={touchOpen ? 'Close navigation' : 'Open navigation'}
+        aria-expanded={touchOpen}
+      >
+        {touchOpen ? <ChevronLeft className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
+      </button>
       {/* Top Branding Section */}
       <div className="p-3.5 pb-2">
         <div
