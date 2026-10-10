@@ -922,8 +922,32 @@ public class GetSmartProviderPlugin extends Plugin {
     }
 
     private ExoPlayer createNativeExoPlayer() {
+        DefaultHttpDataSource.Factory httpFactory = new DefaultHttpDataSource.Factory()
+            .setConnectTimeoutMs(20_000)
+            .setReadTimeoutMs(30_000)
+            .setAllowCrossProtocolRedirects(true);
+
+        if (!nativePlaybackUserAgent.isEmpty()) {
+            httpFactory.setUserAgent(nativePlaybackUserAgent);
+        }
+
+        Map<String, String> requestHeaders = new LinkedHashMap<>();
+        if (!nativePlaybackReferer.isEmpty()) {
+            requestHeaders.put("Referer", nativePlaybackReferer);
+        }
+        if (!nativePlaybackCookie.isEmpty()) {
+            requestHeaders.put("Cookie", nativePlaybackCookie);
+        }
+        if (!requestHeaders.isEmpty()) {
+            httpFactory.setDefaultRequestProperties(requestHeaders);
+        }
+
+        DefaultMediaSourceFactory mediaSourceFactory =
+            new DefaultMediaSourceFactory(httpFactory);
+
         ExoPlayer player = new ExoPlayer.Builder(getActivity())
             .setLoadControl(buildNativeLoadControl())
+            .setMediaSourceFactory(mediaSourceFactory)
             .build();
 
         player.setAudioAttributes(
@@ -936,6 +960,25 @@ public class GetSmartProviderPlugin extends Plugin {
         player.addListener(nativePlayerListener);
         nativeBuiltPerformanceMode = nativeEffectivePerformanceMode;
         return player;
+    }
+
+    private MediaItem buildNativeMediaItem(String url) {
+        MediaItem.Builder builder = new MediaItem.Builder().setUri(url);
+        String mimeType = inferNativeMimeType(url);
+        if (!mimeType.isEmpty()) {
+            builder.setMimeType(mimeType);
+        }
+        return builder.build();
+    }
+
+    private String inferNativeMimeType(String url) {
+        String lower = safeString(url).toLowerCase(Locale.US);
+        if (lower.contains(".m3u8")) return MimeTypes.APPLICATION_M3U8;
+        if (lower.contains(".mpd")) return MimeTypes.APPLICATION_MPD;
+        if (lower.matches(".*\\.ts(?:$|[?#]).*")) return MimeTypes.VIDEO_MP2T;
+        if (lower.contains(".mp4") || lower.contains(".m4v")) return MimeTypes.VIDEO_MP4;
+        if (lower.contains(".webm")) return MimeTypes.VIDEO_WEBM;
+        return "";
     }
 
     private DefaultLoadControl buildNativeLoadControl() {
@@ -1556,6 +1599,9 @@ public class GetSmartProviderPlugin extends Plugin {
         diagnostics.put("rebufferCount", nativeRebufferCount);
         diagnostics.put("startupTimeMs", nativeStartupTimeMs >= 0L ? nativeStartupTimeMs : 0L);
         diagnostics.put("protocol", inferNativeProtocol());
+        diagnostics.put("customUserAgent", !nativePlaybackUserAgent.isEmpty());
+        diagnostics.put("refererHeader", !nativePlaybackReferer.isEmpty());
+        diagnostics.put("cookieHeader", !nativePlaybackCookie.isEmpty());
         diagnostics.put("estimatedBandwidthBps", 0);
         diagnostics.put("estimatedBandwidthAvailable", false);
         diagnostics.put("droppedFrames", 0);
@@ -2341,6 +2387,53 @@ public class GetSmartProviderPlugin extends Plugin {
         }
     }
 
+    private String classifyNativePlaybackError(PlaybackException error) {
+        if (error == null) return "unknown";
+        String name = safeString(error.getErrorCodeName()).toUpperCase(Locale.US);
+
+        if (name.contains("NETWORK") || name.contains("HTTP") || name.contains("TIMEOUT")) {
+            return "network";
+        }
+        if (name.contains("DECOD") || name.contains("AUDIO_TRACK") || name.contains("VIDEO_FRAME")) {
+            return "decoder";
+        }
+        if (name.contains("PARSING") || name.contains("CONTAINER") || name.contains("MALFORMED")) {
+            return "format";
+        }
+        if (name.contains("DRM")) {
+            return "drm";
+        }
+        if (name.contains("BEHIND_LIVE_WINDOW")) {
+            return "live-window";
+        }
+        if (name.contains("IO_BAD_HTTP_STATUS") || name.contains("ACCESS_DENIED")) {
+            return "source-denied";
+        }
+        return "unknown";
+    }
+
+    private String nativePlaybackErrorUserMessage(PlaybackException error) {
+        String category = classifyNativePlaybackError(error);
+
+        switch (category) {
+            case "network":
+                return "The selected stream could not be reached after recovery attempts.";
+            case "decoder":
+                return "This device could not decode the selected stream with the current player engine.";
+            case "format":
+                return "The selected stream format or container could not be parsed reliably.";
+            case "drm":
+                return "This stream requires DRM handling that is not currently available for this source.";
+            case "live-window":
+                return "The live stream moved past the available playback window.";
+            case "source-denied":
+                return "The source rejected or denied the media request.";
+            case "unknown":
+            default:
+                return "Playback stopped after Get Smart exhausted recovery for the selected stream.";
+        }
+    }
+
     private String safePlaybackErrorMessage(PlaybackException error) {
         if (error == null) return "Playback error.";
         String message = error.getMessage();
@@ -2418,6 +2511,9 @@ public class GetSmartProviderPlugin extends Plugin {
         nativeBuiltPerformanceMode = "";
         nativeQualityPreference = "auto";
         nativeMaxRetryAttempts = 3;
+        nativePlaybackUserAgent = "";
+        nativePlaybackReferer = "";
+        nativePlaybackCookie = "";
         nativeRecoveryAttempt = 0;
         nativeRecoveryStage = 0;
         nativeRebuildAttempted = false;
