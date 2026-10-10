@@ -71,6 +71,43 @@ export interface NativePlayerTracks {
   textTracks: NativePlayerTrack[];
 }
 
+export interface NativePlayerDiagnosticLevel {
+  id: number;
+  name: string;
+  width: number;
+  height: number;
+  bitrate: number;
+  selected?: boolean;
+  supported?: boolean;
+}
+
+export interface NativePlayerDiagnostics {
+  active: boolean;
+  state: 'idle' | 'buffering' | 'ready' | 'ended';
+  performanceMode: 'auto' | 'fast' | 'balanced' | 'stable';
+  effectivePerformanceMode: 'fast' | 'balanced' | 'stable';
+  qualityPreference: 'auto' | '1080p' | '720p' | '480p' | 'low';
+  maxRetryAttempts: number;
+  recoveryAttempt: number;
+  recoveryStage: number;
+  rebufferCount: number;
+  startupTimeMs: number;
+  protocol: string;
+  estimatedBandwidthBps: number;
+  estimatedBandwidthAvailable: boolean;
+  droppedFrames: number;
+  totalFrames: number;
+  droppedFramesAvailable: boolean;
+  bufferedSeconds: number;
+  bitrateBps: number;
+  width: number;
+  height: number;
+  resolution: string;
+  healthRating: 'optimal' | 'good' | 'fair' | 'poor';
+  diagnosticMessage: string;
+  availableLevels: NativePlayerDiagnosticLevel[];
+}
+
 interface NativeProviderPlugin {
   playMedia(options: {
     url: string;
@@ -79,6 +116,10 @@ interface NativeProviderPlugin {
     channelNumber?: string;
     currentProgram?: string;
     nextProgram?: string;
+    performanceMode?: 'auto' | 'fast' | 'balanced' | 'stable';
+    qualityPreference?: 'auto' | '1080p' | '720p' | '480p' | 'low';
+    maxRetryAttempts?: number;
+    recovery?: boolean;
     preferredAudioLanguage?: string;
     subtitleDefaultMode?: 'auto' | 'off' | 'preferred';
     preferredSubtitleLanguage?: string;
@@ -94,6 +135,19 @@ interface NativeProviderPlugin {
     subtitleDefaultMode?: string;
     preferredSubtitleLanguage?: string;
   }>;
+  setPerformanceConfig(options: {
+    performanceMode?: 'auto' | 'fast' | 'balanced' | 'stable';
+    qualityPreference?: 'auto' | '1080p' | '720p' | '480p' | 'low';
+    maxRetryAttempts?: number;
+  }): Promise<{
+    applied: boolean;
+    reason?: string;
+    performanceMode?: string;
+    effectivePerformanceMode?: string;
+    qualityPreference?: string;
+    maxRetryAttempts?: number;
+  }>;
+  getPlayerDiagnostics(): Promise<NativePlayerDiagnostics>;
   updatePlayerMetadata(options: {
     title?: string;
     channelNumber?: string;
@@ -119,6 +173,7 @@ interface NativeProviderPlugin {
   addListener(eventName: 'playerCommand', listenerFunc: (event: NativePlayerCommand) => void): Promise<PluginListenerHandle>;
   addListener(eventName: 'playerError', listenerFunc: (event: NativePlayerError) => void): Promise<PluginListenerHandle>;
   addListener(eventName: 'playerTracks', listenerFunc: (event: NativePlayerTracks) => void): Promise<PluginListenerHandle>;
+  addListener(eventName: 'playerDiagnostics', listenerFunc: (event: NativePlayerDiagnostics) => void): Promise<PluginListenerHandle>;
   getTransportInfo(): Promise<NativeTransportInfo>;
   requestJson(options: {
     url: string;
@@ -128,7 +183,7 @@ interface NativeProviderPlugin {
   }): Promise<{ status: number; contentType?: string; route?: string; data: unknown }>;
 }
 
-const EXPECTED_TRANSPORT_MARKER = 'GS-NATIVE-XCIPTV-HS13';
+const EXPECTED_TRANSPORT_MARKER = 'GS-NATIVE-XCIPTV-HS14';
 const NativeProvider = registerPlugin<NativeProviderPlugin>('GetSmartProvider');
 
 export class AndroidProviderTransport implements ProviderTransport {
@@ -191,6 +246,10 @@ export async function playNativeAndroidMedia(options: {
   channelNumber?: string;
   currentProgram?: string;
   nextProgram?: string;
+  performanceMode?: 'auto' | 'fast' | 'balanced' | 'stable';
+  qualityPreference?: 'auto' | '1080p' | '720p' | '480p' | 'low';
+  maxRetryAttempts?: number;
+  recovery?: boolean;
   preferredAudioLanguage?: string;
   subtitleDefaultMode?: 'auto' | 'off' | 'preferred';
   preferredSubtitleLanguage?: string;
@@ -206,6 +265,20 @@ export async function setNativeAndroidTrackPreferences(options: {
 }): Promise<void> {
   if (!isNativeAndroidRuntime()) return;
   await NativeProvider.setTrackPreferences(options);
+}
+
+export async function setNativeAndroidPerformanceConfig(options: {
+  performanceMode?: 'auto' | 'fast' | 'balanced' | 'stable';
+  qualityPreference?: 'auto' | '1080p' | '720p' | '480p' | 'low';
+  maxRetryAttempts?: number;
+}): Promise<void> {
+  if (!isNativeAndroidRuntime()) return;
+  await NativeProvider.setPerformanceConfig(options);
+}
+
+export async function getNativeAndroidPlayerDiagnostics(): Promise<NativePlayerDiagnostics | null> {
+  if (!isNativeAndroidRuntime()) return null;
+  return NativeProvider.getPlayerDiagnostics();
 }
 
 export async function updateNativeAndroidPlayerMetadata(options: {
@@ -277,6 +350,13 @@ export function addNativeAndroidPlayerTracksListener(
 ): Promise<PluginListenerHandle> | null {
   if (!isNativeAndroidRuntime()) return null;
   return NativeProvider.addListener('playerTracks', listener);
+}
+
+export function addNativeAndroidPlayerDiagnosticsListener(
+  listener: (event: NativePlayerDiagnostics) => void
+): Promise<PluginListenerHandle> | null {
+  if (!isNativeAndroidRuntime()) return null;
+  return NativeProvider.addListener('playerDiagnostics', listener);
 }
 
 export async function stopNativeAndroidMedia(): Promise<void> {
