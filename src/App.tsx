@@ -500,8 +500,10 @@ export default function App() {
 
       {/* Main Layout Container */}
       <div
-        className={`${playbackTarget && !isBrowsingDuringPlayback && !isFloatingPiP ? 'invisible pointer-events-none' : ''} flex-1 flex flex-col transition-all duration-300 ${
-          isRailExpanded ? 'ml-64' : 'ml-[74px]'
+        className={`${playbackTarget && !isBrowsingDuringPlayback && !isFloatingPiP ? 'invisible pointer-events-none' : ''} flex-1 min-w-0 flex flex-col overflow-x-hidden transition-all duration-300 ${
+          isRailExpanded
+            ? 'ml-64 w-[calc(100%-256px)]'
+            : 'ml-[74px] w-[calc(100%-74px)]'
         } ${playbackTarget && isBrowsingDuringPlayback ? 'relative z-[55] bg-transparent' : ''}`}
       >
         {/* The persistent left rail is the single app navigation surface. */}
@@ -656,9 +658,13 @@ export default function App() {
           allLiveStreams={allLiveStreams.length > 0 ? allLiveStreams : liveStreams}
           onSelectLiveStream={handlePlayLiveStream}
           onOpenPerformanceSettings={() => setIsPerformanceModalOpen(true)}
+          onOpenPlaylist={() => {
+            setPlaybackPresentation('guide');
+          }}
           onOpenGuide={() => {
             setCurrentTab('live');
-            setPlaybackPresentation('guide');
+            setPlaybackPresentation('browsing');
+            requestAnimationFrame(() => requestAnimationFrame(() => focusFirstContentControl()));
           }}
           isVisuallyHidden={playbackPresentation !== 'watching'}
         />
