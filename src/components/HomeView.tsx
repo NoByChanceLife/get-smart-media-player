@@ -168,7 +168,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
     <div ref={homeRef} onKeyDownCapture={handleTVNavigation} className={`gs-full-canvas space-y-8 pb-12 animate-in fade-in duration-300 ${isPlaybackBackdrop ? 'watching-glass-home' : ''}`}>
       {/* Hero Spotlight Banner */}
       {featuredItem && (
-        <section className="relative w-full rounded-3xl overflow-hidden bg-gradient-to-t from-[#06090f] via-slate-900/60 to-slate-950/40 border border-slate-800/80 shadow-2xl">
+        <section className="relative w-full rounded-xl overflow-hidden bg-gradient-to-t from-[#040b14] via-[#081523]/72 to-[#07111d]/55 border border-[#17304a] shadow-[0_18px_42px_rgba(0,0,0,.30)]">
           <div className="absolute inset-0 bg-gradient-to-r from-[#06090f] via-[#06090f]/75 to-transparent z-10" />
 
           {/* Background Ambient Backdrop */}
@@ -182,12 +182,12 @@ export const HomeView: React.FC<HomeViewProps> = ({
           />
 
           <div className="relative z-20 p-6 sm:p-10 lg:p-12 max-w-2xl">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-950/80 border border-cyan-500/40 text-cyan-300 text-xs font-bold mb-4 backdrop-blur-md">
-              <Radio className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
+            <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-[#0a2d57]/70 border border-[#1b5f9b] text-[#79c4ff] text-[10px] font-bold mb-3 backdrop-blur-md uppercase tracking-[0.12em]">
+              <Radio className="w-3.5 h-3.5 text-[#4baeff] animate-pulse" />
               <span>Get Smart Spotlight</span>
             </div>
 
-            <h1 className="text-2xl sm:text-4xl lg:text-5xl font-extrabold text-white tracking-tight font-heading leading-tight drop-shadow-md">
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white tracking-tight font-heading leading-tight drop-shadow-md">
               {featuredItem.name}
             </h1>
 
@@ -206,7 +206,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                     onPlayLive(featuredItem);
                   }
                 }}
-                data-tv-item tabIndex={0} className="px-6 py-3 rounded-2xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-sm flex items-center gap-2.5 shadow-xl shadow-cyan-500/30 transition-all tv-focus-target active:scale-95"
+                data-tv-item tabIndex={0} className="px-5 py-2.5 rounded-lg bg-[#0b63f6] hover:bg-[#1677ff] text-white font-semibold text-[12px] flex items-center gap-2 shadow-[0_8px_18px_rgba(0,70,180,.28)] transition-all tv-focus-target active:scale-95"
               >
                 <Play className="w-4 h-4 fill-slate-950" />
                 <span>Watch Live Now</span>
@@ -214,9 +214,9 @@ export const HomeView: React.FC<HomeViewProps> = ({
 
               <button
                 onClick={() => onNavigateTab('live')}
-                data-tv-item tabIndex={0} className="px-5 py-3 rounded-2xl bg-slate-900/80 hover:bg-slate-800 text-slate-200 font-semibold text-sm border border-slate-700/80 backdrop-blur-md transition-all tv-focus-target active:scale-95 flex items-center gap-2"
+                data-tv-item tabIndex={0} className="px-4 py-2.5 rounded-lg bg-[#091522]/90 hover:bg-[#0d1d2f] text-[#c7d4df] font-medium text-[12px] border border-[#23415d] backdrop-blur-md transition-all tv-focus-target active:scale-95 flex items-center gap-2"
               >
-                <Tv className="w-4 h-4 text-cyan-400" />
+                <Tv className="w-4 h-4 text-[#4baeff]" />
                 <span>Browse All Channels</span>
               </button>
             </div>
@@ -229,14 +229,14 @@ export const HomeView: React.FC<HomeViewProps> = ({
         <section className="space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
-              <RotateCcw className="w-5 h-5 text-cyan-400" />
+              <RotateCcw className="w-5 h-5 text-[#4baeff]" />
               <h2 className="text-lg sm:text-xl font-bold text-white tracking-tight font-heading">
                 Continue Watching
               </h2>
             </div>
             <button
               onClick={() => onNavigateTab('favorites')}
-              data-tv-item className="text-xs font-semibold text-cyan-300 hover:text-white flex items-center gap-1 group px-3 py-2 rounded-xl border border-transparent tv-focus-target"
+              data-tv-item className="text-xs font-semibold text-[#78c1ff] hover:text-white flex items-center gap-1 group px-3 py-2 rounded-xl border border-transparent tv-focus-target"
             >
               <span>View History</span>
               <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
@@ -251,9 +251,9 @@ export const HomeView: React.FC<HomeViewProps> = ({
                 tabIndex={0}
                 role="button"
                 onClick={() => onPlayHistoryItem(item)}
-                data-tv-item tabIndex={0} className="group relative bg-[#0e1422] rounded-2xl border border-slate-800/80 hover:border-cyan-500/50 p-3 transition-all duration-200 cursor-pointer shadow-lg hover:shadow-cyan-950/40 tv-focus-target"
+                data-tv-item tabIndex={0} className="group relative bg-[#091522] rounded-lg border border-[#17304a] hover:border-[#2d87ff]/70 p-3 transition-all duration-200 cursor-pointer shadow-lg hover:shadow-cyan-950/40 tv-focus-target"
               >
-                <div className="relative aspect-video rounded-xl bg-slate-900 overflow-hidden mb-2.5 flex items-center justify-center">
+                <div className="relative aspect-video rounded-lg bg-[#0a1724] overflow-hidden mb-2.5 flex items-center justify-center">
                   {item.icon ? (
                     <img
                       src={item.icon}
@@ -287,7 +287,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                   )}
                 </div>
 
-                <h3 className="text-xs font-bold text-white truncate group-hover:text-cyan-300 transition-colors">
+                <h3 className="text-xs font-bold text-white truncate group-hover:text-[#78c1ff] transition-colors">
                   {item.title}
                 </h3>
                 {item.subtitle && (
@@ -311,7 +311,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
             </div>
             <button
               onClick={() => onNavigateTab('favorites')}
-              data-tv-item className="text-xs font-semibold text-cyan-300 hover:text-white flex items-center gap-1 group px-3 py-2 rounded-xl border border-transparent tv-focus-target"
+              data-tv-item className="text-xs font-semibold text-[#78c1ff] hover:text-white flex items-center gap-1 group px-3 py-2 rounded-xl border border-transparent tv-focus-target"
             >
               <span>View All</span>
               <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
@@ -332,9 +332,9 @@ export const HomeView: React.FC<HomeViewProps> = ({
                     onPlayLive(stream);
                   }
                 }}
-                data-tv-item tabIndex={0} className="group relative bg-[#0e1422] rounded-2xl border border-slate-800/80 hover:border-amber-400/50 p-3.5 flex flex-col items-center text-center transition-all cursor-pointer shadow-md tv-focus-target"
+                data-tv-item tabIndex={0} className="group relative bg-[#091522] rounded-lg border border-[#17304a] hover:border-amber-400/50 p-3.5 flex flex-col items-center text-center transition-all cursor-pointer shadow-md tv-focus-target"
               >
-                <div className="w-14 h-14 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center p-2 mb-2 group-hover:border-amber-400/40 transition">
+                <div className="w-14 h-14 rounded-lg bg-[#0a1724] border border-[#17304a] flex items-center justify-center p-2 mb-2 group-hover:border-amber-400/40 transition">
                   {stream.stream_icon ? (
                     <img
                       src={stream.stream_icon}
@@ -363,14 +363,14 @@ export const HomeView: React.FC<HomeViewProps> = ({
         <section className="space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
-              <Clock className="w-5 h-5 text-cyan-400" />
+              <Clock className="w-5 h-5 text-[#4baeff]" />
               <h2 className="text-lg sm:text-xl font-bold text-white tracking-tight font-heading">
                 Recent Channels
               </h2>
             </div>
             <button
               onClick={() => onNavigateTab('live')}
-              data-tv-item className="text-xs font-semibold text-cyan-300 hover:text-white flex items-center gap-1 group px-3 py-2 rounded-xl border border-transparent tv-focus-target"
+              data-tv-item className="text-xs font-semibold text-[#78c1ff] hover:text-white flex items-center gap-1 group px-3 py-2 rounded-xl border border-transparent tv-focus-target"
             >
               <span>Channel Guide</span>
               <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
@@ -391,9 +391,9 @@ export const HomeView: React.FC<HomeViewProps> = ({
                     onPlayLive(stream);
                   }
                 }}
-                data-tv-item tabIndex={0} className="group flex items-center gap-3.5 p-3 rounded-2xl bg-[#0e1422] border border-slate-800/80 hover:border-cyan-500/50 cursor-pointer transition shadow-md tv-focus-target"
+                data-tv-item tabIndex={0} className="group flex items-center gap-3.5 p-3 rounded-2xl bg-[#0e1422] border border-slate-800/80 hover:border-[#2d87ff]/70 cursor-pointer transition shadow-md tv-focus-target"
               >
-                <div className="w-12 h-12 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center p-1.5 shrink-0">
+                <div className="w-12 h-12 rounded-lg bg-[#0a1724] border border-[#17304a] flex items-center justify-center p-1.5 shrink-0">
                   {stream.stream_icon ? (
                     <img
                       src={stream.stream_icon}
@@ -401,12 +401,12 @@ export const HomeView: React.FC<HomeViewProps> = ({
                       className="max-h-full max-w-full object-contain"
                     />
                   ) : (
-                    <Tv className="w-5 h-5 text-cyan-400" />
+                    <Tv className="w-5 h-5 text-[#4baeff]" />
                   )}
                 </div>
 
                 <div className="flex-1 min-w-0">
-                  <div className="text-xs font-bold text-white truncate group-hover:text-cyan-300 transition">
+                  <div className="text-xs font-bold text-white truncate group-hover:text-[#78c1ff] transition">
                     {stream.name}
                   </div>
                   <div className="text-[11px] text-slate-400 truncate mt-0.5">
@@ -414,7 +414,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                   </div>
                 </div>
 
-                <div className="w-8 h-8 rounded-xl bg-cyan-600/10 text-cyan-400 group-hover:bg-cyan-500 group-hover:text-slate-950 flex items-center justify-center shrink-0 transition">
+                <div className="w-8 h-8 rounded-xl bg-[#0b63f6]/12 text-[#4baeff] group-hover:bg-[#0b63f6] group-hover:text-white flex items-center justify-center shrink-0 transition">
                   <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
                 </div>
               </div>
@@ -428,14 +428,14 @@ export const HomeView: React.FC<HomeViewProps> = ({
         <section className="space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
-              <Film className="w-5 h-5 text-cyan-400" />
+              <Film className="w-5 h-5 text-[#4baeff]" />
               <h2 className="text-lg sm:text-xl font-bold text-white tracking-tight font-heading">
                 Recently Added Movies
               </h2>
             </div>
             <button
               onClick={() => onNavigateTab('movies')}
-              data-tv-item className="text-xs font-semibold text-cyan-300 hover:text-white flex items-center gap-1 group px-3 py-2 rounded-xl border border-transparent tv-focus-target"
+              data-tv-item className="text-xs font-semibold text-[#78c1ff] hover:text-white flex items-center gap-1 group px-3 py-2 rounded-xl border border-transparent tv-focus-target"
             >
               <span>View Movies</span>
               <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
@@ -458,7 +458,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                       onPlayMovie(movie);
                     }
                   }}
-                  data-tv-item tabIndex={0} className="group relative bg-[#0e1422] rounded-2xl border border-slate-800/80 hover:border-cyan-500/50 overflow-hidden cursor-pointer transition shadow-md tv-focus-target"
+                  data-tv-item tabIndex={0} className="group relative bg-[#091522] rounded-lg border border-[#17304a] hover:border-[#2d87ff]/70 overflow-hidden cursor-pointer transition shadow-md tv-focus-target"
                 >
                   <div className="relative aspect-[2/3] bg-slate-900 overflow-hidden">
                     {movie.stream_icon ? (
@@ -490,7 +490,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                   </div>
 
                   <div className="p-3">
-                    <h3 className="text-xs font-bold text-white truncate group-hover:text-cyan-300 transition">
+                    <h3 className="text-xs font-bold text-white truncate group-hover:text-[#78c1ff] transition">
                       {movie.name}
                     </h3>
                     <div className="flex items-center gap-2 mt-1 text-[10px] text-slate-400">
@@ -510,14 +510,14 @@ export const HomeView: React.FC<HomeViewProps> = ({
         <section className="space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
-              <Layers className="w-5 h-5 text-cyan-400" />
+              <Layers className="w-5 h-5 text-[#4baeff]" />
               <h2 className="text-lg sm:text-xl font-bold text-white tracking-tight font-heading">
                 Recently Added TV Series
               </h2>
             </div>
             <button
               onClick={() => onNavigateTab('series')}
-              data-tv-item className="text-xs font-semibold text-cyan-300 hover:text-white flex items-center gap-1 group px-3 py-2 rounded-xl border border-transparent tv-focus-target"
+              data-tv-item className="text-xs font-semibold text-[#78c1ff] hover:text-white flex items-center gap-1 group px-3 py-2 rounded-xl border border-transparent tv-focus-target"
             >
               <span>View Series</span>
               <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
@@ -532,7 +532,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                 tabIndex={0}
                 role="button"
                 onClick={() => onNavigateTab('series')}
-                data-tv-item tabIndex={0} className="group relative bg-[#0e1422] rounded-2xl border border-slate-800/80 hover:border-cyan-500/50 overflow-hidden cursor-pointer transition shadow-md tv-focus-target"
+                data-tv-item tabIndex={0} className="group relative bg-[#091522] rounded-lg border border-[#17304a] hover:border-[#2d87ff]/70 overflow-hidden cursor-pointer transition shadow-md tv-focus-target"
               >
                 <div className="relative aspect-[2/3] bg-slate-900 overflow-hidden">
                   {series.cover ? (
@@ -557,7 +557,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                 </div>
 
                 <div className="p-3">
-                  <h3 className="text-xs font-bold text-white truncate group-hover:text-cyan-300 transition">
+                  <h3 className="text-xs font-bold text-white truncate group-hover:text-[#78c1ff] transition">
                     {series.name}
                   </h3>
                   <div className="flex items-center gap-2 mt-1 text-[10px] text-slate-400">
@@ -572,9 +572,9 @@ export const HomeView: React.FC<HomeViewProps> = ({
       )}
 
       {/* Active Servers Card (Intelligently surfaced) */}
-      <section className="p-5 sm:p-6 rounded-3xl bg-[#0a0f1b] border border-slate-800/80 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-xl">
+      <section className="p-5 sm:p-6 rounded-xl bg-[#07111d] border border-[#17304a] flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-xl">
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 shrink-0">
+          <div className="w-12 h-12 rounded-lg bg-[#0b63f6]/10 border border-[#2d87ff]/35 flex items-center justify-center text-[#4baeff] shrink-0">
             <Server className="w-6 h-6" />
           </div>
           <div>
@@ -594,7 +594,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
 
         <button
           onClick={onOpenConnections}
-          data-tv-item tabIndex={0} className="px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-xs font-bold text-cyan-300 hover:text-cyan-200 transition tv-focus-target active:scale-95 flex items-center gap-2 shrink-0"
+          data-tv-item tabIndex={0} className="px-5 py-2.5 rounded-lg bg-[#091522] hover:bg-[#0d1d2f] border border-[#23415d] text-xs font-bold text-[#78c1ff] hover:text-cyan-200 transition tv-focus-target active:scale-95 flex items-center gap-2 shrink-0"
         >
           <span>Manage Connections</span>
           <ChevronRight className="w-4 h-4" />
