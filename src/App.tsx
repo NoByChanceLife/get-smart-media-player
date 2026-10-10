@@ -535,6 +535,9 @@ export default function App() {
                   liveStreams={liveStreams}
                   movies={vodStreams}
                   seriesList={seriesList}
+                  liveCategories={liveCategories}
+                  vodCategories={vodCategories}
+                  seriesCategories={seriesCategories}
                   activeProfiles={activeProfiles}
                   userProfile={userProfile}
                   onPlayLive={handlePlayLiveStream}
@@ -606,6 +609,9 @@ export default function App() {
                   liveStreams={liveStreams}
                   movies={vodStreams}
                   seriesList={seriesList}
+                  liveCategories={liveCategories}
+                  vodCategories={vodCategories}
+                  seriesCategories={seriesCategories}
                   onPlayLive={handlePlayLiveStream}
                   onPlayMovie={handlePlayMovie}
                   onSelectSeries={(series) => {
