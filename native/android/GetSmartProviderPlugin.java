@@ -15,7 +15,15 @@ import android.net.ProxyInfo;
 import android.security.keystore.KeyGenParameterSpec;
 import android.security.keystore.KeyProperties;
 import android.util.Base64;
-import android.content.Intent;
+import android.view.KeyEvent;
+import android.view.View;
+import android.view.ViewGroup;
+import android.view.Window;
+import android.widget.FrameLayout;
+
+import androidx.media3.common.MediaItem;
+import androidx.media3.exoplayer.ExoPlayer;
+import androidx.media3.ui.PlayerView;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -65,7 +73,7 @@ public class GetSmartProviderPlugin extends Plugin {
     private static final int DIRECT_ADDRESS_CONNECT_TIMEOUT_MS = 6_000;
     private static final int NETWORK_ROUTE_CONNECT_TIMEOUT_MS = 8_000;
     private static final int MAX_REDIRECTS = 5;
-    private static final String TRANSPORT_BUILD = "GS-NATIVE-XCIPTV-HS8";
+    private static final String TRANSPORT_BUILD = "GS-NATIVE-XCIPTV-HS9";
 
     private static final String CREDENTIAL_PREFS = "getsmart_secure_credentials";
     private static final String CREDENTIAL_DRAFT_KEY = "xtream_draft_v1";
@@ -262,6 +270,10 @@ public class GetSmartProviderPlugin extends Plugin {
         );
     }
 
+    private ExoPlayer nativePlayer;
+    private PlayerView nativePlayerView;
+    private FrameLayout nativePlayerOverlay;
+
     @PluginMethod
     public void playMedia(PluginCall call) {
         final String rawUrl = call.getString("url");
@@ -270,44 +282,104 @@ public class GetSmartProviderPlugin extends Plugin {
             return;
         }
 
+        final URL validated;
         try {
-            URL validated = validateHttpUrl(rawUrl);
-            Intent intent = new Intent(getContext(), NativePlayerActivity.class);
-            intent.putExtra(NativePlayerActivity.EXTRA_URL, validated.toString());
-            intent.putExtra(NativePlayerActivity.EXTRA_TITLE, safeString(call.getString("title")));
-
-            String previousUrl = call.getString("previousUrl");
-            if (previousUrl != null && !previousUrl.trim().isEmpty()) {
-                intent.putExtra(
-                    NativePlayerActivity.EXTRA_PREV_URL,
-                    validateHttpUrl(previousUrl).toString()
-                );
-            }
-
-            String nextUrl = call.getString("nextUrl");
-            if (nextUrl != null && !nextUrl.trim().isEmpty()) {
-                intent.putExtra(
-                    NativePlayerActivity.EXTRA_NEXT_URL,
-                    validateHttpUrl(nextUrl).toString()
-                );
-            }
-
-            getActivity().startActivity(intent);
-
-            JSObject result = new JSObject();
-            result.put("started", true);
-            result.put("engine", "androidx-media3-exoplayer");
-            call.resolve(result);
+            validated = validateHttpUrl(rawUrl);
         } catch (Exception error) {
-            call.reject("No compatible Android media player could open this stream.");
+            call.reject("Invalid media URL.");
+            return;
         }
+
+        if (getActivity() == null) {
+            call.reject("Android player activity is unavailable.");
+            return;
+        }
+
+        getActivity().runOnUiThread(() -> {
+            try {
+                releaseNativePlayer();
+
+                nativePlayer = new ExoPlayer.Builder(getActivity()).build();
+                nativePlayerView = new PlayerView(getActivity());
+                nativePlayerView.setUseController(true);
+                nativePlayerView.setPlayer(nativePlayer);
+                nativePlayerView.setFocusable(true);
+                nativePlayerView.setFocusableInTouchMode(true);
+                nativePlayerView.setBackgroundColor(android.graphics.Color.BLACK);
+
+                nativePlayerOverlay = new FrameLayout(getActivity());
+                nativePlayerOverlay.setBackgroundColor(android.graphics.Color.BLACK);
+                nativePlayerOverlay.addView(
+                    nativePlayerView,
+                    new FrameLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.MATCH_PARENT
+                    )
+                );
+
+                Window window = getActivity().getWindow();
+                ViewGroup decor = (ViewGroup) window.getDecorView();
+                decor.addView(
+                    nativePlayerOverlay,
+                    new ViewGroup.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.MATCH_PARENT
+                    )
+                );
+
+                nativePlayerView.setOnKeyListener((view, keyCode, event) -> {
+                    if (event.getAction() != KeyEvent.ACTION_DOWN) return false;
+                    if (keyCode == KeyEvent.KEYCODE_BACK || keyCode == KeyEvent.KEYCODE_MEDIA_STOP) {
+                        releaseNativePlayer();
+                        return true;
+                    }
+                    return false;
+                });
+                nativePlayerView.requestFocus();
+
+                nativePlayer.setMediaItem(MediaItem.fromUri(validated.toString()));
+                nativePlayer.prepare();
+                nativePlayer.play();
+
+                JSObject result = new JSObject();
+                result.put("started", true);
+                result.put("engine", "androidx-media3-exoplayer-overlay");
+                call.resolve(result);
+            } catch (Exception error) {
+                releaseNativePlayer();
+                call.reject("Get Smart native player could not start: " + error.getClass().getSimpleName());
+            }
+        });
     }
 
     @PluginMethod
     public void stopMedia(PluginCall call) {
-        JSObject result = new JSObject();
-        result.put("stopped", true);
-        call.resolve(result);
+        if (getActivity() == null) {
+            call.resolve(new JSObject().put("stopped", true));
+            return;
+        }
+        getActivity().runOnUiThread(() -> {
+            releaseNativePlayer();
+            JSObject result = new JSObject();
+            result.put("stopped", true);
+            call.resolve(result);
+        });
+    }
+
+    private void releaseNativePlayer() {
+        if (nativePlayerView != null) {
+            nativePlayerView.setPlayer(null);
+        }
+        if (nativePlayer != null) {
+            nativePlayer.release();
+            nativePlayer = null;
+        }
+        if (nativePlayerOverlay != null) {
+            ViewGroup parent = (ViewGroup) nativePlayerOverlay.getParent();
+            if (parent != null) parent.removeView(nativePlayerOverlay);
+            nativePlayerOverlay = null;
+        }
+        nativePlayerView = null;
     }
 
     @PluginMethod
