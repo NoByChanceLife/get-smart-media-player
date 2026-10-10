@@ -21,6 +21,7 @@ import android.view.ViewGroup;
 import android.view.Window;
 import android.widget.FrameLayout;
 
+import androidx.media3.common.AudioAttributes;
 import androidx.media3.common.C;
 import androidx.media3.common.MediaItem;
 import androidx.media3.common.PlaybackException;
@@ -310,7 +311,7 @@ public class GetSmartProviderPlugin extends Plugin {
         public void onPlayerError(PlaybackException error) {
             JSObject payload = new JSObject();
             payload.put("errorCode", error.errorCode);
-            payload.put("errorCodeName", PlaybackException.getErrorCodeName(error.errorCode));
+            payload.put("errorCodeName", error.getErrorCodeName());
             payload.put("message", safePlaybackErrorMessage(error));
             notifyListeners("playerError", payload);
             emitPlayerState("error");
@@ -490,6 +491,13 @@ public class GetSmartProviderPlugin extends Plugin {
         }
 
         nativePlayer = new ExoPlayer.Builder(getActivity()).build();
+        nativePlayer.setAudioAttributes(
+            new AudioAttributes.Builder()
+                .setUsage(C.USAGE_MEDIA)
+                .setContentType(C.AUDIO_CONTENT_TYPE_MOVIE)
+                .build(),
+            true
+        );
         nativePlayer.addListener(nativePlayerListener);
 
         nativePlayerView = new PlayerView(getActivity());
@@ -500,6 +508,7 @@ public class GetSmartProviderPlugin extends Plugin {
         nativePlayerView.setFocusable(true);
         nativePlayerView.setFocusableInTouchMode(true);
         nativePlayerView.setBackgroundColor(android.graphics.Color.BLACK);
+        nativePlayerView.setKeepScreenOn(true);
 
         nativePlayerOverlay = new FrameLayout(getActivity());
         nativePlayerOverlay.setBackgroundColor(android.graphics.Color.BLACK);
