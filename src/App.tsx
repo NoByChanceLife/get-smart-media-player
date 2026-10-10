@@ -76,10 +76,11 @@ export default function App() {
   // Playback presentation is separate from playback ownership. Browsing hides
   // the fullscreen surface without destroying the active player session.
   // Exactly one playback presentation mode can be active at a time.
-  // watching = full video, guide = lightweight guide only, browsing = app shell over video.
-  const [playbackPresentation, setPlaybackPresentation] = useState<'watching' | 'guide' | 'browsing'>('watching');
+  // Exactly one foreground owner: the native video surface OR a WebView overlay.
+  // The native Media3 session continues playing while a WebView surface is open.
+  const [playbackPresentation, setPlaybackPresentation] = useState<'watching' | 'playlist' | 'settings' | 'browsing'>('watching');
   const isBrowsingDuringPlayback = playbackPresentation === 'browsing';
-  const isWatchingGuideOpen = playbackPresentation === 'guide';
+  const isWatchingGuideOpen = playbackPresentation === 'playlist';
   const [isLoadingData, setIsLoadingData] = useState(true);
 
   const mainContentRef = useRef<HTMLDivElement | null>(null);
@@ -361,7 +362,9 @@ export default function App() {
       // Dialog dismiss on app Back
       if (isAppBack) {
         if (isPerformanceModalOpen) {
+          e.preventDefault();
           setIsPerformanceModalOpen(false);
+          if (playbackPresentation === 'settings') setPlaybackPresentation('watching');
           return;
         }
         if (isSettingsOpen) {
@@ -621,7 +624,7 @@ export default function App() {
       {playbackTarget?.type === 'live' && isWatchingGuideOpen && !isFloatingPiP && (
         <WatchingGuideOverlay
           categories={liveCategories}
-          streams={liveStreams}
+          streams={allLiveStreams.length > 0 ? allLiveStreams : liveStreams}
           currentStream={playbackTarget.stream}
           onPlayStream={handlePlayLiveStream}
           onClose={() => {
@@ -657,9 +660,14 @@ export default function App() {
           onLaunchDualPiP={handleLaunchDualPiP}
           allLiveStreams={allLiveStreams.length > 0 ? allLiveStreams : liveStreams}
           onSelectLiveStream={handlePlayLiveStream}
-          onOpenPerformanceSettings={() => setIsPerformanceModalOpen(true)}
+          onOpenPerformanceSettings={() => {
+            // Native Android PlayerView sits above WebView; hide it before the
+            // React settings dialog receives focus. Playback stays alive.
+            setPlaybackPresentation('settings');
+            setIsPerformanceModalOpen(true);
+          }}
           onOpenPlaylist={() => {
-            setPlaybackPresentation('guide');
+            setPlaybackPresentation('playlist');
           }}
           onOpenGuide={() => {
             setCurrentTab('live');
@@ -689,7 +697,10 @@ export default function App() {
       {/* Streaming Performance & Anti-Buffering Settings Modal */}
       <StreamingPerformanceModal
         isOpen={isPerformanceModalOpen}
-        onClose={() => setIsPerformanceModalOpen(false)}
+        onClose={() => {
+          setIsPerformanceModalOpen(false);
+          if (playbackPresentation === 'settings') setPlaybackPresentation('watching');
+        }}
       />
 
       {/* Server & Streaming Lines Settings Modal */}
