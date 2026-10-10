@@ -14,16 +14,31 @@ import android.net.NetworkCapabilities;
 import android.net.ProxyInfo;
 import android.security.keystore.KeyGenParameterSpec;
 import android.security.keystore.KeyProperties;
+import android.app.AlertDialog;
+import android.graphics.Color;
+import android.graphics.drawable.GradientDrawable;
+import android.graphics.drawable.StateListDrawable;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Base64;
+import android.util.TypedValue;
+import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
+import android.widget.Button;
 import android.widget.FrameLayout;
+import android.widget.LinearLayout;
+import android.widget.TextView;
 
 import androidx.media3.common.AudioAttributes;
 import androidx.media3.common.C;
+import androidx.media3.common.Format;
 import androidx.media3.common.MediaItem;
+import androidx.media3.common.TrackGroup;
+import androidx.media3.common.TrackSelectionOverride;
+import androidx.media3.common.TrackSelectionParameters;
 import androidx.media3.common.PlaybackException;
 import androidx.media3.common.Player;
 import androidx.media3.common.Tracks;
@@ -79,7 +94,7 @@ public class GetSmartProviderPlugin extends Plugin {
     private static final int DIRECT_ADDRESS_CONNECT_TIMEOUT_MS = 6_000;
     private static final int NETWORK_ROUTE_CONNECT_TIMEOUT_MS = 8_000;
     private static final int MAX_REDIRECTS = 5;
-    private static final String TRANSPORT_BUILD = "GS-NATIVE-XCIPTV-HS10";
+    private static final String TRANSPORT_BUILD = "GS-NATIVE-XCIPTV-HS11";
 
     private static final String CREDENTIAL_PREFS = "getsmart_secure_credentials";
     private static final String CREDENTIAL_DRAFT_KEY = "xtream_draft_v1";
@@ -281,32 +296,68 @@ public class GetSmartProviderPlugin extends Plugin {
     private ExoPlayer nativePlayer;
     private PlayerView nativePlayerView;
     private FrameLayout nativePlayerOverlay;
+    private FrameLayout nativeOsdOverlay;
+    private LinearLayout nativeOsdTop;
+    private LinearLayout nativeOsdBottom;
+    private TextView nativeChannelView;
+    private TextView nativeTitleView;
+    private TextView nativeProgramView;
+    private TextView nativeNextProgramView;
+    private TextView nativeStatusView;
+    private Button nativePlayPauseButton;
+    private Button nativeAudioButton;
+    private Button nativeSubtitleButton;
+
+    private final Handler nativeUiHandler = new Handler(Looper.getMainLooper());
+    private final Runnable hideNativeOsdRunnable = this::hideNativeOsd;
+
     private String nativePlayerUrl = "";
     private String nativePlayerTitle = "";
     private String nativePlayerMediaType = "";
+    private String nativePlayerChannelNumber = "";
+    private String nativePlayerCurrentProgram = "";
+    private String nativePlayerNextProgram = "";
     private boolean nativePlayerVisible = true;
+    private boolean nativeOsdVisible = true;
     private float lastNonZeroVolume = 1.0f;
+
+    private static final class NativeTrackChoice {
+        final TrackGroup group;
+        final int trackIndex;
+        final String label;
+        final boolean selected;
+
+        NativeTrackChoice(TrackGroup group, int trackIndex, String label, boolean selected) {
+            this.group = group;
+            this.trackIndex = trackIndex;
+            this.label = label;
+            this.selected = selected;
+        }
+    }
 
     private final Player.Listener nativePlayerListener = new Player.Listener() {
         @Override
         public void onPlaybackStateChanged(int playbackState) {
+            updateNativeOsdText();
             emitPlayerState("playback-state");
         }
 
         @Override
         public void onIsPlayingChanged(boolean isPlaying) {
+            updateNativeOsdText();
             emitPlayerState("is-playing");
         }
 
         @Override
         public void onPlayWhenReadyChanged(boolean playWhenReady, int reason) {
+            updateNativeOsdText();
             emitPlayerState("play-when-ready");
         }
 
         @Override
         public void onTracksChanged(Tracks tracks) {
-            JSObject summary = buildTrackSummary(tracks);
-            notifyListeners("playerTracks", summary);
+            updateNativeOsdText();
+            notifyListeners("playerTracks", buildDetailedTrackSummary(tracks));
             emitPlayerState("tracks");
         }
 
@@ -317,6 +368,8 @@ public class GetSmartProviderPlugin extends Plugin {
             payload.put("errorCodeName", error.getErrorCodeName());
             payload.put("message", safePlaybackErrorMessage(error));
             notifyListeners("playerError", payload);
+            updateNativeOsdText();
+            showNativeOsd(false);
             emitPlayerState("error");
         }
     };
@@ -345,6 +398,9 @@ public class GetSmartProviderPlugin extends Plugin {
 
         final String requestedTitle = safeString(call.getString("title"));
         final String requestedMediaType = safeString(call.getString("mediaType"));
+        final String requestedChannelNumber = safeString(call.getString("channelNumber"));
+        final String requestedCurrentProgram = safeString(call.getString("currentProgram"));
+        final String requestedNextProgram = safeString(call.getString("nextProgram"));
         final String requestedUrl = validated.toString();
 
         getActivity().runOnUiThread(() -> {
@@ -353,6 +409,9 @@ public class GetSmartProviderPlugin extends Plugin {
 
                 nativePlayerTitle = requestedTitle;
                 nativePlayerMediaType = requestedMediaType;
+                nativePlayerChannelNumber = requestedChannelNumber;
+                nativePlayerCurrentProgram = requestedCurrentProgram;
+                nativePlayerNextProgram = requestedNextProgram;
 
                 if (!requestedUrl.equals(nativePlayerUrl)) {
                     nativePlayerUrl = requestedUrl;
@@ -365,15 +424,35 @@ public class GetSmartProviderPlugin extends Plugin {
                 }
 
                 applyNativePlayerVisibility();
+                updateNativeOsdText();
+                showNativeOsd(true);
 
                 JSObject result = new JSObject();
                 result.put("started", true);
-                result.put("engine", "androidx-media3-exoplayer-persistent");
+                result.put("engine", "androidx-media3-exoplayer-getsmart-osd");
                 call.resolve(result);
                 emitPlayerState("media-selected");
             } catch (Exception error) {
                 call.reject("Get Smart native player could not start: " + error.getClass().getSimpleName());
             }
+        });
+    }
+
+    @PluginMethod
+    public void updatePlayerMetadata(PluginCall call) {
+        nativePlayerTitle = safeString(call.getString("title"));
+        nativePlayerChannelNumber = safeString(call.getString("channelNumber"));
+        nativePlayerCurrentProgram = safeString(call.getString("currentProgram"));
+        nativePlayerNextProgram = safeString(call.getString("nextProgram"));
+
+        if (getActivity() == null) {
+            call.resolve(buildPlayerState("metadata-no-activity"));
+            return;
+        }
+
+        getActivity().runOnUiThread(() -> {
+            updateNativeOsdText();
+            call.resolve(buildPlayerState("metadata"));
         });
     }
 
@@ -395,6 +474,75 @@ public class GetSmartProviderPlugin extends Plugin {
     @PluginMethod
     public void getPlayerState(PluginCall call) {
         call.resolve(buildPlayerState("query"));
+    }
+
+    @PluginMethod
+    public void getPlayerTracks(PluginCall call) {
+        if (nativePlayer == null) {
+            JSObject empty = new JSObject();
+            empty.put("audioTracks", new JSONArray());
+            empty.put("videoTracks", new JSONArray());
+            empty.put("textTracks", new JSONArray());
+            call.resolve(empty);
+            return;
+        }
+        call.resolve(buildDetailedTrackSummary(nativePlayer.getCurrentTracks()));
+    }
+
+    @PluginMethod
+    public void selectPlayerTrack(PluginCall call) {
+        if (nativePlayer == null || getActivity() == null) {
+            call.reject("No active native player.");
+            return;
+        }
+
+        final String type = safeString(call.getString("type"));
+        final String groupId = safeString(call.getString("groupId"));
+        final Integer trackIndex = call.getInt("trackIndex");
+        final boolean disabled = call.getBoolean("disabled", false);
+
+        final int trackType =
+            "audio".equals(type) ? C.TRACK_TYPE_AUDIO :
+            "text".equals(type) ? C.TRACK_TYPE_TEXT :
+            "video".equals(type) ? C.TRACK_TYPE_VIDEO :
+            C.TRACK_TYPE_UNKNOWN;
+
+        if (trackType == C.TRACK_TYPE_UNKNOWN) {
+            call.reject("Unsupported track type.");
+            return;
+        }
+
+        getActivity().runOnUiThread(() -> {
+            try {
+                TrackSelectionParameters.Builder builder =
+                    nativePlayer.getTrackSelectionParameters().buildUpon();
+                builder.clearOverridesOfType(trackType);
+
+                if (disabled) {
+                    builder.setTrackTypeDisabled(trackType, true);
+                } else {
+                    builder.setTrackTypeDisabled(trackType, false);
+                    if (!groupId.isEmpty() && trackIndex != null) {
+                        NativeTrackChoice choice = findNativeTrackChoice(trackType, groupId, trackIndex);
+                        if (choice == null) {
+                            call.reject("Requested track is no longer available.");
+                            return;
+                        }
+                        builder.setOverrideForType(
+                            new TrackSelectionOverride(choice.group, choice.trackIndex)
+                        );
+                    }
+                }
+
+                nativePlayer.setTrackSelectionParameters(builder.build());
+                updateNativeOsdText();
+                JSObject result = buildDetailedTrackSummary(nativePlayer.getCurrentTracks());
+                call.resolve(result);
+                notifyListeners("playerTracks", result);
+            } catch (Exception error) {
+                call.reject("Unable to select native player track.");
+            }
+        });
     }
 
     @PluginMethod
@@ -453,20 +601,21 @@ public class GetSmartProviderPlugin extends Plugin {
                     long offset = offsetMs == null ? 0L : offsetMs;
                     long duration = nativePlayer.getDuration();
                     long target = Math.max(0L, nativePlayer.getCurrentPosition() + offset);
-                    if (duration > 0L) target = Math.min(duration, target);
+                    if (duration > 0L && duration != C.TIME_UNSET) target = Math.min(duration, target);
                     nativePlayer.seekTo(target);
                     break;
                 case "showControls":
-                    if (nativePlayerView != null) nativePlayerView.showController();
+                    showNativeOsd(false);
                     break;
                 case "hideControls":
-                    if (nativePlayerView != null) nativePlayerView.hideController();
+                    hideNativeOsd();
                     break;
                 default:
                     call.reject("Unsupported native player action.");
                     return;
             }
 
+            updateNativeOsdText();
             JSObject state = buildPlayerState("control-" + action);
             call.resolve(state);
             notifyListeners("playerState", state);
@@ -505,19 +654,26 @@ public class GetSmartProviderPlugin extends Plugin {
         nativePlayer.addListener(nativePlayerListener);
 
         nativePlayerView = new PlayerView(getActivity());
-        nativePlayerView.setUseController(true);
-        nativePlayerView.setControllerAutoShow(true);
-        nativePlayerView.setControllerShowTimeoutMs(4500);
+        nativePlayerView.setUseController(false);
         nativePlayerView.setPlayer(nativePlayer);
         nativePlayerView.setFocusable(true);
         nativePlayerView.setFocusableInTouchMode(true);
-        nativePlayerView.setBackgroundColor(android.graphics.Color.BLACK);
+        nativePlayerView.setBackgroundColor(Color.BLACK);
         nativePlayerView.setKeepScreenOn(true);
 
         nativePlayerOverlay = new FrameLayout(getActivity());
-        nativePlayerOverlay.setBackgroundColor(android.graphics.Color.BLACK);
+        nativePlayerOverlay.setBackgroundColor(Color.BLACK);
         nativePlayerOverlay.addView(
             nativePlayerView,
+            new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+            )
+        );
+
+        buildNativeOsd();
+        nativePlayerOverlay.addView(
+            nativeOsdOverlay,
             new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT
@@ -534,11 +690,480 @@ public class GetSmartProviderPlugin extends Plugin {
             )
         );
 
+        nativePlayerView.setOnClickListener((view) -> showNativeOsd(true));
+        nativePlayerOverlay.setOnClickListener((view) -> showNativeOsd(true));
         nativePlayerView.setOnKeyListener((view, keyCode, event) ->
             handleNativePlayerKeyEvent(event)
         );
 
         applyNativePlayerVisibility();
+        updateNativeOsdText();
+    }
+
+    private void buildNativeOsd() {
+        nativeOsdOverlay = new FrameLayout(getActivity());
+        nativeOsdOverlay.setClickable(false);
+        nativeOsdOverlay.setFocusable(false);
+
+        nativeOsdTop = new LinearLayout(getActivity());
+        nativeOsdTop.setOrientation(LinearLayout.VERTICAL);
+        nativeOsdTop.setPadding(dp(26), dp(22), dp(26), dp(18));
+        nativeOsdTop.setBackground(makeGradient(
+            new int[] { Color.argb(235, 3, 12, 22), Color.argb(165, 3, 12, 22), Color.TRANSPARENT },
+            GradientDrawable.Orientation.TOP_BOTTOM
+        ));
+
+        LinearLayout topTitleRow = new LinearLayout(getActivity());
+        topTitleRow.setOrientation(LinearLayout.HORIZONTAL);
+        topTitleRow.setGravity(Gravity.CENTER_VERTICAL);
+
+        nativeChannelView = makeText("", 13f, Color.rgb(120, 193, 255), true);
+        nativeChannelView.setPadding(0, 0, dp(14), 0);
+        nativeTitleView = makeText("", 21f, Color.WHITE, true);
+
+        topTitleRow.addView(nativeChannelView);
+        topTitleRow.addView(
+            nativeTitleView,
+            new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+        );
+
+        nativeStatusView = makeText("LIVE", 11f, Color.WHITE, true);
+        nativeStatusView.setGravity(Gravity.CENTER);
+        nativeStatusView.setPadding(dp(10), dp(4), dp(10), dp(4));
+        nativeStatusView.setBackground(makeRounded(Color.rgb(193, 48, 67), dp(7)));
+        topTitleRow.addView(nativeStatusView);
+
+        nativeProgramView = makeText("", 14f, Color.rgb(226, 232, 240), true);
+        nativeProgramView.setPadding(0, dp(7), 0, 0);
+        nativeNextProgramView = makeText("", 12f, Color.rgb(148, 163, 184), false);
+        nativeNextProgramView.setPadding(0, dp(3), 0, 0);
+
+        nativeOsdTop.addView(topTitleRow);
+        nativeOsdTop.addView(nativeProgramView);
+        nativeOsdTop.addView(nativeNextProgramView);
+
+        FrameLayout.LayoutParams topParams = new FrameLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT,
+            Gravity.TOP
+        );
+        nativeOsdOverlay.addView(nativeOsdTop, topParams);
+
+        nativeOsdBottom = new LinearLayout(getActivity());
+        nativeOsdBottom.setOrientation(LinearLayout.HORIZONTAL);
+        nativeOsdBottom.setGravity(Gravity.CENTER);
+        nativeOsdBottom.setPadding(dp(20), dp(20), dp(20), dp(24));
+        nativeOsdBottom.setBackground(makeGradient(
+            new int[] { Color.TRANSPARENT, Color.argb(170, 3, 12, 22), Color.argb(245, 3, 12, 22) },
+            GradientDrawable.Orientation.TOP_BOTTOM
+        ));
+
+        Button guideButton = makeOsdButton("Guide");
+        Button previousButton = makeOsdButton("◀ Channel");
+        nativePlayPauseButton = makeOsdButton("Pause");
+        Button nextButton = makeOsdButton("Channel ▶");
+        nativeAudioButton = makeOsdButton("Audio");
+        nativeSubtitleButton = makeOsdButton("CC");
+        Button stopButton = makeOsdButton("Stop");
+
+        guideButton.setOnClickListener((v) -> {
+            emitPlayerCommand("guide");
+            scheduleNativeOsdHide();
+        });
+        previousButton.setOnClickListener((v) -> {
+            emitPlayerCommand("channelPrevious");
+            showNativeOsd(true);
+        });
+        nativePlayPauseButton.setOnClickListener((v) -> {
+            if (nativePlayer != null) {
+                if (nativePlayer.isPlaying()) nativePlayer.pause();
+                else nativePlayer.play();
+                updateNativeOsdText();
+                scheduleNativeOsdHide();
+            }
+        });
+        nextButton.setOnClickListener((v) -> {
+            emitPlayerCommand("channelNext");
+            showNativeOsd(true);
+        });
+        nativeAudioButton.setOnClickListener((v) -> showNativeTrackDialog(C.TRACK_TYPE_AUDIO, "Audio Track"));
+        nativeSubtitleButton.setOnClickListener((v) -> showNativeTrackDialog(C.TRACK_TYPE_TEXT, "Subtitles & Captions"));
+        stopButton.setOnClickListener((v) -> emitPlayerCommand("stop"));
+
+        for (Button button : new Button[] {
+            guideButton,
+            previousButton,
+            nativePlayPauseButton,
+            nextButton,
+            nativeAudioButton,
+            nativeSubtitleButton,
+            stopButton
+        }) {
+            LinearLayout.LayoutParams buttonParams = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                dp(46)
+            );
+            buttonParams.setMargins(dp(5), 0, dp(5), 0);
+            nativeOsdBottom.addView(button, buttonParams);
+        }
+
+        FrameLayout.LayoutParams bottomParams = new FrameLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT,
+            Gravity.BOTTOM
+        );
+        nativeOsdOverlay.addView(nativeOsdBottom, bottomParams);
+    }
+
+    private Button makeOsdButton(String label) {
+        Button button = new Button(getActivity());
+        button.setText(label);
+        button.setTextColor(Color.WHITE);
+        button.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+        button.setAllCaps(false);
+        button.setMinWidth(dp(82));
+        button.setPadding(dp(14), 0, dp(14), 0);
+        button.setFocusable(true);
+        button.setFocusableInTouchMode(false);
+
+        StateListDrawable states = new StateListDrawable();
+        states.addState(
+            new int[] { android.R.attr.state_focused },
+            makeRounded(Color.rgb(11, 99, 246), dp(9))
+        );
+        states.addState(
+            new int[] { android.R.attr.state_pressed },
+            makeRounded(Color.rgb(45, 135, 255), dp(9))
+        );
+        states.addState(
+            new int[] {},
+            makeRounded(Color.argb(205, 18, 35, 52), dp(9))
+        );
+        button.setBackground(states);
+        return button;
+    }
+
+    private TextView makeText(String text, float sp, int color, boolean bold) {
+        TextView view = new TextView(getActivity());
+        view.setText(text);
+        view.setTextColor(color);
+        view.setTextSize(TypedValue.COMPLEX_UNIT_SP, sp);
+        if (bold) view.setTypeface(view.getTypeface(), android.graphics.Typeface.BOLD);
+        view.setSingleLine(true);
+        view.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        return view;
+    }
+
+    private GradientDrawable makeRounded(int color, int radiusPx) {
+        GradientDrawable drawable = new GradientDrawable();
+        drawable.setColor(color);
+        drawable.setCornerRadius(radiusPx);
+        return drawable;
+    }
+
+    private GradientDrawable makeGradient(int[] colors, GradientDrawable.Orientation orientation) {
+        return new GradientDrawable(orientation, colors);
+    }
+
+    private int dp(int value) {
+        float density = getContext().getResources().getDisplayMetrics().density;
+        return Math.round(value * density);
+    }
+
+    private void updateNativeOsdText() {
+        if (getActivity() == null) return;
+        getActivity().runOnUiThread(() -> {
+            if (nativeTitleView == null) return;
+
+            String channelPrefix = nativePlayerChannelNumber.isEmpty()
+                ? ""
+                : "CH " + nativePlayerChannelNumber;
+            nativeChannelView.setText(channelPrefix);
+            nativeTitleView.setText(nativePlayerTitle.isEmpty() ? "Get Smart Player" : nativePlayerTitle);
+
+            String current = nativePlayerCurrentProgram.isEmpty()
+                ? ("live".equals(nativePlayerMediaType) ? "Live programming" : "")
+                : nativePlayerCurrentProgram;
+            nativeProgramView.setText(current);
+
+            String next = nativePlayerNextProgram.isEmpty()
+                ? ""
+                : "Up Next  •  " + nativePlayerNextProgram;
+            nativeNextProgramView.setText(next);
+
+            boolean isLive = "live".equals(nativePlayerMediaType);
+            nativeStatusView.setText(isLive ? "LIVE" : playbackStateName(
+                nativePlayer == null ? Player.STATE_IDLE : nativePlayer.getPlaybackState()
+            ).toUpperCase(Locale.US));
+            nativeStatusView.setBackground(
+                makeRounded(
+                    isLive ? Color.rgb(193, 48, 67) : Color.rgb(11, 99, 246),
+                    dp(7)
+                )
+            );
+
+            if (nativePlayPauseButton != null && nativePlayer != null) {
+                nativePlayPauseButton.setText(nativePlayer.isPlaying() ? "Pause" : "Play");
+            }
+
+            if (nativeAudioButton != null && nativePlayer != null) {
+                int count = countTracks(nativePlayer.getCurrentTracks(), C.TRACK_TYPE_AUDIO);
+                nativeAudioButton.setText(count > 1 ? "Audio (" + count + ")" : "Audio");
+            }
+
+            if (nativeSubtitleButton != null && nativePlayer != null) {
+                int count = countTracks(nativePlayer.getCurrentTracks(), C.TRACK_TYPE_TEXT);
+                nativeSubtitleButton.setText(count > 0 ? "CC (" + count + ")" : "CC");
+                nativeSubtitleButton.setEnabled(count > 0);
+                nativeSubtitleButton.setAlpha(count > 0 ? 1f : 0.45f);
+            }
+        });
+    }
+
+    private void showNativeOsd(boolean autoHide) {
+        nativeUiHandler.removeCallbacks(hideNativeOsdRunnable);
+        nativeOsdVisible = true;
+        if (nativeOsdOverlay != null) {
+            nativeOsdOverlay.setVisibility(View.VISIBLE);
+            nativeOsdOverlay.setClickable(true);
+        }
+        updateNativeOsdText();
+
+        if (nativePlayPauseButton != null) {
+            nativePlayPauseButton.requestFocus();
+        }
+
+        if (autoHide) {
+            scheduleNativeOsdHide();
+        }
+    }
+
+    private void scheduleNativeOsdHide() {
+        nativeUiHandler.removeCallbacks(hideNativeOsdRunnable);
+        nativeUiHandler.postDelayed(hideNativeOsdRunnable, 4500L);
+    }
+
+    private void hideNativeOsd() {
+        nativeUiHandler.removeCallbacks(hideNativeOsdRunnable);
+        nativeOsdVisible = false;
+        if (nativeOsdOverlay != null) {
+            nativeOsdOverlay.setVisibility(View.GONE);
+            nativeOsdOverlay.setClickable(false);
+        }
+        if (nativePlayerView != null && nativePlayerVisible) {
+            nativePlayerView.requestFocus();
+        }
+    }
+
+    private void showNativeTrackDialog(int trackType, String title) {
+        if (nativePlayer == null || getActivity() == null) return;
+
+        List<NativeTrackChoice> choices = collectNativeTrackChoices(trackType);
+        boolean allowOff = trackType == C.TRACK_TYPE_TEXT;
+        int extra = allowOff ? 2 : 1;
+        String[] labels = new String[choices.size() + extra];
+        labels[0] = "Auto";
+        int start = 1;
+
+        if (allowOff) {
+            labels[1] = "Off";
+            start = 2;
+        }
+
+        int checked = 0;
+        boolean disabled = nativePlayer
+            .getTrackSelectionParameters()
+            .getTrackTypeDisabled(trackType);
+
+        if (allowOff && disabled) checked = 1;
+
+        for (int i = 0; i < choices.size(); i++) {
+            NativeTrackChoice choice = choices.get(i);
+            labels[i + start] = choice.label;
+            if (!disabled && choice.selected) checked = i + start;
+        }
+
+        nativeUiHandler.removeCallbacks(hideNativeOsdRunnable);
+
+        new AlertDialog.Builder(getActivity())
+            .setTitle(title)
+            .setSingleChoiceItems(labels, checked, (dialog, which) -> {
+                TrackSelectionParameters.Builder builder =
+                    nativePlayer.getTrackSelectionParameters().buildUpon();
+                builder.clearOverridesOfType(trackType);
+
+                if (allowOff && which == 1) {
+                    builder.setTrackTypeDisabled(trackType, true);
+                } else {
+                    builder.setTrackTypeDisabled(trackType, false);
+                    if (which >= start) {
+                        NativeTrackChoice choice = choices.get(which - start);
+                        builder.setOverrideForType(
+                            new TrackSelectionOverride(choice.group, choice.trackIndex)
+                        );
+                    }
+                }
+
+                nativePlayer.setTrackSelectionParameters(builder.build());
+                dialog.dismiss();
+                updateNativeOsdText();
+                notifyListeners(
+                    "playerTracks",
+                    buildDetailedTrackSummary(nativePlayer.getCurrentTracks())
+                );
+                showNativeOsd(true);
+            })
+            .setNegativeButton("Cancel", (dialog, which) -> {
+                dialog.dismiss();
+                showNativeOsd(true);
+            })
+            .show();
+    }
+
+    private List<NativeTrackChoice> collectNativeTrackChoices(int trackType) {
+        List<NativeTrackChoice> choices = new ArrayList<>();
+        if (nativePlayer == null) return choices;
+
+        for (Tracks.Group group : nativePlayer.getCurrentTracks().getGroups()) {
+            if (group.getType() != trackType) continue;
+            TrackGroup mediaTrackGroup = group.getMediaTrackGroup();
+
+            for (int i = 0; i < group.length; i++) {
+                if (!group.isTrackSupported(i)) continue;
+                Format format = group.getTrackFormat(i);
+                choices.add(
+                    new NativeTrackChoice(
+                        mediaTrackGroup,
+                        i,
+                        formatTrackLabel(format, trackType, i),
+                        group.isTrackSelected(i)
+                    )
+                );
+            }
+        }
+        return choices;
+    }
+
+    private NativeTrackChoice findNativeTrackChoice(int trackType, String groupId, int trackIndex) {
+        for (Tracks.Group group : nativePlayer.getCurrentTracks().getGroups()) {
+            if (group.getType() != trackType) continue;
+            TrackGroup mediaTrackGroup = group.getMediaTrackGroup();
+            if (!safeString(mediaTrackGroup.id).equals(groupId)) continue;
+            if (trackIndex < 0 || trackIndex >= group.length || !group.isTrackSupported(trackIndex)) {
+                return null;
+            }
+            return new NativeTrackChoice(
+                mediaTrackGroup,
+                trackIndex,
+                formatTrackLabel(group.getTrackFormat(trackIndex), trackType, trackIndex),
+                group.isTrackSelected(trackIndex)
+            );
+        }
+        return null;
+    }
+
+    private int countTracks(Tracks tracks, int trackType) {
+        int count = 0;
+        if (tracks == null) return count;
+        for (Tracks.Group group : tracks.getGroups()) {
+            if (group.getType() == trackType) count += group.length;
+        }
+        return count;
+    }
+
+    private String formatTrackLabel(Format format, int trackType, int index) {
+        List<String> parts = new ArrayList<>();
+
+        if (format.label != null && !format.label.trim().isEmpty()) {
+            parts.add(format.label.trim());
+        }
+
+        if (format.language != null && !format.language.trim().isEmpty()) {
+            try {
+                Locale locale = Locale.forLanguageTag(format.language);
+                String language = locale.getDisplayLanguage();
+                if (language != null && !language.trim().isEmpty()) {
+                    parts.add(language);
+                } else {
+                    parts.add(format.language.toUpperCase(Locale.US));
+                }
+            } catch (Exception ignored) {
+                parts.add(format.language.toUpperCase(Locale.US));
+            }
+        }
+
+        if (trackType == C.TRACK_TYPE_VIDEO && format.height > 0) {
+            parts.add(format.height + "p");
+        }
+
+        if (trackType == C.TRACK_TYPE_AUDIO && format.channelCount > 0) {
+            parts.add(format.channelCount + "ch");
+        }
+
+        if (format.sampleMimeType != null && !format.sampleMimeType.isEmpty()) {
+            String mime = format.sampleMimeType;
+            int slash = mime.indexOf('/');
+            parts.add(slash >= 0 ? mime.substring(slash + 1).toUpperCase(Locale.US) : mime);
+        }
+
+        if (parts.isEmpty()) {
+            if (trackType == C.TRACK_TYPE_AUDIO) return "Audio " + (index + 1);
+            if (trackType == C.TRACK_TYPE_TEXT) return "Subtitle " + (index + 1);
+            if (trackType == C.TRACK_TYPE_VIDEO) return "Video " + (index + 1);
+            return "Track " + (index + 1);
+        }
+
+        return String.join(" • ", parts);
+    }
+
+    private JSObject buildDetailedTrackSummary(Tracks tracks) {
+        JSONArray audio = new JSONArray();
+        JSONArray video = new JSONArray();
+        JSONArray text = new JSONArray();
+
+        if (tracks != null) {
+            for (Tracks.Group group : tracks.getGroups()) {
+                TrackGroup mediaTrackGroup = group.getMediaTrackGroup();
+
+                for (int i = 0; i < group.length; i++) {
+                    Format format = group.getTrackFormat(i);
+                    JSONObject item = new JSONObject();
+                    try {
+                        item.put("groupId", safeString(mediaTrackGroup.id));
+                        item.put("trackIndex", i);
+                        item.put("type", trackTypeName(group.getType()));
+                        item.put("label", formatTrackLabel(format, group.getType(), i));
+                        item.put("language", safeString(format.language));
+                        item.put("mimeType", safeString(format.sampleMimeType));
+                        item.put("codecs", safeString(format.codecs));
+                        item.put("bitrate", format.bitrate > 0 ? format.bitrate : 0);
+                        item.put("width", format.width > 0 ? format.width : 0);
+                        item.put("height", format.height > 0 ? format.height : 0);
+                        item.put("channelCount", format.channelCount > 0 ? format.channelCount : 0);
+                        item.put("selected", group.isTrackSelected(i));
+                        item.put("supported", group.isTrackSupported(i));
+                    } catch (JSONException ignored) {
+                    }
+
+                    if (group.getType() == C.TRACK_TYPE_AUDIO) audio.put(item);
+                    else if (group.getType() == C.TRACK_TYPE_VIDEO) video.put(item);
+                    else if (group.getType() == C.TRACK_TYPE_TEXT) text.put(item);
+                }
+            }
+        }
+
+        JSObject summary = new JSObject();
+        summary.put("audioTracks", audio);
+        summary.put("videoTracks", video);
+        summary.put("textTracks", text);
+        return summary;
+    }
+
+    private String trackTypeName(int trackType) {
+        if (trackType == C.TRACK_TYPE_AUDIO) return "audio";
+        if (trackType == C.TRACK_TYPE_VIDEO) return "video";
+        if (trackType == C.TRACK_TYPE_TEXT) return "text";
+        return "unknown";
     }
 
     public static boolean dispatchPlayerKeyEvent(KeyEvent event) {
@@ -566,28 +1191,32 @@ public class GetSmartProviderPlugin extends Plugin {
 
         if (keyCode == KeyEvent.KEYCODE_CHANNEL_UP) {
             emitPlayerCommand("channelPrevious");
+            showNativeOsd(true);
             return true;
         }
 
         if (keyCode == KeyEvent.KEYCODE_CHANNEL_DOWN) {
             emitPlayerCommand("channelNext");
+            showNativeOsd(true);
             return true;
         }
 
-        boolean controllerVisible = nativePlayerView.isControllerFullyVisible();
-
-        if (!controllerVisible && keyCode == KeyEvent.KEYCODE_DPAD_UP) {
-            emitPlayerCommand("channelPrevious");
+        if (keyCode == KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE) {
+            if (nativePlayer.isPlaying()) nativePlayer.pause();
+            else nativePlayer.play();
+            showNativeOsd(true);
             return true;
         }
 
-        if (!controllerVisible && keyCode == KeyEvent.KEYCODE_DPAD_DOWN) {
-            emitPlayerCommand("channelNext");
+        if (keyCode == KeyEvent.KEYCODE_MEDIA_PLAY) {
+            nativePlayer.play();
+            showNativeOsd(true);
             return true;
         }
 
-        if (!controllerVisible && keyCode == KeyEvent.KEYCODE_DPAD_LEFT) {
-            emitPlayerCommand("guide");
+        if (keyCode == KeyEvent.KEYCODE_MEDIA_PAUSE) {
+            nativePlayer.pause();
+            showNativeOsd(true);
             return true;
         }
 
@@ -596,20 +1225,40 @@ public class GetSmartProviderPlugin extends Plugin {
             return true;
         }
 
-        if (keyCode == KeyEvent.KEYCODE_BACK) {
-            if (controllerVisible) {
-                nativePlayerView.hideController();
-            } else {
-                emitPlayerCommand("back");
+        if (nativeOsdVisible) {
+            if (keyCode == KeyEvent.KEYCODE_BACK) {
+                hideNativeOsd();
+                return true;
             }
+            // When our OSD is visible, let Android focus navigation route
+            // D-pad/OK events naturally between the native buttons.
+            return false;
+        }
+
+        if (keyCode == KeyEvent.KEYCODE_DPAD_UP) {
+            emitPlayerCommand("channelPrevious");
+            showNativeOsd(true);
             return true;
         }
 
-        if (
-            (keyCode == KeyEvent.KEYCODE_DPAD_CENTER || keyCode == KeyEvent.KEYCODE_ENTER) &&
-            !controllerVisible
-        ) {
-            nativePlayerView.showController();
+        if (keyCode == KeyEvent.KEYCODE_DPAD_DOWN) {
+            emitPlayerCommand("channelNext");
+            showNativeOsd(true);
+            return true;
+        }
+
+        if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT) {
+            emitPlayerCommand("guide");
+            return true;
+        }
+
+        if (keyCode == KeyEvent.KEYCODE_BACK) {
+            emitPlayerCommand("back");
+            return true;
+        }
+
+        if (keyCode == KeyEvent.KEYCODE_DPAD_CENTER || keyCode == KeyEvent.KEYCODE_ENTER) {
+            showNativeOsd(true);
             return true;
         }
 
@@ -620,8 +1269,11 @@ public class GetSmartProviderPlugin extends Plugin {
         if (nativePlayerOverlay == null) return;
 
         nativePlayerOverlay.setVisibility(nativePlayerVisible ? View.VISIBLE : View.GONE);
-        if (nativePlayerVisible && nativePlayerView != null) {
-            nativePlayerView.requestFocus();
+        if (nativePlayerVisible) {
+            showNativeOsd(true);
+        } else {
+            nativeUiHandler.removeCallbacks(hideNativeOsdRunnable);
+            if (nativeOsdOverlay != null) nativeOsdOverlay.setVisibility(View.GONE);
         }
         emitPlayerState("visibility-applied");
     }
@@ -643,6 +1295,10 @@ public class GetSmartProviderPlugin extends Plugin {
         state.put("visible", nativePlayerVisible);
         state.put("title", nativePlayerTitle);
         state.put("mediaType", nativePlayerMediaType);
+        state.put("channelNumber", nativePlayerChannelNumber);
+        state.put("currentProgram", nativePlayerCurrentProgram);
+        state.put("nextProgram", nativePlayerNextProgram);
+        state.put("osdVisible", nativeOsdVisible);
 
         if (nativePlayer == null) {
             state.put("playbackState", "idle");
@@ -659,7 +1315,8 @@ public class GetSmartProviderPlugin extends Plugin {
         state.put("isPlaying", nativePlayer.isPlaying());
         state.put("playWhenReady", nativePlayer.getPlayWhenReady());
         state.put("positionMs", nativePlayer.getCurrentPosition());
-        state.put("durationMs", Math.max(0L, nativePlayer.getDuration()));
+        long duration = nativePlayer.getDuration();
+        state.put("durationMs", duration > 0 && duration != C.TIME_UNSET ? duration : 0);
         state.put("bufferedPositionMs", Math.max(0L, nativePlayer.getBufferedPosition()));
         state.put("volume", nativePlayer.getVolume());
         return state;
@@ -679,34 +1336,12 @@ public class GetSmartProviderPlugin extends Plugin {
         }
     }
 
-    private JSObject buildTrackSummary(Tracks tracks) {
-        int audio = 0;
-        int video = 0;
-        int text = 0;
-
-        if (tracks != null) {
-            for (Tracks.Group group : tracks.getGroups()) {
-                int length = group.length;
-                if (group.getType() == C.TRACK_TYPE_AUDIO) audio += length;
-                else if (group.getType() == C.TRACK_TYPE_VIDEO) video += length;
-                else if (group.getType() == C.TRACK_TYPE_TEXT) text += length;
-            }
-        }
-
-        JSObject summary = new JSObject();
-        summary.put("audioTracks", audio);
-        summary.put("videoTracks", video);
-        summary.put("textTracks", text);
-        return summary;
-    }
-
     private String safePlaybackErrorMessage(PlaybackException error) {
         if (error == null) return "Playback error.";
         String message = error.getMessage();
         if (message == null || message.trim().isEmpty()) {
             return "Playback error.";
         }
-        // Keep native errors useful without ever reflecting the current stream URL.
         String sanitized = message
             .replaceAll("https?://[^\\s]+", "[stream]")
             .replaceAll("(?i)(username|password|token)=([^&\\s]+)", "$1=[redacted]");
@@ -714,11 +1349,13 @@ public class GetSmartProviderPlugin extends Plugin {
     }
 
     private void releaseNativePlayer() {
+        nativeUiHandler.removeCallbacks(hideNativeOsdRunnable);
         if (nativePlayer != null) {
             nativePlayer.removeListener(nativePlayerListener);
         }
         if (nativePlayerView != null) {
             nativePlayerView.setPlayer(null);
+            nativePlayerView.setKeepScreenOn(false);
         }
         if (nativePlayer != null) {
             nativePlayer.release();
@@ -730,9 +1367,24 @@ public class GetSmartProviderPlugin extends Plugin {
             nativePlayerOverlay = null;
         }
         nativePlayerView = null;
+        nativeOsdOverlay = null;
+        nativeOsdTop = null;
+        nativeOsdBottom = null;
+        nativeChannelView = null;
+        nativeTitleView = null;
+        nativeProgramView = null;
+        nativeNextProgramView = null;
+        nativeStatusView = null;
+        nativePlayPauseButton = null;
+        nativeAudioButton = null;
+        nativeSubtitleButton = null;
         nativePlayerUrl = "";
         nativePlayerTitle = "";
         nativePlayerMediaType = "";
+        nativePlayerChannelNumber = "";
+        nativePlayerCurrentProgram = "";
+        nativePlayerNextProgram = "";
+        nativeOsdVisible = false;
         notifyListeners("playerState", buildPlayerState("stopped"));
     }
 
