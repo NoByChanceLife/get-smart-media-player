@@ -111,7 +111,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         if (target.stream.direct_source.startsWith('https://')) return target.stream.direct_source;
         return `/api/xtream/stream?url=${encodeURIComponent(target.stream.direct_source)}`;
       }
-      return xtreamService.buildStreamUrl('live', target.stream.stream_id, 'm3u8', undefined, target.stream.serverId);
+      return xtreamService.buildStreamUrl('live', target.stream.stream_id, undefined, undefined, target.stream.serverId);
     } else if (target.type === 'vod') {
       if (target.movie.direct_source) {
         if (target.movie.direct_source.startsWith('https://')) return target.movie.direct_source;
