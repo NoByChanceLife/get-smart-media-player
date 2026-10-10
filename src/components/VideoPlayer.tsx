@@ -23,7 +23,16 @@ import {
 } from 'lucide-react';
 import { PlaybackTarget, XtreamLiveStream, XtreamEPGProgramme } from '../types/xtream';
 import { xtreamService } from '../services/xtreamClient';
-import { isNativeAndroidRuntime, playNativeAndroidMedia, stopNativeAndroidMedia } from '../services/androidProviderTransport';
+import {
+  addNativeAndroidPlayerCommandListener,
+  addNativeAndroidPlayerErrorListener,
+  addNativeAndroidPlayerStateListener,
+  controlNativeAndroidMedia,
+  isNativeAndroidRuntime,
+  playNativeAndroidMedia,
+  setNativeAndroidPlayerVisible,
+  stopNativeAndroidMedia,
+} from '../services/androidProviderTransport';
 import { resolveStalkerStreamLink } from '../services/stalkerClient';
 import { streamingPerformanceService } from '../services/streamingPerformanceService';
 import { useStreamHealthTracker } from '../hooks/useStreamHealthTracker';
@@ -58,6 +67,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const hlsRef = useRef<Hls | null>(null);
+  const nativeAndroid = isNativeAndroidRuntime();
 
   const [isPlaying, setIsPlaying] = useState<boolean>(true);
   const [isMuted, setIsMuted] = useState<boolean>(false);
@@ -81,11 +91,15 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const onCloseRef = useRef(onClose);
   const onStopRef = useRef(onStop);
   const onOpenGuideRef = useRef(onOpenGuide);
+  const allLiveStreamsRef = useRef(allLiveStreams);
+  const onSelectLiveStreamRef = useRef(onSelectLiveStream);
 
   useEffect(() => { isVisuallyHiddenRef.current = isVisuallyHidden; }, [isVisuallyHidden]);
   useEffect(() => { onCloseRef.current = onClose; }, [onClose]);
   useEffect(() => { onStopRef.current = onStop; }, [onStop]);
   useEffect(() => { onOpenGuideRef.current = onOpenGuide; }, [onOpenGuide]);
+  useEffect(() => { allLiveStreamsRef.current = allLiveStreams; }, [allLiveStreams]);
+  useEffect(() => { onSelectLiveStreamRef.current = onSelectLiveStream; }, [onSelectLiveStream]);
 
   // Derive title and current info
   const title =
@@ -147,6 +161,101 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   useEffect(() => { getStreamUrlRef.current = getStreamUrl; }, [getStreamUrl]);
   useEffect(() => { playbackTitleRef.current = title; }, [title]);
   useEffect(() => { playbackProgramRef.current = currentProgramTitle; }, [currentProgramTitle]);
+
+  // Android owns the real Media3 surface. Keep the React session synchronized
+  // through native player events instead of inferring state from the hidden HTML video.
+  useEffect(() => {
+    if (!nativeAndroid) return;
+
+    let cancelled = false;
+    const handles: Array<{ remove: () => Promise<void> }> = [];
+
+    const register = async () => {
+      const statePromise = addNativeAndroidPlayerStateListener((state) => {
+        setIsPlaying(Boolean(state.isPlaying));
+        setIsLoading(state.playbackState === 'buffering' || state.playbackState === 'idle');
+        setCurrentTime(Math.max(0, state.positionMs || 0) / 1000);
+        setDuration(Math.max(0, state.durationMs || 0) / 1000);
+        const nextVolume = Math.max(0, Math.min(1, state.volume ?? 1));
+        setVolume(nextVolume);
+        setIsMuted(nextVolume === 0);
+      });
+      const commandPromise = addNativeAndroidPlayerCommandListener((event) => {
+        const playbackTarget = playbackTargetRef.current;
+
+        if (event.command === 'stop') {
+          onStopRef.current();
+          return;
+        }
+
+        if (event.command === 'guide' || event.command === 'back') {
+          onOpenGuideRef.current?.();
+          return;
+        }
+
+        if (
+          playbackTarget.type === 'live' &&
+          (event.command === 'channelPrevious' || event.command === 'channelNext')
+        ) {
+          const streams = allLiveStreamsRef.current;
+          const selectStream = onSelectLiveStreamRef.current;
+          if (!selectStream || streams.length === 0) return;
+
+          const currentIndex = streams.findIndex(
+            (stream) => String(stream.stream_id) === String(playbackTarget.stream.stream_id)
+          );
+          if (currentIndex < 0) return;
+
+          const nextIndex =
+            event.command === 'channelPrevious'
+              ? (currentIndex - 1 + streams.length) % streams.length
+              : (currentIndex + 1) % streams.length;
+          selectStream(streams[nextIndex]);
+        }
+      });
+      const errorPromise = addNativeAndroidPlayerErrorListener((event) => {
+        setIsLoading(false);
+        setErrorMsg('Native playback stopped.');
+        setErrorDetail(`${event.errorCodeName || 'PLAYER_ERROR'} · ${event.message || 'Unknown playback error'}`);
+      });
+
+      for (const pending of [statePromise, commandPromise, errorPromise]) {
+        if (!pending) continue;
+        const handle = await pending;
+        if (cancelled) {
+          await handle.remove();
+        } else {
+          handles.push(handle);
+        }
+      }
+    };
+
+    register().catch(() => undefined);
+
+    return () => {
+      cancelled = true;
+      handles.forEach((handle) => {
+        handle.remove().catch(() => undefined);
+      });
+    };
+  }, [nativeAndroid]);
+
+  // Browsing/guide presentation hides only the native surface. The Media3
+  // session continues underneath so returning to Watch does not restart playback.
+  useEffect(() => {
+    if (!nativeAndroid) return;
+    setNativeAndroidPlayerVisible(!isVisuallyHidden).catch(() => undefined);
+  }, [nativeAndroid, isVisuallyHidden]);
+
+  // Stop/release the native session only when the player component itself is
+  // unmounted (explicit Stop or replacement of the playback owner), not on every
+  // channel/media identity change.
+  useEffect(() => {
+    if (!nativeAndroid) return;
+    return () => {
+      stopNativeAndroidMedia().catch(() => undefined);
+    };
+  }, [nativeAndroid]);
 
   // Playback health tracking, auto-adaptation & bounded recovery
   const {
@@ -220,47 +329,43 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       if (isCancelled) return;
 
       // Android APKs do not run server.ts. Route provider media directly into
-      // the native Android player instead of calling the web-only stream-ticket API.
-      if (isNativeAndroidRuntime()) {
+      // Get Smart's persistent native Media3 player. Channel changes update the
+      // same player instance instead of tearing it down or opening another app.
+      if (nativeAndroid) {
         try {
           let nativeUrl = resolvedUrl;
           if (nativeUrl.startsWith('/api/xtream/stream?url=')) {
             const encoded = nativeUrl.split('?url=')[1] || '';
             nativeUrl = decodeURIComponent(encoded);
           }
-          let previousUrl: string | undefined;
-          let nextUrl: string | undefined;
-
-          if (playbackTarget.type === 'live' && allLiveStreams.length > 1) {
-            const currentIndex = allLiveStreams.findIndex(
-              (stream) => String(stream.stream_id) === String(playbackTarget.stream.stream_id)
-            );
-            if (currentIndex >= 0) {
-              const unwrap = (value: string): string => {
-                if (!value.startsWith('/api/xtream/stream?url=')) return value;
-                return decodeURIComponent(value.split('?url=')[1] || '');
-              };
-              const previous = allLiveStreams[(currentIndex - 1 + allLiveStreams.length) % allLiveStreams.length];
-              const next = allLiveStreams[(currentIndex + 1) % allLiveStreams.length];
-              previousUrl = unwrap(
-                xtreamService.buildStreamUrl('live', previous.stream_id, undefined, undefined, previous.serverId)
-              );
-              nextUrl = unwrap(
-                xtreamService.buildStreamUrl('live', next.stream_id, undefined, undefined, next.serverId)
-              );
-            }
-          }
 
           await playNativeAndroidMedia({
             url: nativeUrl,
             title: playbackTitleRef.current,
             mediaType: playbackTarget.type === 'episode' ? 'series' : playbackTarget.type,
-            previousUrl,
-            nextUrl,
           });
+
+          xtreamService.addToHistory({
+            id:
+              playbackTarget.type === 'live'
+                ? `live_${playbackTarget.stream.stream_id}`
+                : playbackTarget.type === 'vod'
+                ? `vod_${playbackTarget.movie.stream_id}`
+                : `ep_${playbackTarget.episode.id}`,
+            type: playbackTarget.type,
+            title: playbackTitleRef.current,
+            subtitle: playbackProgramRef.current,
+            icon:
+              playbackTarget.type === 'live'
+                ? playbackTarget.stream.stream_icon
+                : playbackTarget.type === 'vod'
+                ? playbackTarget.movie.stream_icon
+                : playbackTarget.series.cover,
+          });
+
           if (!isCancelled) {
-            setIsLoading(false);
-            setIsPlaying(true);
+            setErrorMsg(null);
+            setErrorDetail(null);
           }
         } catch (err: unknown) {
           if (!isCancelled) {
@@ -464,9 +569,8 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         hlsRef.current.destroy();
         hlsRef.current = null;
       }
-      if (isNativeAndroidRuntime()) {
-        stopNativeAndroidMedia().catch(() => undefined);
-      }
+      // Native Media3 persists across media identity changes. It is released
+      // only by the dedicated unmount effect above.
     };
   }, [playbackIdentity]);
 
@@ -494,6 +598,10 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   };
 
   const togglePlay = () => {
+    if (nativeAndroid) {
+      controlNativeAndroidMedia('toggle').catch(() => undefined);
+      return;
+    }
     if (!videoRef.current) return;
     if (videoRef.current.paused) {
       videoRef.current.play();
@@ -505,6 +613,10 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   };
 
   const toggleMute = () => {
+    if (nativeAndroid) {
+      controlNativeAndroidMedia('toggleMute').catch(() => undefined);
+      return;
+    }
     if (!videoRef.current) return;
     videoRef.current.muted = !videoRef.current.muted;
     setIsMuted(videoRef.current.muted);
@@ -513,10 +625,14 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = parseFloat(e.target.value);
     setVolume(val);
+    setIsMuted(val === 0);
+    if (nativeAndroid) {
+      controlNativeAndroidMedia('setVolume', { value: val }).catch(() => undefined);
+      return;
+    }
     if (videoRef.current) {
       videoRef.current.volume = val;
       videoRef.current.muted = val === 0;
-      setIsMuted(val === 0);
     }
   };
 
@@ -569,11 +685,13 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
           break;
         case 'MediaPlay':
           e.preventDefault();
-          videoRef.current?.play().catch(() => undefined);
+          if (nativeAndroid) controlNativeAndroidMedia('play').catch(() => undefined);
+          else videoRef.current?.play().catch(() => undefined);
           break;
         case 'MediaPause':
           e.preventDefault();
-          videoRef.current?.pause();
+          if (nativeAndroid) controlNativeAndroidMedia('pause').catch(() => undefined);
+          else videoRef.current?.pause();
           break;
         case 'x':
         case 'X':
