@@ -2004,11 +2004,10 @@ public class GetSmartProviderPlugin extends Plugin {
         int extra = allowOff ? 2 : 1;
         String[] labels = new String[choices.size() + extra];
         labels[0] = "Auto";
-        int start = 1;
+        final int start = allowOff ? 2 : 1;
 
         if (allowOff) {
             labels[1] = "Off";
-            start = 2;
         }
 
         int checked = 0;
