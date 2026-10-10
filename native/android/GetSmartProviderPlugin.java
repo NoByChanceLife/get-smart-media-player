@@ -27,7 +27,7 @@ import java.util.concurrent.Executors;
 public class GetSmartProviderPlugin extends Plugin {
     private static final int CONNECT_TIMEOUT_MS = 10000;
     private static final int READ_TIMEOUT_MS = 25000;
-    private static final int MAX_RESPONSE_BYTES = 2 * 1024 * 1024;
+    private static final int MAX_RESPONSE_BYTES = 32 * 1024 * 1024;
     private final ExecutorService executor = Executors.newCachedThreadPool();
 
     @PluginMethod
@@ -47,7 +47,7 @@ public class GetSmartProviderPlugin extends Plugin {
                 connection.setConnectTimeout(CONNECT_TIMEOUT_MS);
                 connection.setReadTimeout(READ_TIMEOUT_MS);
                 connection.setInstanceFollowRedirects(false);
-                connection.setRequestProperty("Accept", "*/*");
+                connection.setRequestProperty("Accept", "*/*");\n                connection.setRequestProperty("Connection", "keep-alive");
 
                 String userAgent = call.getString("userAgent");
                 if (userAgent != null && !userAgent.isEmpty()) {
@@ -69,7 +69,7 @@ public class GetSmartProviderPlugin extends Plugin {
                     connection.setConnectTimeout(CONNECT_TIMEOUT_MS);
                     connection.setReadTimeout(READ_TIMEOUT_MS);
                     connection.setInstanceFollowRedirects(false);
-                    connection.setRequestProperty("Accept", "*/*");
+                    connection.setRequestProperty("Accept", "*/*");\n                    connection.setRequestProperty("Connection", "keep-alive");
                     if (userAgent != null && !userAgent.isEmpty()) {
                         connection.setRequestProperty("User-Agent", userAgent);
                     }
@@ -98,8 +98,17 @@ public class GetSmartProviderPlugin extends Plugin {
                         if (trimmed.startsWith("[")) result.put("data", new JSONArray(trimmed));
                         else result.put("data", new JSONObject(trimmed));
                     } catch (JSONException jsonError) {
-                        call.reject("Provider returned a non-JSON response.");
-                        return;
+                        // Preserve the upstream HTTP status without reflecting provider
+                        // body content back to JavaScript. Many providers return an HTML
+                        // error document for 4xx/5xx responses.
+                        if (status >= 400) {
+                            JSObject safeError = new JSObject();
+                            safeError.put("error", "Provider returned a non-JSON error response.");
+                            result.put("data", safeError);
+                        } else {
+                            call.reject("Provider returned a non-JSON response.");
+                            return;
+                        }
                     }
                 }
                 call.resolve(result);
