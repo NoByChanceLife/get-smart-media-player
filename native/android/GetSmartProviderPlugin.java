@@ -1521,6 +1521,7 @@ public class GetSmartProviderPlugin extends Plugin {
     }
 
     private JSObject buildNativeDiagnostics() {
+        pruneNativeStalls(SystemClock.elapsedRealtime());
         JSObject diagnostics = new JSObject();
         diagnostics.put("active", nativePlayer != null);
         diagnostics.put("state", nativePlayer == null ? "idle" : playbackStateName(nativePlayer.getPlaybackState()));
@@ -2272,6 +2273,7 @@ public class GetSmartProviderPlugin extends Plugin {
     private void releaseNativePlayer() {
         nativeUiHandler.removeCallbacks(hideNativeOsdRunnable);
         nativeUiHandler.removeCallbacks(refreshNativeProgressRunnable);
+        nativeUiHandler.removeCallbacks(refreshNativeDiagnosticsRunnable);
         nativeUiHandler.removeCallbacks(commitNativeNumericEntryRunnable);
         nativeNumericEntry.setLength(0);
         if (nativePlayer != null) {
@@ -2326,7 +2328,23 @@ public class GetSmartProviderPlugin extends Plugin {
         preferredAudioLanguage = "";
         subtitleDefaultMode = "auto";
         preferredSubtitleLanguage = "";
+        nativePerformanceMode = "auto";
+        nativeEffectivePerformanceMode = "balanced";
+        nativeBuiltPerformanceMode = "";
+        nativeQualityPreference = "auto";
+        nativeMaxRetryAttempts = 3;
+        nativeRecoveryAttempt = 0;
+        nativeRecoveryStage = 0;
+        nativeRebuildAttempted = false;
+        nativeRebufferCount = 0;
+        nativeEverReady = false;
+        nativeBufferingIncident = false;
+        nativePlaybackStartedElapsedMs = 0L;
+        nativeStartupTimeMs = -1L;
+        nativeLastReadyElapsedMs = 0L;
+        nativeRecentStalls.clear();
         notifyListeners("playerState", buildPlayerState("stopped"));
+        notifyListeners("playerDiagnostics", buildNativeDiagnostics());
     }
 
     @PluginMethod
