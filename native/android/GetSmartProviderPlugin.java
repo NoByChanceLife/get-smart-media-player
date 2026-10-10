@@ -1580,7 +1580,11 @@ public class GetSmartProviderPlugin extends Plugin {
             showNativeOsd(true);
         } else {
             nativeUiHandler.removeCallbacks(hideNativeOsdRunnable);
+            nativeUiHandler.removeCallbacks(refreshNativeProgressRunnable);
+            nativeUiHandler.removeCallbacks(commitNativeNumericEntryRunnable);
+            nativeNumericEntry.setLength(0);
             if (nativeOsdOverlay != null) nativeOsdOverlay.setVisibility(View.GONE);
+            if (nativeNumericChannelView != null) nativeNumericChannelView.setVisibility(View.GONE);
         }
         emitPlayerState("visibility-applied");
     }
