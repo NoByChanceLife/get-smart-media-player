@@ -529,10 +529,14 @@ public class GetSmartProviderPlugin extends Plugin {
         getActivity().runOnUiThread(() -> {
             try {
                 boolean mediaChanged = !requestedUrl.equals(nativePlayerUrl);
+                String sanitizedUserAgent = sanitizeHttpHeaderValue(requestedUserAgent);
+                String sanitizedReferer = sanitizeHttpHeaderValue(requestedReferer);
+                String sanitizedCookie = sanitizeHttpHeaderValue(requestedCookie);
+
                 boolean requestProfileChanged =
-                    !nativePlaybackUserAgent.equals(requestedUserAgent.trim()) ||
-                    !nativePlaybackReferer.equals(requestedReferer.trim()) ||
-                    !nativePlaybackCookie.equals(requestedCookie.trim());
+                    !nativePlaybackUserAgent.equals(sanitizedUserAgent) ||
+                    !nativePlaybackReferer.equals(sanitizedReferer) ||
+                    !nativePlaybackCookie.equals(sanitizedCookie);
 
                 nativePlayerTitle = requestedTitle;
                 nativePlayerMediaType = requestedMediaType;
@@ -549,9 +553,9 @@ public class GetSmartProviderPlugin extends Plugin {
                 nativeQualityPreference = normalizeQualityPreference(requestedQualityPreference);
                 nativeMaxRetryAttempts =
                     requestedMaxRetries == null ? 3 : Math.max(1, Math.min(5, requestedMaxRetries));
-                nativePlaybackUserAgent = requestedUserAgent.trim();
-                nativePlaybackReferer = requestedReferer.trim();
-                nativePlaybackCookie = requestedCookie.trim();
+                nativePlaybackUserAgent = sanitizedUserAgent;
+                nativePlaybackReferer = sanitizedReferer;
+                nativePlaybackCookie = sanitizedCookie;
 
                 if (nativePlayer != null && requestProfileChanged) {
                     replaceNativePlayerForSourceProfile();
@@ -1358,6 +1362,14 @@ public class GetSmartProviderPlugin extends Plugin {
     private int dp(int value) {
         float density = getContext().getResources().getDisplayMetrics().density;
         return Math.round(value * density);
+    }
+
+    private String sanitizeHttpHeaderValue(String value) {
+        String sanitized = safeString(value)
+            .replace("\r", "")
+            .replace("\n", "")
+            .trim();
+        return sanitized.length() > 8192 ? sanitized.substring(0, 8192) : sanitized;
     }
 
     private String normalizeLanguageCode(String value) {
