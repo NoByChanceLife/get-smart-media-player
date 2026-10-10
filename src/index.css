@@ -40,6 +40,14 @@
     --gs-modal-pad: clamp(14px, 1.4vw, 24px);
   }
 
+  html,
+  body,
+  #root {
+    width: 100%;
+    min-width: 0;
+    overflow-x: hidden;
+  }
+
   body {
     font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
     background:
