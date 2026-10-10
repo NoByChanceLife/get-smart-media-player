@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Tv,
   Star,
@@ -42,6 +42,7 @@ export const SeriesView: React.FC<SeriesViewProps> = ({
   const [loadingSeasons, setLoadingSeasons] = useState<boolean>(false);
   const seriesGridRef = useRef<HTMLDivElement | null>(null);
   const seriesViewRef = useRef<HTMLDivElement | null>(null);
+  const seriesDialogRef = useRef<HTMLDivElement | null>(null);
 
   const focusNavigationRailFromMedia = () => {
     const rail = document.querySelector<HTMLElement>(
@@ -51,10 +52,7 @@ export const SeriesView: React.FC<SeriesViewProps> = ({
   };
 
   const focusTopBarFromMedia = () => {
-    const target = document.querySelector<HTMLElement>(
-      '[data-tv-topbar] .tv-focus-target, [data-tv-topbar] button:not([disabled]), [data-tv-topbar] select:not([disabled])'
-    );
-    target?.focus();
+    focusNavigationRailFromMedia();
   };
 
   const focusZoneItem = (zone: string, preferredIndex = 0) => {
@@ -185,6 +183,27 @@ export const SeriesView: React.FC<SeriesViewProps> = ({
     cards[next]?.focus();
     cards[next]?.scrollIntoView({ behavior: 'auto', block: 'nearest', inline: 'nearest' });
   };
+
+  useEffect(() => {
+    if (!selectedSeries) return;
+
+    const previousFocus = document.activeElement as HTMLElement | null;
+    const dialog = seriesDialogRef.current;
+    const first = dialog?.querySelector<HTMLElement>('button:not([disabled]), [tabindex="0"]');
+    requestAnimationFrame(() => first?.focus());
+
+    const handleDialogKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' || event.key === 'Backspace') {
+        event.preventDefault();
+        event.stopPropagation();
+        setSelectedSeries(null);
+        requestAnimationFrame(() => previousFocus?.focus());
+      }
+    };
+
+    window.addEventListener('keydown', handleDialogKey, true);
+    return () => window.removeEventListener('keydown', handleDialogKey, true);
+  }, [selectedSeries]);
 
   const canAccess = parentalControlService.canAccessSection('series');
   const parentalSettings = parentalControlService.getSettings();
@@ -359,8 +378,8 @@ export const SeriesView: React.FC<SeriesViewProps> = ({
 
       {/* Cinematic Series Episodes & Seasons Modal */}
       {selectedSeries && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md p-4 animate-in fade-in duration-200">
-          <div className="w-full max-w-4xl max-h-[92vh] rounded-xl bg-[#07111d] border border-[#17304a] shadow-2xl overflow-hidden flex flex-col relative">
+        <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/90 backdrop-blur-md p-4 animate-in fade-in duration-200">
+          <div ref={seriesDialogRef} className="w-full max-w-4xl max-h-[92vh] rounded-xl bg-[#07111d] border border-[#17304a] shadow-2xl overflow-hidden flex flex-col relative">
             {/* Header with Backdrop */}
             <div className="relative aspect-[21/9] sm:aspect-[24/9] w-full bg-slate-950 overflow-hidden shrink-0">
               <img
