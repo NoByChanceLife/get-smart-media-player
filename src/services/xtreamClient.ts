@@ -829,6 +829,9 @@ class XtreamService {
             // Keep original title
           }
 
+          const startTimestamp = Number(p.start_timestamp || 0);
+          const stopTimestamp = Number(p.stop_timestamp || 0);
+
           return {
             id: String(p.id || Math.random()),
             epg_id: String(p.epg_id || ''),
@@ -838,9 +841,14 @@ class XtreamService {
             end: p.end || '',
             description: p.description || '',
             channel_id: String(p.channel_id || rawStreamId),
-            start_timestamp: p.start_timestamp ? String(p.start_timestamp) : undefined,
-            stop_timestamp: p.stop_timestamp ? String(p.stop_timestamp) : undefined,
+            start_timestamp: Number.isFinite(startTimestamp) && startTimestamp > 0 ? startTimestamp : 0,
+            stop_timestamp: Number.isFinite(stopTimestamp) && stopTimestamp > 0 ? stopTimestamp : 0,
           };
+        }).sort((a, b) => {
+          const aStart = Number(a.start_timestamp || 0);
+          const bStart = Number(b.start_timestamp || 0);
+          if (aStart > 0 || bStart > 0) return aStart - bStart;
+          return String(a.start).localeCompare(String(b.start));
         });
       }
     } catch {
