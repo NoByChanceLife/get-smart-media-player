@@ -7,6 +7,7 @@ import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
 
 import android.content.Context;
+import android.content.res.ColorStateList;
 import android.content.SharedPreferences;
 import android.net.ConnectivityManager;
 import android.net.Network;
@@ -1173,6 +1174,8 @@ public class GetSmartProviderPlugin extends Plugin {
         nativeProgressEndView = makeText("", 12f, Color.WHITE, true);
         nativeProgressSeekBar = new SeekBar(getActivity());
         nativeProgressSeekBar.setMax(1000);
+        nativeProgressSeekBar.setProgressTintList(ColorStateList.valueOf(Color.rgb(18, 149, 255)));
+        nativeProgressSeekBar.setThumbTintList(ColorStateList.valueOf(Color.WHITE));
         nativeProgressSeekBar.setFocusable(true);
         nativeProgressSeekBar.setFocusableInTouchMode(true);
         nativeProgressSeekBar.setPadding(dp(10), 0, dp(10), 0);
@@ -2039,7 +2042,7 @@ public class GetSmartProviderPlugin extends Plugin {
             nativeNumericChannelView.setVisibility(View.VISIBLE);
         }
 
-        showNativeOsd(false);
+        showNativeInfoBanner();
         nativeUiHandler.postDelayed(commitNativeNumericEntryRunnable, 1500L);
     }
 
@@ -2089,11 +2092,12 @@ public class GetSmartProviderPlugin extends Plugin {
 
             boolean liveControls = "live".equals(nativePlayerMediaType);
             if (nativeGuideButton != null) nativeGuideButton.setVisibility(liveControls ? View.VISIBLE : View.GONE);
-            if (nativePreviousButton != null) nativePreviousButton.setVisibility(liveControls ? View.VISIBLE : View.GONE);
-            if (nativeNextButton != null) nativeNextButton.setVisibility(liveControls ? View.VISIBLE : View.GONE);
-            if (nativeLastButton != null) nativeLastButton.setVisibility(liveControls ? View.VISIBLE : View.GONE);
-            if (nativeSeekBackButton != null) nativeSeekBackButton.setVisibility(liveControls ? View.GONE : View.VISIBLE);
-            if (nativeSeekForwardButton != null) nativeSeekForwardButton.setVisibility(liveControls ? View.GONE : View.VISIBLE);
+            if (nativePreviousButton != null) nativePreviousButton.setVisibility(View.VISIBLE);
+            if (nativeNextButton != null) nativeNextButton.setVisibility(View.VISIBLE);
+            if (nativeLastButton != null) nativeLastButton.setVisibility(View.VISIBLE);
+            if (nativeHealthButton != null) nativeHealthButton.setVisibility(liveControls ? View.VISIBLE : View.GONE);
+            if (nativeSeekBackButton != null) nativeSeekBackButton.setVisibility(View.GONE);
+            if (nativeSeekForwardButton != null) nativeSeekForwardButton.setVisibility(View.GONE);
 
             if (nativePlayPauseButton != null && nativePlayer != null) {
                 nativePlayPauseButton.setText(nativePlayer.isPlaying() ? "Ⅱ" : "▶");
@@ -2147,7 +2151,15 @@ public class GetSmartProviderPlugin extends Plugin {
             nativeOsdOverlay.setVisibility(View.VISIBLE);
             nativeOsdOverlay.setClickable(false);
         }
-        if (nativeOsdTop != null) nativeOsdTop.setVisibility(View.VISIBLE);
+        if (nativeOsdTop != null) {
+            nativeOsdTop.setVisibility(View.VISIBLE);
+            ViewGroup.LayoutParams raw = nativeOsdTop.getLayoutParams();
+            if (raw instanceof FrameLayout.LayoutParams) {
+                FrameLayout.LayoutParams params = (FrameLayout.LayoutParams) raw;
+                params.bottomMargin = dp(252);
+                nativeOsdTop.setLayoutParams(params);
+            }
+        }
         if (nativeOsdBottom != null) nativeOsdBottom.setVisibility(View.VISIBLE);
 
         updateNativeOsdText();
@@ -2173,7 +2185,15 @@ public class GetSmartProviderPlugin extends Plugin {
             nativeOsdOverlay.setVisibility(View.VISIBLE);
             nativeOsdOverlay.setClickable(false);
         }
-        if (nativeOsdTop != null) nativeOsdTop.setVisibility(View.VISIBLE);
+        if (nativeOsdTop != null) {
+            nativeOsdTop.setVisibility(View.VISIBLE);
+            ViewGroup.LayoutParams raw = nativeOsdTop.getLayoutParams();
+            if (raw instanceof FrameLayout.LayoutParams) {
+                FrameLayout.LayoutParams params = (FrameLayout.LayoutParams) raw;
+                params.bottomMargin = dp(28);
+                nativeOsdTop.setLayoutParams(params);
+            }
+        }
         if (nativeOsdBottom != null) nativeOsdBottom.setVisibility(View.GONE);
 
         updateNativeOsdText();
