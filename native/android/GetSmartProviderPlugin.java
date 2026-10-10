@@ -16,7 +16,6 @@ import android.security.keystore.KeyGenParameterSpec;
 import android.security.keystore.KeyProperties;
 import android.util.Base64;
 import android.content.Intent;
-import android.net.Uri;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -66,7 +65,7 @@ public class GetSmartProviderPlugin extends Plugin {
     private static final int DIRECT_ADDRESS_CONNECT_TIMEOUT_MS = 6_000;
     private static final int NETWORK_ROUTE_CONNECT_TIMEOUT_MS = 8_000;
     private static final int MAX_REDIRECTS = 5;
-    private static final String TRANSPORT_BUILD = "GS-NATIVE-XCIPTV-HS7";
+    private static final String TRANSPORT_BUILD = "GS-NATIVE-XCIPTV-HS8";
 
     private static final String CREDENTIAL_PREFS = "getsmart_secure_credentials";
     private static final String CREDENTIAL_DRAFT_KEY = "xtream_draft_v1";
@@ -273,14 +272,31 @@ public class GetSmartProviderPlugin extends Plugin {
 
         try {
             URL validated = validateHttpUrl(rawUrl);
-            Intent intent = new Intent(Intent.ACTION_VIEW);
-            intent.setDataAndType(Uri.parse(validated.toString()), "video/*");
-            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            getContext().startActivity(intent);
+            Intent intent = new Intent(getContext(), NativePlayerActivity.class);
+            intent.putExtra(NativePlayerActivity.EXTRA_URL, validated.toString());
+            intent.putExtra(NativePlayerActivity.EXTRA_TITLE, safeString(call.getString("title")));
+
+            String previousUrl = call.getString("previousUrl");
+            if (previousUrl != null && !previousUrl.trim().isEmpty()) {
+                intent.putExtra(
+                    NativePlayerActivity.EXTRA_PREV_URL,
+                    validateHttpUrl(previousUrl).toString()
+                );
+            }
+
+            String nextUrl = call.getString("nextUrl");
+            if (nextUrl != null && !nextUrl.trim().isEmpty()) {
+                intent.putExtra(
+                    NativePlayerActivity.EXTRA_NEXT_URL,
+                    validateHttpUrl(nextUrl).toString()
+                );
+            }
+
+            getActivity().startActivity(intent);
 
             JSObject result = new JSObject();
             result.put("started", true);
-            result.put("engine", "android-media-intent");
+            result.put("engine", "androidx-media3-exoplayer");
             call.resolve(result);
         } catch (Exception error) {
             call.reject("No compatible Android media player could open this stream.");
