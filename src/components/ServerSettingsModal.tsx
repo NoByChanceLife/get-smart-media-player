@@ -45,6 +45,11 @@ import {
   diagnoseDirectStreamConnection,
   ConnectionDiagnosticReport,
 } from '../services/connectionDiagnostics';
+import {
+  saveXtreamCredentialDraft,
+  loadXtreamCredentialDraft,
+  clearXtreamCredentialDraft,
+} from '../services/credentialDraftService';
 
 interface ServerSettingsModalProps {
   isOpen: boolean;
@@ -66,6 +71,8 @@ export const ServerSettingsModal: React.FC<ServerSettingsModalProps> = ({
   const [xtreamUsername, setXtreamUsername] = useState('');
   const [xtreamPassword, setXtreamPassword] = useState('');
   const [xtreamName, setXtreamName] = useState('');
+  const [rememberXtreamCredentials, setRememberXtreamCredentials] = useState(true);
+  const xtreamDraftLoadedRef = useRef(false);
 
   // Portal / STB Form Fields
   const [stbPortalUrl, setStbPortalUrl] = useState('');
@@ -93,6 +100,61 @@ export const ServerSettingsModal: React.FC<ServerSettingsModalProps> = ({
   const [saveSuccessMsg, setSaveSuccessMsg] = useState<string | null>(null);
 
   const modalRef = useRef<HTMLDivElement | null>(null);
+
+  // Restore the last Xtream form values when Connections is opened. Android
+  // persists these encrypted with the device keystore; browser/PWA fallback is
+  // session-only so the password is not written to durable browser storage.
+  useEffect(() => {
+    if (!isOpen) return;
+
+    let cancelled = false;
+    xtreamDraftLoadedRef.current = false;
+
+    void loadXtreamCredentialDraft()
+      .then((draft) => {
+        if (cancelled) return;
+        if (draft.name) setXtreamName(draft.name);
+        if (draft.serverUrl) setXtreamUrl(draft.serverUrl);
+        if (draft.username) setXtreamUsername(draft.username);
+        if (draft.password) setXtreamPassword(draft.password);
+        xtreamDraftLoadedRef.current = true;
+      })
+      .catch(() => {
+        xtreamDraftLoadedRef.current = true;
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen || newServerType !== 'xtream' || !xtreamDraftLoadedRef.current) return;
+
+    const timer = window.setTimeout(() => {
+      if (!rememberXtreamCredentials) {
+        void clearXtreamCredentialDraft();
+        return;
+      }
+
+      void saveXtreamCredentialDraft({
+        name: xtreamName,
+        serverUrl: xtreamUrl,
+        username: xtreamUsername,
+        password: xtreamPassword,
+      });
+    }, 300);
+
+    return () => window.clearTimeout(timer);
+  }, [
+    isOpen,
+    newServerType,
+    rememberXtreamCredentials,
+    xtreamName,
+    xtreamUrl,
+    xtreamUsername,
+    xtreamPassword,
+  ]);
 
   // TV remote / keyboard spatial navigation inside this modal.
   useEffect(() => {
@@ -160,6 +222,20 @@ export const ServerSettingsModal: React.FC<ServerSettingsModalProps> = ({
         if (!xtreamUrl || !xtreamUsername || !xtreamPassword) {
           throw new Error('Please fill in Server URL, Username, and Password.');
         }
+
+        // Persist before the network test so a timeout/failure never forces the
+        // user to re-enter the account on the next attempt.
+        if (rememberXtreamCredentials) {
+          await saveXtreamCredentialDraft({
+            name: xtreamName,
+            serverUrl: xtreamUrl,
+            username: xtreamUsername,
+            password: xtreamPassword,
+          });
+        } else {
+          await clearXtreamCredentialDraft();
+        }
+
         report = await diagnoseXtreamConnection(
           {
             serverUrl: xtreamUrl.trim(),
@@ -536,6 +612,32 @@ export const ServerSettingsModal: React.FC<ServerSettingsModalProps> = ({
                         </div>
                       </div>
                     </div>
+
+                    <button
+                      type="button"
+                      role="checkbox"
+                      aria-checked={rememberXtreamCredentials}
+                      onClick={() => setRememberXtreamCredentials((value) => !value)}
+                      className="tv-focus-target w-full flex items-center justify-between gap-3 rounded-lg border border-[#17304a] bg-[#07111d] px-3 py-2.5 text-left hover:border-[#2d5c84] transition"
+                    >
+                      <div className="min-w-0">
+                        <p className="text-xs font-semibold text-slate-200">Remember Xtream credentials on this device</p>
+                        <p className="mt-0.5 text-[10px] text-slate-500">
+                          Keeps this form filled for retries. Android stores the password encrypted with the device keystore.
+                        </p>
+                      </div>
+                      <span
+                        className={`relative h-5 w-9 shrink-0 rounded-full transition-colors ${
+                          rememberXtreamCredentials ? 'bg-[#0b63f6]' : 'bg-[#1a2938]'
+                        }`}
+                      >
+                        <span
+                          className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${
+                            rememberXtreamCredentials ? 'translate-x-[18px]' : 'translate-x-0.5'
+                          }`}
+                        />
+                      </span>
+                    </button>
                   </div>
                 )}
 
