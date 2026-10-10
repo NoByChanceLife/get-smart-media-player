@@ -51,6 +51,16 @@ public class GetSmartProviderPlugin extends Plugin {
     private final ExecutorService executor = Executors.newCachedThreadPool();
 
     @PluginMethod
+    public void getTransportInfo(PluginCall call) {
+        JSObject result = new JSObject();
+        result.put("marker", TRANSPORT_BUILD);
+        result.put("engine", "HttpURLConnection");
+        result.put("connectTimeoutMs", CONNECT_TIMEOUT_MS);
+        result.put("readTimeoutMs", READ_TIMEOUT_MS);
+        call.resolve(result);
+    }
+
+    @PluginMethod
     public void saveCredentialDraft(PluginCall call) {
         executor.execute(() -> {
             try {
