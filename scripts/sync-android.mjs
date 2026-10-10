@@ -21,6 +21,15 @@ if (!existsSync(join(root, 'android'))) {
 const packageDir = join(root, 'android', 'app', 'src', 'main', 'java', 'com', 'getsmartmedia', 'player');
 mkdirSync(packageDir, { recursive: true });
 
+// HS8 briefly generated a separate NativePlayerActivity. The app-owned player
+// now lives inside MainActivity, so remove any stale source left in an existing
+// Android workspace before Gradle compiles it.
+const staleNativePlayerActivity = join(packageDir, 'NativePlayerActivity.java');
+if (existsSync(staleNativePlayerActivity)) {
+  rmSync(staleNativePlayerActivity, { force: true });
+  console.log('Removed stale NativePlayerActivity.java.');
+}
+
 copyFileSync(join(root, 'native', 'android', 'GetSmartProviderPlugin.java'), join(packageDir, 'GetSmartProviderPlugin.java'));
 copyFileSync(join(root, 'native', 'android', 'MainActivity.java'), join(packageDir, 'MainActivity.java'));
 copyFileSync(join(root, 'native', 'android', 'AndroidManifest.xml'), join(root, 'android', 'app', 'src', 'main', 'AndroidManifest.xml'));
@@ -66,8 +75,8 @@ for (const dependency of media3Dependencies) {
 // Give this diagnostic APK an unmistakable Android package version so the
 // device installer and App Info can prove which build is actually running.
 compatibleBuildGradle = compatibleBuildGradle
-  .replace(/versionCode\s+\d+/, 'versionCode 2026101015')
-  .replace(/versionName\s+["'][^"']+["']/, 'versionName "2026.10.10-hs15"');
+  .replace(/versionCode\s+\d+/, 'versionCode 2026101016')
+  .replace(/versionName\s+["'][^"']+["']/, 'versionName "2026.10.10-hs16"');
 
 if (compatibleBuildGradle !== originalBuildGradle) {
   writeFileSync(appBuildGradle, compatibleBuildGradle, 'utf8');
