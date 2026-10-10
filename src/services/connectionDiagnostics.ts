@@ -421,27 +421,28 @@ export async function diagnoseXtreamConnection(
     if (m3u8Analysis.isPlayable) {
       playbackVerified = true;
       updateStep('testing_playback', 'success', `Playback verified: ${m3u8Analysis.formatDesc} (${m3u8Probe.latencyMs}ms)`);
-    } else if (m3u8Analysis.isHtmlReject) {
-      // Returned an HTML error page -> Test .ts alternative
+    } else {
+      // A large number of Xtream providers expose live streams as MPEG-TS even
+      // when the catalog/auth API itself is fully valid. Always test .ts when
+      // HLS is not positively verified rather than only after an HTML response.
       const tsEndpoint = `${base}/live/${creds.username}/${creds.password}/${sampleStreamId}.ts`;
       const tsProbe = await probeUrl(tsEndpoint);
       const tsAnalysis = analyzeMediaProbe(tsProbe);
+
       if (tsAnalysis.isPlayable) {
         playbackVerified = true;
         updateStep('testing_playback', 'success', `Playback verified: ${tsAnalysis.formatDesc} (${tsProbe.latencyMs}ms)`);
+      } else if (m3u8Probe.ok && (m3u8Probe.status === 200 || m3u8Probe.status === 206)) {
+        updateStep(
+          'testing_playback',
+          'success',
+          `Playback endpoint reachable but media format was not verified (HTTP ${m3u8Probe.status})`
+        );
       } else {
-        // Conservative: Connection is verified, but stream endpoint returned HTML/unsupported
-        updateStep('testing_playback', 'success', 'Connection verified; playback not yet verified (provider returned non-media response)');
+        // Conservative handling: provider/catalog verification is sufficient to
+        // save the account; native playback is verified separately on device.
+        updateStep('testing_playback', 'success', 'Connection verified; playback not yet verified');
       }
-    } else if (m3u8Probe.ok && (m3u8Probe.status === 200 || m3u8Probe.status === 206)) {
-      updateStep(
-        'testing_playback',
-        'success',
-        `Playback endpoint reachable but media format was not verified (HTTP ${m3u8Probe.status})`
-      );
-    } else {
-      // Conservative handling: Do not falsely claim verified
-      updateStep('testing_playback', 'success', 'Connection verified; playback not yet verified');
     }
   } else {
     updateStep('testing_playback', 'success', 'Connection verified; playback not yet verified');
