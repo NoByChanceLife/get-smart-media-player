@@ -426,14 +426,11 @@ export default function App() {
         if (
           e.key === 'ArrowLeft' &&
           mainContentRef.current?.contains(target) &&
-          !target.closest('input, textarea, select') &&
-          !target.matches('[data-media-card]') &&
-          !target.closest('[data-media-card]') &&
-          !target.matches('[data-media-navigation]') &&
-          !target.closest('[data-media-navigation]') &&
-          !target.matches('[data-tv-zone]') &&
-          !target.closest('[data-tv-zone]')
+          !target.closest('input, textarea, select')
         ) {
+          // Left is the universal escape/reset direction. Feature-level handlers
+          // get the first chance to move within their own row/zone; if the event
+          // reaches App, always return to the main navigation rail.
           e.preventDefault();
           focusNavigationRail();
           return;
