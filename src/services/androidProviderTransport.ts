@@ -1,4 +1,4 @@
-import { Capacitor, registerPlugin } from '@capacitor/core';
+import { Capacitor, registerPlugin, type PluginListenerHandle } from '@capacitor/core';
 import type { ProviderRequest, ProviderTransport } from './providerTransport';
 
 interface NativeTransportInfo {
@@ -8,9 +8,51 @@ interface NativeTransportInfo {
   readTimeoutMs: number;
 }
 
+export interface NativePlayerState {
+  reason: string;
+  active: boolean;
+  visible: boolean;
+  title: string;
+  mediaType: string;
+  playbackState: 'idle' | 'buffering' | 'ready' | 'ended';
+  isPlaying: boolean;
+  playWhenReady: boolean;
+  positionMs: number;
+  durationMs: number;
+  bufferedPositionMs: number;
+  volume: number;
+}
+
+export interface NativePlayerCommand {
+  command: 'stop' | 'channelPrevious' | 'channelNext' | 'guide' | 'back';
+}
+
+export interface NativePlayerError {
+  errorCode: number;
+  errorCodeName: string;
+  message: string;
+}
+
+export interface NativePlayerTrackSummary {
+  audioTracks: number;
+  videoTracks: number;
+  textTracks: number;
+}
+
 interface NativeProviderPlugin {
-  playMedia(options: { url: string; title?: string; mediaType?: 'live' | 'vod' | 'series'; previousUrl?: string; nextUrl?: string }): Promise<{ started: boolean; engine: string }>;
+  playMedia(options: { url: string; title?: string; mediaType?: 'live' | 'vod' | 'series' }): Promise<{ started: boolean; engine: string }>;
   stopMedia(): Promise<{ stopped: boolean }>;
+  setPlayerVisible(options: { visible: boolean }): Promise<NativePlayerState>;
+  getPlayerState(): Promise<NativePlayerState>;
+  controlMedia(options: {
+    action: 'play' | 'pause' | 'toggle' | 'mute' | 'unmute' | 'toggleMute' | 'setVolume' | 'seekBy' | 'showControls' | 'hideControls';
+    value?: number;
+    offsetMs?: number;
+  }): Promise<NativePlayerState>;
+  addListener(eventName: 'playerState', listenerFunc: (state: NativePlayerState) => void): Promise<PluginListenerHandle>;
+  addListener(eventName: 'playerCommand', listenerFunc: (event: NativePlayerCommand) => void): Promise<PluginListenerHandle>;
+  addListener(eventName: 'playerError', listenerFunc: (event: NativePlayerError) => void): Promise<PluginListenerHandle>;
+  addListener(eventName: 'playerTracks', listenerFunc: (event: NativePlayerTrackSummary) => void): Promise<PluginListenerHandle>;
   getTransportInfo(): Promise<NativeTransportInfo>;
   requestJson(options: {
     url: string;
@@ -20,7 +62,7 @@ interface NativeProviderPlugin {
   }): Promise<{ status: number; contentType?: string; route?: string; data: unknown }>;
 }
 
-const EXPECTED_TRANSPORT_MARKER = 'GS-NATIVE-XCIPTV-HS9';
+const EXPECTED_TRANSPORT_MARKER = 'GS-NATIVE-XCIPTV-HS10';
 const NativeProvider = registerPlugin<NativeProviderPlugin>('GetSmartProvider');
 
 export class AndroidProviderTransport implements ProviderTransport {
@@ -80,11 +122,55 @@ export async function playNativeAndroidMedia(options: {
   url: string;
   title?: string;
   mediaType?: 'live' | 'vod' | 'series';
-  previousUrl?: string;
-  nextUrl?: string;
 }): Promise<void> {
   if (!isNativeAndroidRuntime()) throw new Error('Native Android playback is unavailable.');
   await NativeProvider.playMedia(options);
+}
+
+export async function setNativeAndroidPlayerVisible(visible: boolean): Promise<NativePlayerState | null> {
+  if (!isNativeAndroidRuntime()) return null;
+  return NativeProvider.setPlayerVisible({ visible });
+}
+
+export async function getNativeAndroidPlayerState(): Promise<NativePlayerState | null> {
+  if (!isNativeAndroidRuntime()) return null;
+  return NativeProvider.getPlayerState();
+}
+
+export async function controlNativeAndroidMedia(
+  action: 'play' | 'pause' | 'toggle' | 'mute' | 'unmute' | 'toggleMute' | 'setVolume' | 'seekBy' | 'showControls' | 'hideControls',
+  options: { value?: number; offsetMs?: number } = {}
+): Promise<NativePlayerState | null> {
+  if (!isNativeAndroidRuntime()) return null;
+  return NativeProvider.controlMedia({ action, ...options });
+}
+
+export function addNativeAndroidPlayerStateListener(
+  listener: (state: NativePlayerState) => void
+): Promise<PluginListenerHandle> | null {
+  if (!isNativeAndroidRuntime()) return null;
+  return NativeProvider.addListener('playerState', listener);
+}
+
+export function addNativeAndroidPlayerCommandListener(
+  listener: (event: NativePlayerCommand) => void
+): Promise<PluginListenerHandle> | null {
+  if (!isNativeAndroidRuntime()) return null;
+  return NativeProvider.addListener('playerCommand', listener);
+}
+
+export function addNativeAndroidPlayerErrorListener(
+  listener: (event: NativePlayerError) => void
+): Promise<PluginListenerHandle> | null {
+  if (!isNativeAndroidRuntime()) return null;
+  return NativeProvider.addListener('playerError', listener);
+}
+
+export function addNativeAndroidPlayerTracksListener(
+  listener: (event: NativePlayerTrackSummary) => void
+): Promise<PluginListenerHandle> | null {
+  if (!isNativeAndroidRuntime()) return null;
+  return NativeProvider.addListener('playerTracks', listener);
 }
 
 export async function stopNativeAndroidMedia(): Promise<void> {
