@@ -47,7 +47,7 @@ export interface NativePlayerCommand {
 export interface NativePlayerError {
   errorCode: number;
   errorCodeName: string;
-  category?: 'network' | 'decoder' | 'format' | 'drm' | 'live-window' | 'source-denied' | 'unknown' | string;
+  category?: 'network' | 'decoder' | 'format' | 'drm' | 'live-window' | 'source-http' | 'unknown' | string;
   userMessage?: string;
   message: string;
 }
