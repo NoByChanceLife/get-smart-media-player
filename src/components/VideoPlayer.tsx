@@ -694,7 +694,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
       {/* Top Header Bar */}
       <div
-        className={`absolute top-0 left-0 right-0 p-4 sm:p-6 bg-gradient-to-b from-black/90 via-black/50 to-transparent transition-opacity duration-300 flex items-center justify-between z-20 ${
+        className={`absolute top-0 left-0 right-0 p-3 sm:p-4 lg:p-5 bg-gradient-to-b from-black/90 via-black/50 to-transparent transition-opacity duration-300 flex items-center justify-between z-20 ${
           showControls ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
         }`}
       >
@@ -785,7 +785,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
       {/* Bottom OSD / Player Controls Bar */}
       <div
-        className={`absolute bottom-0 left-0 right-0 p-4 sm:p-6 bg-gradient-to-t from-black/90 via-black/55 to-transparent transition-opacity duration-300 z-20 ${
+        className={`absolute bottom-0 left-0 right-0 p-3 sm:p-4 lg:p-5 bg-gradient-to-t from-black/90 via-black/55 to-transparent transition-opacity duration-300 z-20 ${
           showControls ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
         }`}
       >
@@ -960,7 +960,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
       {/* Slide-out Quick Channel Switcher Overlay Drawer */}
       {showChannelDrawer && target.type === 'live' && (
-        <div className="absolute inset-y-0 left-0 w-80 max-w-full bg-slate-950/95 border-r border-slate-800 backdrop-blur-xl p-4 flex flex-col z-30 animate-in slide-in-from-left duration-200">
+        <div className="absolute inset-y-0 left-0 w-[clamp(240px,28vw,320px)] max-w-[90vw] bg-slate-950/95 border-r border-slate-800 backdrop-blur-xl p-3 sm:p-4 flex flex-col z-30 animate-in slide-in-from-left duration-200">
           <div className="flex items-center justify-between pb-3 border-b border-slate-800">
             <div className="flex items-center gap-2">
               <Tv className="w-4 h-4 text-cyan-400" />
