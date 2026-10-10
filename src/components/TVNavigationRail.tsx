@@ -60,6 +60,14 @@ export const TVNavigationRail: React.FC<TVNavigationRailProps> = ({
       railRef.current?.querySelectorAll<HTMLElement>('button:not([disabled]), [tabindex="0"]') ?? []
     ).filter((element) => element.offsetParent !== null);
 
+  const closeTouchRailToContent = () => {
+    setTouchOpen(false);
+    setRemoteOpen(false);
+    setHovered(false);
+    if (isExpanded) onToggleExpanded();
+    requestAnimationFrame(() => requestAnimationFrame(() => onFocusContent?.()));
+  };
+
   const focusRelativeItem = (direction: 1 | -1) => {
     const items = getFocusableItems();
     if (!items.length) return;
@@ -154,6 +162,9 @@ export const TVNavigationRail: React.FC<TVNavigationRailProps> = ({
       <button
         type="button"
         onClick={() => setTouchOpen((open) => !open)}
+        onMouseEnter={() => {
+          if (touchOpen) closeTouchRailToContent();
+        }}
         className="md:hidden absolute left-full top-1/2 -translate-y-1/2 w-8 h-16 rounded-r-2xl border border-l-0 border-slate-700/80 bg-[#070b13]/95 text-cyan-300 flex items-center justify-center shadow-xl tv-focus-target"
         aria-label={touchOpen ? 'Close navigation' : 'Open navigation'}
         aria-expanded={touchOpen}
@@ -161,7 +172,7 @@ export const TVNavigationRail: React.FC<TVNavigationRailProps> = ({
         {touchOpen ? <ChevronLeft className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
       </button>
       {/* Top Branding Section */}
-      <div className="p-3.5 pb-2">
+      <div className="p-3.5 pb-2 shrink-0">
         <div
           onClick={onToggleExpanded}
           className="flex items-center gap-3 p-2 rounded-2xl hover:bg-slate-800/60 cursor-pointer transition-all active:scale-95 group"
@@ -186,7 +197,7 @@ export const TVNavigationRail: React.FC<TVNavigationRailProps> = ({
       </div>
 
       {/* Center Navigation Links */}
-      <nav className="flex-1 px-3 py-2 space-y-1.5 overflow-y-auto custom-scrollbar">
+      <nav className="flex-1 min-h-0 px-3 py-2 space-y-1.5 overflow-y-auto custom-scrollbar">
         {primaryNavItems.map((item) => {
           const isActive = currentTab === item.id;
           return (
@@ -194,7 +205,15 @@ export const TVNavigationRail: React.FC<TVNavigationRailProps> = ({
               key={item.id}
               data-tv-nav-item
               aria-current={isActive ? 'page' : undefined}
-              onClick={() => onSelectTab(item.id)}
+              onClick={() => {
+                onSelectTab(item.id);
+                if (touchOpen) {
+                  requestAnimationFrame(() => {
+                    const active = railRef.current?.querySelector<HTMLElement>('[data-tv-nav-item][aria-current="page"]');
+                    active?.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'auto' });
+                  });
+                }
+              }}
               className={`w-full flex items-center gap-3.5 px-3 py-3 rounded-2xl text-sm font-semibold transition-all duration-200 tv-focus-target group relative ${
                 isActive
                   ? 'bg-gradient-to-r from-cyan-600/90 to-cyan-500 text-white shadow-lg shadow-cyan-950/60 font-bold'
@@ -236,7 +255,7 @@ export const TVNavigationRail: React.FC<TVNavigationRailProps> = ({
       </nav>
 
       {/* Bottom Section: Connections, Profiles, Settings, Collapse */}
-      <div className="p-3 border-t border-slate-800/70 space-y-1.5 bg-[#05080e]/60">
+      <div className="p-3 border-t border-slate-800/70 space-y-1.5 bg-[#05080e]/60 shrink-0 max-h-[48dvh] overflow-y-auto custom-scrollbar">
         {/* Connections / Server Manager Button */}
         <button
           onClick={onOpenConnections}
