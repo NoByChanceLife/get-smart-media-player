@@ -502,23 +502,25 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
           nativeRecoveryRequestedRef.current = false;
 
-          xtreamService.addToHistory({
-            id:
-              playbackTarget.type === 'live'
-                ? `live_${playbackTarget.stream.stream_id}`
-                : playbackTarget.type === 'vod'
-                ? `vod_${playbackTarget.movie.stream_id}`
-                : `ep_${playbackTarget.episode.id}`,
-            type: playbackTarget.type,
-            title: playbackTitleRef.current,
-            subtitle: playbackProgramRef.current,
-            icon:
-              playbackTarget.type === 'live'
-                ? playbackTarget.stream.stream_icon
-                : playbackTarget.type === 'vod'
-                ? playbackTarget.movie.stream_icon
-                : playbackTarget.series.cover,
-          });
+          if (!isRecoveryRequest) {
+            xtreamService.addToHistory({
+              id:
+                playbackTarget.type === 'live'
+                  ? `live_${playbackTarget.stream.stream_id}`
+                  : playbackTarget.type === 'vod'
+                  ? `vod_${playbackTarget.movie.stream_id}`
+                  : `ep_${playbackTarget.episode.id}`,
+              type: playbackTarget.type,
+              title: playbackTitleRef.current,
+              subtitle: playbackProgramRef.current,
+              icon:
+                playbackTarget.type === 'live'
+                  ? playbackTarget.stream.stream_icon
+                  : playbackTarget.type === 'vod'
+                  ? playbackTarget.movie.stream_icon
+                  : playbackTarget.series.cover,
+            });
+          }
 
           if (!isCancelled) {
             setErrorMsg(null);
