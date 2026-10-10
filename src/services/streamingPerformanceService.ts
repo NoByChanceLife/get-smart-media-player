@@ -36,12 +36,14 @@ export interface StreamHealthStats {
   height: number;
   bitrateBps: number;
   estimatedBandwidthBps: number;
+  estimatedBandwidthAvailable?: boolean;
   bufferedSeconds: number;
   liveLatencySeconds: number | null;
   rebufferCount: number;
   startupTimeMs: number | null;
   droppedFrames: number;
   totalFrames: number;
+  droppedFramesAvailable?: boolean;
   protocol: string;
   autoAdaptationLevel: PerformanceMode;
   healthRating: HealthRating;
