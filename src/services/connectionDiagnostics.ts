@@ -397,16 +397,25 @@ export async function diagnoseXtreamConnection(
     if (Array.isArray(streams) && streams.length > 0) {
       streamsCount = streams.length;
       sampleStreamId = String(streams[0].stream_id);
+      updateStep('loading_streams', 'success', `Loaded ${streamsCount} active streams`);
+    } else {
+      // Authentication is the authoritative account check. Some valid packages
+      // are VOD-only, temporarily return no live channels, or expose very large
+      // inventories that should be synchronized after the profile is saved.
+      updateStep(
+        'loading_streams',
+        'success',
+        'Account verified; live inventory is empty or will synchronize after save'
+      );
     }
   } catch (err: unknown) {
     const error = err as Error;
-    return fail('loading_streams', 'SERVER_UNREACHABLE', `Failed to load stream inventory: ${sanitizeErrorMessage(error.message)}`);
+    updateStep(
+      'loading_streams',
+      'success',
+      `Account verified; live inventory sync deferred: ${sanitizeErrorMessage(error.message)}`
+    );
   }
-
-  if (streamsCount === 0) {
-    return fail('loading_streams', 'UNSUPPORTED_API_RESPONSE', 'Server returned 0 channels. Account package may have no active channels assigned.');
-  }
-  updateStep('loading_streams', 'success', `Loaded ${streamsCount} active streams`);
 
   // Step 6: Testing playback endpoint (truthful lightweight validation)
   updateStep('testing_playback', 'running', 'Testing sample media endpoint responsiveness...');
@@ -453,7 +462,9 @@ export async function diagnoseXtreamConnection(
   report.success = true;
   report.summaryMessage = playbackVerified
     ? `Connection & playback verified: ${streamsCount} channels available · Expires ${expiryStr}.`
-    : `Connection verified; playback not yet verified (${streamsCount} channels active · Expires ${expiryStr}).`;
+    : streamsCount > 0
+    ? `Connection verified; playback not yet verified (${streamsCount} channels active · Expires ${expiryStr}).`
+    : `Account verified; catalog synchronization will continue after save · Expires ${expiryStr}.`;
 
   report.meta = {
     accountStatus: u.status || 'Active',
