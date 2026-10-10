@@ -157,8 +157,8 @@ export const StreamingPerformanceModal: React.FC<StreamingPerformanceModalProps>
   ];
 
   return (
-    <div ref={modalRef} className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-6 bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="bg-[#070b14] border border-cyan-500/30 rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl flex flex-col max-h-[92vh] text-slate-200">
+    <div ref={modalRef} className="gs-modal-viewport fixed inset-0 z-[100] flex items-center justify-center bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
+      <div className="gs-modal-shell bg-[#070b14] border border-cyan-500/30 rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl flex flex-col text-slate-200">
         {/* Header */}
         <div className="px-6 py-5 border-b border-slate-800/80 flex items-center justify-between bg-[#05080e]/80">
           <div>
@@ -194,7 +194,7 @@ export const StreamingPerformanceModal: React.FC<StreamingPerformanceModalProps>
         </div>
 
         {/* Scrollable Content */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
+        <div className="gs-modal-pad flex-1 min-h-0 overflow-y-auto space-y-5 custom-scrollbar">
           {/* Mode Selector Cards */}
           <div>
             <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">
