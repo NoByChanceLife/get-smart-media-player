@@ -214,7 +214,9 @@ export const StreamHealthPanel: React.FC<StreamHealthPanelProps> = ({
             <div className="flex justify-between text-slate-400">
               <span>Estimated Bandwidth:</span>
               <span className="text-cyan-300">
-                {streamingPerformanceService.formatBitrate(stats.estimatedBandwidthBps)}
+                {stats.estimatedBandwidthAvailable === false
+                  ? 'Unavailable'
+                  : streamingPerformanceService.formatBitrate(stats.estimatedBandwidthBps)}
               </span>
             </div>
             <div className="flex justify-between text-slate-400">
@@ -226,7 +228,9 @@ export const StreamHealthPanel: React.FC<StreamHealthPanelProps> = ({
             <div className="flex justify-between text-slate-400">
               <span>Dropped Video Frames:</span>
               <span className={stats.droppedFrames > 10 ? 'text-amber-400' : 'text-slate-200'}>
-                {stats.droppedFrames} / {stats.totalFrames}
+                {stats.droppedFramesAvailable === false
+                  ? 'Unavailable'
+                  : `${stats.droppedFrames} / ${stats.totalFrames}`}
               </span>
             </div>
             <div className="flex justify-between text-slate-400">
