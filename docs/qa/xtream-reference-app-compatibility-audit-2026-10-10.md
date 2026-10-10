@@ -394,3 +394,28 @@ Protected:
 - stable-pre-reskin-2026-10-10 branch.
 
 Compatibility changes should occur below those UX contracts wherever possible.
+
+
+---
+
+# Follow-up from real-device timeout
+
+Observed real-device result after the first compatibility pass:
+
+- Xtream authentication failed at the network stage with: Provider connection timed out.
+- Because this occurs before an HTTP status or user_info response, the failure is below Xtream credential validation.
+
+Additional reference-app evidence:
+- The supplied working application contains the literal user agent/version string okhttp/3.12.11.
+- Its networking stack includes OkHttp connection/DNS/retry infrastructure rather than a raw one-request HttpURLConnection wrapper.
+
+Remediation applied:
+- Replaced GetSmartProviderPlugin's HttpURLConnection request engine with a shared OkHttpClient.
+- Matched the reference-compatible OkHttp 3.12.11 library family.
+- Increased native connect timeout to 25 seconds and read timeout to 45 seconds.
+- Enabled retryOnConnectionFailure.
+- Preserved manual redirect validation.
+- Preserved credential-safe errors.
+- Added MAC/cookie/Bearer headers to the native bridge for portal compatibility.
+- scripts/sync-android.mjs now injects com.squareup.okhttp3:okhttp:3.12.11 into the generated Android app dependencies.
+- This change requires a fresh android:prepare / native rebuild; a web-only refresh cannot test it.
