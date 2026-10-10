@@ -475,6 +475,7 @@ export default function App() {
     playbackTarget,
     isFloatingPiP,
     playbackPresentation,
+    isPerformanceModalOpen,
     isSettingsOpen,
     isParentalControlsOpen,
     isProfileSwitcherOpen,
