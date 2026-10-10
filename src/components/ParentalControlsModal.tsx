@@ -230,17 +230,17 @@ export const ParentalControlsModal: React.FC<ParentalControlsModalProps> = ({
 
   return (
     <div ref={modalRef} className="gs-modal-viewport fixed inset-0 z-[100] flex items-center justify-center bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="gs-modal-shell w-full max-w-4xl rounded-3xl bg-slate-900 border border-slate-800 shadow-2xl overflow-hidden flex flex-col">
+      <div className="gs-modal-shell w-full max-w-4xl rounded-lg bg-[#091522] border border-[#17304a] shadow-2xl overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="gs-modal-pad border-b border-slate-800 flex items-center justify-between bg-slate-950/60">
+        <div className="gs-modal-pad border-b border-[#17304a] flex items-center justify-between bg-[#050d17]/60">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400">
+            <div className="w-10 h-10 rounded-lg bg-cyan-500/10 border border-[#2d87ff]/45 flex items-center justify-center text-[#4baeff]">
               <Shield className="w-5 h-5" />
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-base font-bold text-white">Parental Controls & User Profiles</h2>
-                <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-cyan-950 text-cyan-400 border border-cyan-800/40">
+                <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-[#0a2d57] text-[#4baeff] border border-[#245f98]/60">
                   Master Admin Protected
                 </span>
               </div>
@@ -252,20 +252,20 @@ export const ParentalControlsModal: React.FC<ParentalControlsModalProps> = ({
 
           <button
             onClick={onClose}
-            className="p-2 rounded-xl bg-slate-800 text-slate-400 hover:text-white transition"
+            className="p-2 rounded-lg bg-[#0d1d2f] text-slate-400 hover:text-white transition"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Tab Selector */}
-        <div className="px-6 py-3 border-b border-slate-800 bg-slate-950/40 flex items-center gap-2">
+        <div className="px-6 py-3 border-b border-[#17304a] bg-[#050d17]/40 flex items-center gap-2">
           <button
             onClick={() => setActiveTab('profiles')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition ${
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition ${
               activeTab === 'profiles'
-                ? 'bg-cyan-600 text-white shadow-md'
-                : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                ? 'bg-[#0b63f6] text-white shadow-[0_6px_16px_rgba(0,70,180,.24)]'
+                : 'text-slate-400 hover:text-white hover:bg-[#0d1d2f]/60'
             }`}
           >
             <Users className="w-4 h-4" />
@@ -274,10 +274,10 @@ export const ParentalControlsModal: React.FC<ParentalControlsModalProps> = ({
 
           <button
             onClick={() => setActiveTab('content_locks')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition ${
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition ${
               activeTab === 'content_locks'
-                ? 'bg-cyan-600 text-white shadow-md'
-                : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                ? 'bg-[#0b63f6] text-white shadow-[0_6px_16px_rgba(0,70,180,.24)]'
+                : 'text-slate-400 hover:text-white hover:bg-[#0d1d2f]/60'
             }`}
           >
             <Lock className="w-4 h-4" />
@@ -286,10 +286,10 @@ export const ParentalControlsModal: React.FC<ParentalControlsModalProps> = ({
 
           <button
             onClick={() => setActiveTab('pin')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition ${
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition ${
               activeTab === 'pin'
-                ? 'bg-cyan-600 text-white shadow-md'
-                : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                ? 'bg-[#0b63f6] text-white shadow-[0_6px_16px_rgba(0,70,180,.24)]'
+                : 'text-slate-400 hover:text-white hover:bg-[#0d1d2f]/60'
             }`}
           >
             <KeyRound className="w-4 h-4" />
@@ -311,10 +311,10 @@ export const ParentalControlsModal: React.FC<ParentalControlsModalProps> = ({
                       <button
                         key={p.id}
                         onClick={() => setSelectedProfileId(p.id)}
-                        className={`flex items-center gap-2.5 px-3.5 py-2 rounded-2xl border text-xs font-bold transition-all ${
+                        className={`flex items-center gap-2.5 px-3.5 py-2 rounded-lg border text-xs font-bold transition-all ${
                           isSelected
-                            ? 'bg-slate-800 border-cyan-500 text-white shadow-lg'
-                            : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:text-white'
+                            ? 'bg-[#0d1d2f] border-cyan-500 text-white shadow-lg'
+                            : 'bg-[#050d17]/60 border-[#17304a] text-slate-400 hover:text-white'
                         }`}
                       >
                         <div
@@ -331,7 +331,7 @@ export const ParentalControlsModal: React.FC<ParentalControlsModalProps> = ({
                         </div>
                         <span className="truncate max-w-[120px]">{p.name}</span>
                         {p.role === 'master_admin' && (
-                          <span className="text-[9px] px-1.5 py-0.5 rounded bg-cyan-950 text-cyan-400 border border-cyan-800/40">
+                          <span className="text-[9px] px-1.5 py-0.5 rounded bg-[#0a2d57] text-[#4baeff] border border-[#245f98]/60">
                             Admin
                           </span>
                         )}
@@ -347,7 +347,7 @@ export const ParentalControlsModal: React.FC<ParentalControlsModalProps> = ({
 
                 <button
                   onClick={() => setIsCreatingProfile(true)}
-                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-cyan-600/20 hover:bg-cyan-600/30 text-cyan-400 text-xs font-semibold border border-cyan-500/30 shrink-0 transition"
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-[#0b63f6]/18 hover:bg-[#0b63f6]/28 text-[#4baeff] text-xs font-semibold border border-[#2d87ff]/45 shrink-0 transition"
                 >
                   <Plus className="w-3.5 h-3.5" />
                   <span>New Profile</span>
@@ -356,9 +356,9 @@ export const ParentalControlsModal: React.FC<ParentalControlsModalProps> = ({
 
               {/* Create Profile Drawer */}
               {isCreatingProfile && (
-                <form onSubmit={handleCreateProfileSubmit} className="p-5 rounded-2xl bg-slate-950 border border-cyan-500/40 space-y-4">
-                  <div className="flex items-center justify-between pb-2 border-b border-slate-800">
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-cyan-400 flex items-center gap-2">
+                <form onSubmit={handleCreateProfileSubmit} className="p-5 rounded-lg bg-[#050d17] border border-[#2d87ff]/50 space-y-4">
+                  <div className="flex items-center justify-between pb-2 border-b border-[#17304a]">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-[#4baeff] flex items-center gap-2">
                       <Plus className="w-4 h-4" />
                       <span>Create New User Profile</span>
                     </h4>
@@ -379,7 +379,7 @@ export const ParentalControlsModal: React.FC<ParentalControlsModalProps> = ({
                         placeholder="e.g. Maya (Teen) or Lucas (Kids)"
                         value={newProfileName}
                         onChange={(e) => setNewProfileName(e.target.value)}
-                        className="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-cyan-500"
+                        className="w-full bg-[#091522] border border-[#23415d] rounded-lg px-3 py-2 text-white focus:outline-none focus:border-[#2d87ff]"
                         required
                       />
                     </div>
@@ -389,7 +389,7 @@ export const ParentalControlsModal: React.FC<ParentalControlsModalProps> = ({
                       <select
                         value={newProfileRole}
                         onChange={(e) => setNewProfileRole(e.target.value as UserRole)}
-                        className="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-cyan-500"
+                        className="w-full bg-[#091522] border border-[#23415d] rounded-lg px-3 py-2 text-white focus:outline-none focus:border-[#2d87ff]"
                       >
                         <option value="kids">👶 Kids (Safe Mode Auto-Lock)</option>
                         <option value="standard">🧑 Standard / Family (Custom Privileges)</option>
@@ -418,13 +418,13 @@ export const ParentalControlsModal: React.FC<ParentalControlsModalProps> = ({
                     <button
                       type="button"
                       onClick={() => setIsCreatingProfile(false)}
-                      className="px-4 py-2 rounded-xl text-xs text-slate-400 hover:text-white"
+                      className="px-4 py-2 rounded-lg text-xs text-slate-400 hover:text-white"
                     >
                       Cancel
                     </button>
                     <button
                       type="submit"
-                      className="px-5 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold shadow-md"
+                      className="px-5 py-2 rounded-lg bg-[#0b63f6] hover:bg-[#1677ff] text-white text-xs font-bold shadow-md"
                     >
                       Save Profile
                     </button>
@@ -434,11 +434,11 @@ export const ParentalControlsModal: React.FC<ParentalControlsModalProps> = ({
 
               {/* Selected Profile Privileges Card */}
               {selectedProfile && (
-                <div className="p-5 rounded-2xl bg-slate-950 border border-slate-800 space-y-5">
-                  <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+                <div className="p-5 rounded-lg bg-[#050d17] border border-[#17304a] space-y-5">
+                  <div className="flex items-center justify-between pb-3 border-b border-[#17304a]">
                     <div className="flex items-center gap-3">
                       <div
-                        className="w-10 h-10 rounded-2xl flex items-center justify-center text-white"
+                        className="w-10 h-10 rounded-lg flex items-center justify-center text-white"
                         style={{ backgroundColor: selectedProfile.avatarColor }}
                       >
                         {selectedProfile.role === 'master_admin' ? (
@@ -453,7 +453,7 @@ export const ParentalControlsModal: React.FC<ParentalControlsModalProps> = ({
                         <h3 className="text-sm font-bold text-white flex items-center gap-2">
                           <span>{selectedProfile.name}</span>
                           {selectedProfile.role === 'master_admin' && (
-                            <span className="text-[10px] text-cyan-400 bg-cyan-950 border border-cyan-800/40 px-2 py-0.5 rounded-full">
+                            <span className="text-[10px] text-[#4baeff] bg-[#0a2d57] border border-[#245f98]/60 px-2 py-0.5 rounded-full">
                               Master Administrator
                             </span>
                           )}
@@ -469,7 +469,7 @@ export const ParentalControlsModal: React.FC<ParentalControlsModalProps> = ({
                     {selectedProfile.role !== 'master_admin' && (
                       <button
                         onClick={() => handleDeleteProfile(selectedProfile.id)}
-                        className="p-2 rounded-xl text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 transition"
+                        className="p-2 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 transition"
                         title="Delete Profile"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -485,9 +485,9 @@ export const ParentalControlsModal: React.FC<ParentalControlsModalProps> = ({
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                       {/* Live TV Access */}
-                      <div className="p-3.5 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-between">
+                      <div className="p-3.5 rounded-lg bg-[#091522] border border-[#17304a] flex items-center justify-between">
                         <div className="flex items-center gap-2.5">
-                          <Tv className="w-4 h-4 text-cyan-400" />
+                          <Tv className="w-4 h-4 text-[#4baeff]" />
                           <div>
                             <p className="font-semibold text-white">Live TV Channels</p>
                             <p className="text-[11px] text-slate-400">Access live satellite feeds</p>
@@ -499,7 +499,7 @@ export const ParentalControlsModal: React.FC<ParentalControlsModalProps> = ({
                           className={`px-3 py-1 rounded-lg text-xs font-bold transition ${
                             selectedProfile.privileges.canAccessLiveTV
                               ? 'bg-emerald-600/30 text-emerald-400 border border-emerald-500/40'
-                              : 'bg-slate-800 text-slate-500'
+                              : 'bg-[#0d1d2f] text-slate-500'
                           }`}
                         >
                           {selectedProfile.privileges.canAccessLiveTV ? 'Allowed' : 'Blocked'}
@@ -507,7 +507,7 @@ export const ParentalControlsModal: React.FC<ParentalControlsModalProps> = ({
                       </div>
 
                       {/* Movies Access */}
-                      <div className="p-3.5 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-between">
+                      <div className="p-3.5 rounded-lg bg-[#091522] border border-[#17304a] flex items-center justify-between">
                         <div className="flex items-center gap-2.5">
                           <Film className="w-4 h-4 text-amber-400" />
                           <div>
@@ -521,7 +521,7 @@ export const ParentalControlsModal: React.FC<ParentalControlsModalProps> = ({
                           className={`px-3 py-1 rounded-lg text-xs font-bold transition ${
                             selectedProfile.privileges.canAccessMovies
                               ? 'bg-emerald-600/30 text-emerald-400 border border-emerald-500/40'
-                              : 'bg-slate-800 text-slate-500'
+                              : 'bg-[#0d1d2f] text-slate-500'
                           }`}
                         >
                           {selectedProfile.privileges.canAccessMovies ? 'Allowed' : 'Blocked'}
@@ -529,7 +529,7 @@ export const ParentalControlsModal: React.FC<ParentalControlsModalProps> = ({
                       </div>
 
                       {/* Series Access */}
-                      <div className="p-3.5 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-between">
+                      <div className="p-3.5 rounded-lg bg-[#091522] border border-[#17304a] flex items-center justify-between">
                         <div className="flex items-center gap-2.5">
                           <Layers className="w-4 h-4 text-purple-400" />
                           <div>
@@ -543,7 +543,7 @@ export const ParentalControlsModal: React.FC<ParentalControlsModalProps> = ({
                           className={`px-3 py-1 rounded-lg text-xs font-bold transition ${
                             selectedProfile.privileges.canAccessSeries
                               ? 'bg-emerald-600/30 text-emerald-400 border border-emerald-500/40'
-                              : 'bg-slate-800 text-slate-500'
+                              : 'bg-[#0d1d2f] text-slate-500'
                           }`}
                         >
                           {selectedProfile.privileges.canAccessSeries ? 'Allowed' : 'Blocked'}
@@ -551,7 +551,7 @@ export const ParentalControlsModal: React.FC<ParentalControlsModalProps> = ({
                       </div>
 
                       {/* Server Settings Access */}
-                      <div className="p-3.5 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-between">
+                      <div className="p-3.5 rounded-lg bg-[#091522] border border-[#17304a] flex items-center justify-between">
                         <div className="flex items-center gap-2.5">
                           <Settings className="w-4 h-4 text-slate-400" />
                           <div>
@@ -565,7 +565,7 @@ export const ParentalControlsModal: React.FC<ParentalControlsModalProps> = ({
                           className={`px-3 py-1 rounded-lg text-xs font-bold transition ${
                             selectedProfile.privileges.canManageServers
                               ? 'bg-emerald-600/30 text-emerald-400 border border-emerald-500/40'
-                              : 'bg-slate-800 text-slate-500'
+                              : 'bg-[#0d1d2f] text-slate-500'
                           }`}
                         >
                           {selectedProfile.privileges.canManageServers ? 'Allowed' : 'Locked'}
@@ -591,10 +591,10 @@ export const ParentalControlsModal: React.FC<ParentalControlsModalProps> = ({
                             <button
                               key={cat.category_id}
                               onClick={() => handleToggleUserBlockedCategory(cat.category_id)}
-                              className={`px-3 py-1 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition ${
+                              className={`px-3 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition ${
                                 isBlocked
                                   ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
-                                  : 'bg-slate-900 text-slate-400 border border-slate-800 hover:text-white'
+                                  : 'bg-[#091522] text-slate-400 border border-[#17304a] hover:text-white'
                               }`}
                             >
                               {isBlocked && <Lock className="w-3 h-3 text-rose-400" />}
@@ -614,9 +614,9 @@ export const ParentalControlsModal: React.FC<ParentalControlsModalProps> = ({
           {activeTab === 'content_locks' && (
             <div className="space-y-6">
               {/* Display Policy Toggle: Hide vs Lock badge */}
-              <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 flex items-center justify-between gap-4">
+              <div className="p-4 rounded-lg bg-[#050d17] border border-[#17304a] flex items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-slate-800 flex items-center justify-center text-cyan-400 shrink-0">
+                  <div className="w-9 h-9 rounded-lg bg-[#0d1d2f] flex items-center justify-center text-[#4baeff] shrink-0">
                     {settings.hideLockedContentCompletely ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </div>
                   <div>
@@ -631,10 +631,10 @@ export const ParentalControlsModal: React.FC<ParentalControlsModalProps> = ({
 
                 <button
                   onClick={handleToggleHideContent}
-                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition shrink-0 ${
+                  className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition shrink-0 ${
                     settings.hideLockedContentCompletely
-                      ? 'bg-cyan-600 text-white shadow'
-                      : 'bg-slate-800 text-slate-400 hover:text-white'
+                      ? 'bg-[#0b63f6] text-white shadow-[0_6px_16px_rgba(0,70,180,.24)]'
+                      : 'bg-[#0d1d2f] text-slate-400 hover:text-white'
                   }`}
                 >
                   {settings.hideLockedContentCompletely ? 'Vanish / Hidden' : 'Show with Lock'}
@@ -642,9 +642,9 @@ export const ParentalControlsModal: React.FC<ParentalControlsModalProps> = ({
               </div>
 
               {/* Restrict Server Manager */}
-              <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 flex items-center justify-between gap-4">
+              <div className="p-4 rounded-lg bg-[#050d17] border border-[#17304a] flex items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-slate-800 flex items-center justify-center text-cyan-400 shrink-0">
+                  <div className="w-9 h-9 rounded-lg bg-[#0d1d2f] flex items-center justify-center text-[#4baeff] shrink-0">
                     <ShieldCheck className="w-4 h-4" />
                   </div>
                   <div>
@@ -657,10 +657,10 @@ export const ParentalControlsModal: React.FC<ParentalControlsModalProps> = ({
 
                 <button
                   onClick={handleToggleRestrictServers}
-                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition shrink-0 ${
+                  className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition shrink-0 ${
                     settings.restrictServerSettings
                       ? 'bg-emerald-600/30 text-emerald-400 border border-emerald-500/40'
-                      : 'bg-slate-800 text-slate-400 hover:text-white'
+                      : 'bg-[#0d1d2f] text-slate-400 hover:text-white'
                   }`}
                 >
                   {settings.restrictServerSettings ? 'PIN Protected' : 'Open'}
@@ -685,10 +685,10 @@ export const ParentalControlsModal: React.FC<ParentalControlsModalProps> = ({
                       <button
                         key={cat.category_id}
                         onClick={() => handleToggleCategoryLock(cat.category_id, 'live')}
-                        className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition ${
+                        className={`px-3.5 py-2 rounded-lg text-xs font-bold flex items-center gap-2 transition ${
                           isLocked
                             ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40 shadow-sm'
-                            : 'bg-slate-950 text-slate-300 border border-slate-800 hover:border-slate-700'
+                            : 'bg-[#050d17] text-slate-300 border border-[#17304a] hover:border-[#23415d]'
                         }`}
                       >
                         {isLocked ? <Lock className="w-3.5 h-3.5 text-rose-400" /> : <Unlock className="w-3.5 h-3.5 text-slate-500" />}
@@ -717,14 +717,14 @@ export const ParentalControlsModal: React.FC<ParentalControlsModalProps> = ({
                       <div
                         key={stream.stream_id}
                         onClick={() => handleToggleChannelLock(stream.stream_id)}
-                        className={`p-2.5 rounded-xl border flex items-center justify-between cursor-pointer transition ${
+                        className={`p-2.5 rounded-lg border flex items-center justify-between cursor-pointer transition ${
                           isLocked
                             ? 'bg-rose-500/10 border-rose-500/40 text-white'
-                            : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:text-white'
+                            : 'bg-[#050d17]/60 border-[#17304a] text-slate-400 hover:text-white'
                         }`}
                       >
                         <div className="flex items-center gap-2 truncate min-w-0">
-                          <span className="text-[10px] font-mono font-bold text-cyan-400 w-6">
+                          <span className="text-[10px] font-mono font-bold text-[#4baeff] w-6">
                             {stream.num || stream.stream_id}
                           </span>
                           <span className="text-xs font-semibold truncate">{stream.name}</span>
@@ -747,8 +747,8 @@ export const ParentalControlsModal: React.FC<ParentalControlsModalProps> = ({
           {/* TAB 3: Change Master PIN */}
           {activeTab === 'pin' && (
             <div className="max-w-md mx-auto space-y-6 py-4">
-              <div className="p-4 rounded-2xl bg-cyan-950/30 border border-cyan-500/20 text-center">
-                <KeyRound className="w-8 h-8 text-cyan-400 mx-auto mb-2" />
+              <div className="p-4 rounded-lg bg-[#0a2d57]/35 border border-cyan-500/20 text-center">
+                <KeyRound className="w-8 h-8 text-[#4baeff] mx-auto mb-2" />
                 <h4 className="text-sm font-bold text-white">
                   {isPinConfigured ? 'Master Admin PIN Security' : 'Create Master PIN'}
                 </h4>
@@ -772,7 +772,7 @@ export const ParentalControlsModal: React.FC<ParentalControlsModalProps> = ({
                         placeholder="••••"
                         value={currentPinInput}
                         onChange={(e) => setCurrentPinInput(e.target.value.replace(/\D/g, ''))}
-                        className="w-full bg-slate-950 border border-slate-700/80 rounded-xl px-3 py-2 text-white font-mono text-center tracking-widest text-base focus:outline-none focus:border-cyan-500"
+                        className="w-full bg-[#050d17] border border-[#23415d] rounded-lg px-3 py-2 text-white font-mono text-center tracking-widest text-base focus:outline-none focus:border-[#2d87ff]"
                         required
                       />
                     </div>
@@ -788,7 +788,7 @@ export const ParentalControlsModal: React.FC<ParentalControlsModalProps> = ({
                       placeholder="••••"
                       value={newPinInput}
                       onChange={(e) => setNewPinInput(e.target.value.replace(/\D/g, ''))}
-                      className="w-full bg-slate-950 border border-slate-700/80 rounded-xl px-3 py-2 text-white font-mono text-center tracking-widest text-base focus:outline-none focus:border-cyan-500"
+                      className="w-full bg-[#050d17] border border-[#23415d] rounded-lg px-3 py-2 text-white font-mono text-center tracking-widest text-base focus:outline-none focus:border-[#2d87ff]"
                       required
                     />
                   </div>
@@ -803,7 +803,7 @@ export const ParentalControlsModal: React.FC<ParentalControlsModalProps> = ({
                       placeholder="••••"
                       value={confirmPinInput}
                       onChange={(e) => setConfirmPinInput(e.target.value.replace(/\D/g, ''))}
-                      className="w-full bg-slate-950 border border-slate-700/80 rounded-xl px-3 py-2 text-white font-mono text-center tracking-widest text-base focus:outline-none focus:border-cyan-500"
+                      className="w-full bg-[#050d17] border border-[#23415d] rounded-lg px-3 py-2 text-white font-mono text-center tracking-widest text-base focus:outline-none focus:border-[#2d87ff]"
                       required
                     />
                   </div>
@@ -811,7 +811,7 @@ export const ParentalControlsModal: React.FC<ParentalControlsModalProps> = ({
 
                 {pinFeedback && (
                   <div
-                    className={`p-3 rounded-xl text-xs flex items-center gap-2 ${
+                    className={`p-3 rounded-lg text-xs flex items-center gap-2 ${
                       pinFeedback.type === 'success'
                         ? 'bg-emerald-950 text-emerald-300 border border-emerald-800'
                         : 'bg-rose-950 text-rose-300 border border-rose-800'
@@ -828,14 +828,14 @@ export const ParentalControlsModal: React.FC<ParentalControlsModalProps> = ({
 
                 <button
                   type="submit"
-                  className="w-full py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold transition shadow-lg shadow-cyan-950/50"
+                  className="w-full py-2.5 rounded-lg bg-[#0b63f6] hover:bg-[#1677ff] text-white text-xs font-bold transition shadow-lg shadow-cyan-950/50"
                 >
                   {isPinConfigured ? 'Update Master PIN' : 'Create Master PIN'}
                 </button>
               </form>
 
               {/* Relock Button */}
-              <div className="pt-4 border-t border-slate-800 text-center">
+              <div className="pt-4 border-t border-[#17304a] text-center">
                 <button
                   type="button"
                   onClick={() => {
