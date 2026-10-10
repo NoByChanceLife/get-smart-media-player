@@ -99,20 +99,20 @@ export const PinModal: React.FC<PinModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/85 backdrop-blur-md p-4 animate-in fade-in duration-150">
-      <div className="w-full max-w-sm rounded-3xl bg-slate-900 border border-slate-800 shadow-2xl p-6 flex flex-col items-center text-center relative">
+      <div className="w-full max-w-sm rounded-xl bg-[#091522] border border-[#17304a] shadow-2xl p-6 flex flex-col items-center text-center relative">
         {/* Close Button */}
         <button
           onClick={onCancel}
-          className="absolute top-4 right-4 p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition"
+          className="absolute top-4 right-4 p-2 rounded-xl text-slate-400 hover:text-white hover:bg-[#0d1d2f] transition"
         >
           <X className="w-5 h-5" />
         </button>
 
         {/* Lock Icon */}
-        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-3 transition-colors ${
+        <div className={`w-14 h-14 rounded-lg flex items-center justify-center mb-3 transition-colors ${
           hasError
             ? 'bg-rose-500/10 border border-rose-500/30 text-rose-400 animate-bounce'
-            : 'bg-cyan-500/10 border border-cyan-500/30 text-cyan-400'
+            : 'bg-[#0b63f6]/10 border border-[#2d87ff]/40 text-[#4baeff]'
         }`}>
           {hasError ? <ShieldAlert className="w-7 h-7" /> : <Lock className="w-7 h-7" />}
         </div>
@@ -132,7 +132,7 @@ export const PinModal: React.FC<PinModalProps> = ({
                     ? 'bg-cyan-400 border-cyan-400 scale-110 shadow-lg shadow-cyan-500/50'
                     : hasError
                     ? 'border-rose-500/80 bg-rose-500/20'
-                    : 'border-slate-700 bg-slate-800'
+                    : 'border-slate-700 bg-[#0d1d2f]'
                 }`}
               />
             );
@@ -157,7 +157,7 @@ export const PinModal: React.FC<PinModalProps> = ({
               key={digit}
               type="button"
               onClick={() => handleDigit(digit)}
-              className="h-12 rounded-2xl bg-slate-800/80 hover:bg-slate-750 text-white font-mono font-bold text-lg active:scale-95 transition border border-slate-700/60 shadow-sm flex items-center justify-center"
+              className="h-12 rounded-lg bg-[#0d1d2f] hover:bg-slate-750 text-white font-mono font-bold text-lg active:scale-95 transition border border-[#23415d]/70 shadow-sm flex items-center justify-center"
             >
               {digit}
             </button>
@@ -165,21 +165,21 @@ export const PinModal: React.FC<PinModalProps> = ({
           <button
             type="button"
             onClick={handleClear}
-            className="h-12 rounded-2xl bg-slate-800/40 hover:bg-slate-800 text-slate-400 text-xs font-semibold active:scale-95 transition flex items-center justify-center"
+            className="h-12 rounded-lg bg-[#0d1d2f]/65 hover:bg-[#0d1d2f] text-slate-400 text-xs font-semibold active:scale-95 transition flex items-center justify-center"
           >
             Clear
           </button>
           <button
             type="button"
             onClick={() => handleDigit('0')}
-            className="h-12 rounded-2xl bg-slate-800/80 hover:bg-slate-750 text-white font-mono font-bold text-lg active:scale-95 transition border border-slate-700/60 shadow-sm flex items-center justify-center"
+            className="h-12 rounded-lg bg-[#0d1d2f] hover:bg-slate-750 text-white font-mono font-bold text-lg active:scale-95 transition border border-[#23415d]/70 shadow-sm flex items-center justify-center"
           >
             0
           </button>
           <button
             type="button"
             onClick={handleBackspace}
-            className="h-12 rounded-2xl bg-slate-800/40 hover:bg-slate-800 text-slate-400 active:scale-95 transition flex items-center justify-center"
+            className="h-12 rounded-lg bg-[#0d1d2f]/65 hover:bg-[#0d1d2f] text-slate-400 active:scale-95 transition flex items-center justify-center"
           >
             <Delete className="w-5 h-5" />
           </button>
@@ -189,7 +189,7 @@ export const PinModal: React.FC<PinModalProps> = ({
           type="button"
           onClick={() => void handleSubmit()}
           disabled={pin.length < 4 || isVerifying}
-          className="mt-4 w-full max-w-[260px] h-11 rounded-2xl bg-cyan-600 hover:bg-cyan-500 disabled:bg-slate-800 disabled:text-slate-500 text-white text-xs font-bold transition tv-focus-target"
+          className="mt-4 w-full max-w-[260px] h-11 rounded-lg bg-[#0b63f6] hover:bg-[#1677ff] disabled:bg-[#0d1d2f] disabled:text-slate-500 text-white text-xs font-bold transition tv-focus-target"
         >
           {isVerifying ? 'Verifying…' : 'Unlock'}
         </button>
