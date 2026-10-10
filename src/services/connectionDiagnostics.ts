@@ -31,6 +31,7 @@ export type DiagnosticErrorCategory =
   | 'ACCESS_FORBIDDEN'
   | 'INVALID_CREDENTIALS'
   | 'SERVER_UNREACHABLE'
+  | 'NETWORK_ROUTE_FAILURE'
   | 'DNS_FAILURE'
   | 'HTTP_HTTPS_ISSUE'
   | 'REDIRECT_PROBLEM'
@@ -296,7 +297,7 @@ export async function diagnoseXtreamConnection(
   } catch (err: unknown) {
     const error = err as Error;
     const msg = sanitizeErrorMessage(error.message || 'Xtream authentication request failed');
-    const diagnosticStamp = `[BUILD GSM-20261010-HS4 | TRANSPORT ${transportLabel}]`;
+    const diagnosticStamp = `[BUILD GSM-20261010-HS5 | TRANSPORT ${transportLabel}]`;
     const stampedMsg = `${msg} ${diagnosticStamp}`;
 
     // Do not collapse HTTP 403 into "bad credentials". A provider can return
@@ -322,8 +323,15 @@ export async function diagnoseXtreamConnection(
         `Xtream player_api.php was reached but did not return Xtream JSON: ${stampedMsg}`
       );
     }
-    if (/dns|enotfound|getaddrinfo/i.test(msg)) {
+    if (/host could not be resolved|unknownhost|enotfound|name or service not known|getaddrinfo[^.]*?(fail|error)/i.test(msg)) {
       return fail('connecting', 'DNS_FAILURE', `DNS failure while contacting Xtream server: ${stampedMsg}`);
+    }
+    if (/resolved\s+\d+\s+address|direct provider routes were unreachable|tcp connection timed out|timed out during connecting/i.test(msg)) {
+      return fail(
+        'connecting',
+        'NETWORK_ROUTE_FAILURE',
+        `Xtream host resolved, but Get Smart could not establish a network route to the provider: ${stampedMsg}`
+      );
     }
     if (/ssl|tls|certificate|protocol/i.test(msg)) {
       return fail('connecting', 'HTTP_HTTPS_ISSUE', `HTTP/HTTPS issue while contacting Xtream server: ${stampedMsg}`);
