@@ -165,7 +165,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
     null;
 
   return (
-    <div ref={homeRef} onKeyDownCapture={handleTVNavigation} className={`space-y-10 pb-12 animate-in fade-in duration-300 ${isPlaybackBackdrop ? 'watching-glass-home' : ''}`}>
+    <div ref={homeRef} onKeyDownCapture={handleTVNavigation} className={`gs-full-canvas space-y-8 pb-12 animate-in fade-in duration-300 ${isPlaybackBackdrop ? 'watching-glass-home' : ''}`}>
       {/* Hero Spotlight Banner */}
       {featuredItem && (
         <section className="relative w-full rounded-3xl overflow-hidden bg-gradient-to-t from-[#06090f] via-slate-900/60 to-slate-950/40 border border-slate-800/80 shadow-2xl">
@@ -243,7 +243,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
             </button>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+          <div className="gs-landscape-grid">
             {continueWatching.slice(0, 5).map((item) => (
               <div
                 key={item.id}
@@ -318,7 +318,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
             </button>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3.5">
+          <div className="gs-channel-grid">
             {favoriteChannels.slice(0, 6).map((stream) => (
               <div
                 key={stream.stream_id}
@@ -377,7 +377,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
             </button>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="gs-landscape-grid">
             {recentLiveStreams.slice(0, 4).map((stream) => (
               <div
                 key={stream.stream_id}
@@ -442,7 +442,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
             </button>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+          <div className="gs-poster-grid">
             {recentMovies.map((movie) => {
               const isLocked = parentalControlService.isMovieLocked(movie);
               return (
@@ -524,7 +524,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
             </button>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+          <div className="gs-poster-grid">
             {recentSeries.map((series) => (
               <div
                 key={series.series_id}
