@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { PlaybackTarget, XtreamLiveStream, XtreamEPGProgramme } from '../types/xtream';
 import { xtreamService } from '../services/xtreamClient';
+import { isNativeAndroidRuntime, playNativeAndroidMedia, stopNativeAndroidMedia } from '../services/androidProviderTransport';
 import { resolveStalkerStreamLink } from '../services/stalkerClient';
 import { streamingPerformanceService } from '../services/streamingPerformanceService';
 import { useStreamHealthTracker } from '../hooks/useStreamHealthTracker';
@@ -218,6 +219,34 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
       if (isCancelled) return;
 
+      // Android APKs do not run server.ts. Route provider media directly into
+      // the native Android player instead of calling the web-only stream-ticket API.
+      if (isNativeAndroidRuntime()) {
+        try {
+          let nativeUrl = resolvedUrl;
+          if (nativeUrl.startsWith('/api/xtream/stream?url=')) {
+            const encoded = nativeUrl.split('?url=')[1] || '';
+            nativeUrl = decodeURIComponent(encoded);
+          }
+          await playNativeAndroidMedia({
+            url: nativeUrl,
+            title: playbackTitleRef.current,
+            mediaType: playbackTarget.type === 'episode' ? 'series' : playbackTarget.type,
+          });
+          if (!isCancelled) {
+            setIsLoading(false);
+            setIsPlaying(true);
+          }
+        } catch (err: unknown) {
+          if (!isCancelled) {
+            const error = err as Error;
+            setErrorMsg(error.message || 'Native Android player could not start this stream.');
+            setIsLoading(false);
+          }
+        }
+        return;
+      }
+
       // Preserve the upstream format hint before replacing the provider URL with
       // an opaque ticket path. Do not assume every live stream is HLS.
       let mediaHintUrl = resolvedUrl;
@@ -409,6 +438,9 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       if (hlsRef.current) {
         hlsRef.current.destroy();
         hlsRef.current = null;
+      }
+      if (isNativeAndroidRuntime()) {
+        stopNativeAndroidMedia().catch(() => undefined);
       }
     };
   }, [playbackIdentity]);
