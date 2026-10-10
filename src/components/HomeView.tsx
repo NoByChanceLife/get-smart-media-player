@@ -23,11 +23,15 @@ import {
 } from '../types/xtream';
 import { WatchHistoryItem, xtreamService } from '../services/xtreamClient';
 import { parentalControlService } from '../services/parentalControlService';
+import { adultDiscoveryCategoryIds, isPrivateDiscoveryContent, isPrivateHistoryTitle } from '../services/discoveryPrivacy';
 
 interface HomeViewProps {
   liveStreams: XtreamLiveStream[];
   movies: XtreamVodStream[];
   seriesList: XtreamSeries[];
+  liveCategories: XtreamCategory[];
+  vodCategories: XtreamCategory[];
+  seriesCategories: XtreamCategory[];
   activeProfiles: SavedProfile[];
   userProfile: UserProfile;
   onPlayLive: (stream: XtreamLiveStream) => void;
@@ -44,6 +48,9 @@ export const HomeView: React.FC<HomeViewProps> = ({
   liveStreams,
   movies,
   seriesList,
+  liveCategories,
+  vodCategories,
+  seriesCategories,
   activeProfiles,
   userProfile,
   onPlayLive,
@@ -128,15 +135,27 @@ export const HomeView: React.FC<HomeViewProps> = ({
     }
   };
 
-  // Filter content with parental controls
-  const visibleLive = liveStreams.filter((s) => !parentalControlService.isChannelHidden(s));
-  const visibleMovies = movies.filter((m) => !parentalControlService.isMovieHidden(m));
-  const visibleSeries = seriesList.filter((s) => !parentalControlService.isSeriesHidden(s));
+  // Home is always discreet, even in an unrestricted adult profile or when
+  // parental hideLockedContentCompletely is disabled. Access rules are separate.
+  const adultLiveIds = adultDiscoveryCategoryIds(liveCategories);
+  const adultVodIds = adultDiscoveryCategoryIds(vodCategories);
+  const adultSeriesIds = adultDiscoveryCategoryIds(seriesCategories);
+  const visibleLive = liveStreams.filter((s) => !parentalControlService.isChannelHidden(s) && !isPrivateDiscoveryContent(s, adultLiveIds));
+  const visibleMovies = movies.filter((m) => !parentalControlService.isMovieHidden(m) && !isPrivateDiscoveryContent(m, adultVodIds));
+  const visibleSeries = seriesList.filter((s) => !parentalControlService.isSeriesHidden(s) && !isPrivateDiscoveryContent(s, adultSeriesIds));
 
   // Continue Watching items (vod/episodes or items with progress)
-  const continueWatching = historyItems.filter(
-    (h) => h.type === 'vod' || h.type === 'episode' || (h.progressSeconds && h.progressSeconds > 0)
-  );
+  // Stored watch-history thumbnails/titles are also discovery surfaces.
+  // Fail closed for unrecognized movie/episode history identities until a
+  // catalog match proves the item is safe for automatic display.
+  const safeMovieHistoryIds = new Set(visibleMovies.map((m) => `vod_${m.stream_id}`));
+  const continueWatching = historyItems.filter((h) => {
+    if (isPrivateHistoryTitle(h)) return false;
+    if (h.type === 'vod') return safeMovieHistoryIds.has(h.id);
+    if (h.type === 'episode') return false; // Provider series/episode match still pending.
+    return h.type === 'live' && Boolean(h.progressSeconds && h.progressSeconds > 0) &&
+      visibleLive.some((stream) => `live_${stream.stream_id}` === h.id);
+  });
 
   // Recent Live channels from history
   const recentLiveItems = historyItems.filter((h) => h.type === 'live');
