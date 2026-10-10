@@ -16,16 +16,17 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.net.InetAddress;
+import java.io.BufferedReader;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.security.KeyStore;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
-
-import java.security.KeyStore;
 
 import javax.crypto.Cipher;
 import javax.crypto.KeyGenerator;
@@ -33,34 +34,18 @@ import javax.crypto.SecretKey;
 import javax.crypto.spec.GCMParameterSpec;
 import javax.net.ssl.SSLException;
 
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.Response;
-import okhttp3.ResponseBody;
-
 @CapacitorPlugin(name = "GetSmartProvider")
 public class GetSmartProviderPlugin extends Plugin {
     private static final int MAX_RESPONSE_BYTES = 32 * 1024 * 1024;
-    private static final int MAX_REDIRECTS = 5;
+
+    // Verified from the supplied known-working XCIPTV-family APK's
+    // WebServicesAdapter used by player_api.php.
+    private static final int CONNECT_TIMEOUT_MS = 40_000;
+    private static final int READ_TIMEOUT_MS = 35_000;
+
     private static final String CREDENTIAL_PREFS = "getsmart_secure_credentials";
     private static final String CREDENTIAL_DRAFT_KEY = "xtream_draft_v1";
     private static final String KEYSTORE_ALIAS = "getsmart_xtream_draft_key_v1";
-
-    /**
-     * Use the same mature native HTTP family observed in the known-working
-     * reference IPTV application. The client is shared so DNS/connection pools
-     * and retry behavior work like a normal Android media application rather
-     * than recreating a raw URLConnection for every Xtream request.
-     */
-    private final OkHttpClient httpClient = new OkHttpClient.Builder()
-        .connectTimeout(25, TimeUnit.SECONDS)
-        .readTimeout(45, TimeUnit.SECONDS)
-        .writeTimeout(30, TimeUnit.SECONDS)
-        .retryOnConnectionFailure(true)
-        // Redirects are followed manually so every target can be validated.
-        .followRedirects(false)
-        .followSslRedirects(false)
-        .build();
 
     private final ExecutorService executor = Executors.newCachedThreadPool();
 
@@ -104,8 +89,6 @@ public class GetSmartProviderPlugin extends Plugin {
                 result.put("password", payload.optString("password", ""));
                 call.resolve(result);
             } catch (Exception error) {
-                // If the keystore was reset (for example after app restore),
-                // discard the unreadable draft rather than exposing raw data.
                 getContext().getSharedPreferences(CREDENTIAL_PREFS, Context.MODE_PRIVATE)
                     .edit()
                     .remove(CREDENTIAL_DRAFT_KEY)
@@ -136,7 +119,10 @@ public class GetSmartProviderPlugin extends Plugin {
             return (SecretKey) keyStore.getKey(KEYSTORE_ALIAS, null);
         }
 
-        KeyGenerator generator = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, "AndroidKeyStore");
+        KeyGenerator generator = KeyGenerator.getInstance(
+            KeyProperties.KEY_ALGORITHM_AES,
+            "AndroidKeyStore"
+        );
         generator.init(
             new KeyGenParameterSpec.Builder(
                 KEYSTORE_ALIAS,
@@ -162,7 +148,9 @@ public class GetSmartProviderPlugin extends Plugin {
 
     private String decryptDraft(String encrypted) throws Exception {
         String[] parts = encrypted.split(":", 2);
-        if (parts.length != 2) throw new IllegalArgumentException("Credential draft format is invalid.");
+        if (parts.length != 2) {
+            throw new IllegalArgumentException("Credential draft format is invalid.");
+        }
 
         byte[] iv = Base64.decode(parts[0], Base64.NO_WRAP);
         byte[] ciphertext = Base64.decode(parts[1], Base64.NO_WRAP);
@@ -190,176 +178,202 @@ public class GetSmartProviderPlugin extends Plugin {
         final String token = call.getString("token");
 
         executor.execute(() -> {
+            HttpURLConnection connection = null;
+            String phase = "validating";
+
             try {
-                URL currentUrl = validatePublicHttpUrl(rawUrl);
-                int redirects = 0;
+                URL url = validateHttpUrl(rawUrl);
 
-                while (true) {
-                    Request request = buildRequest(currentUrl, userAgent, mac, token);
+                // Match the working APK's Xtream WebServicesAdapter as closely
+                // as practical: HttpURLConnection, GET, User-Agent, native
+                // redirect handling, 40s connect timeout, 35s read timeout.
+                phase = "opening";
+                connection = (HttpURLConnection) url.openConnection();
+                connection.setRequestMethod("GET");
+                connection.setConnectTimeout(CONNECT_TIMEOUT_MS);
+                connection.setReadTimeout(READ_TIMEOUT_MS);
+                connection.setInstanceFollowRedirects(true);
 
-                    try (Response response = httpClient.newCall(request).execute()) {
-                        final int status = response.code();
+                if (userAgent != null && !userAgent.trim().isEmpty()) {
+                    connection.setRequestProperty("User-Agent", userAgent.trim());
+                }
 
-                        if (status >= 300 && status < 400) {
-                            if (redirects >= MAX_REDIRECTS) {
-                                call.reject("Provider returned too many redirects.");
-                                return;
-                            }
+                // Optional Portal/STB compatibility headers. Ordinary Xtream
+                // calls do not send these.
+                if (mac != null && !mac.trim().isEmpty()) {
+                    String encodedMac = URLEncoder.encode(
+                        mac.trim(),
+                        StandardCharsets.UTF_8.name()
+                    );
+                    connection.setRequestProperty(
+                        "Cookie",
+                        "mac=" + encodedMac + "; stb_lang=en; timezone=Europe/London;"
+                    );
+                    connection.setRequestProperty(
+                        "X-User-Agent",
+                        "Model: MAG250; Link: Ethernet"
+                    );
+                }
 
-                            String location = response.header("Location");
-                            if (location == null || location.trim().isEmpty()) {
-                                call.reject("Provider redirect was missing a destination.");
-                                return;
-                            }
+                if (token != null && !token.trim().isEmpty()) {
+                    connection.setRequestProperty(
+                        "Authorization",
+                        "Bearer " + token.trim()
+                    );
+                }
 
-                            currentUrl = validatePublicHttpUrl(new URL(currentUrl, location).toString());
-                            redirects++;
-                            continue;
-                        }
+                phase = "connecting";
+                connection.connect();
 
-                        String contentType = response.header("Content-Type", "");
-                        String body = readBounded(response.body());
+                phase = "reading";
+                int status = connection.getResponseCode();
+                String contentType = connection.getContentType();
 
-                        JSObject result = new JSObject();
-                        result.put("status", status);
-                        result.put("contentType", contentType == null ? "" : contentType);
+                InputStream stream =
+                    status >= 200 && status < 400
+                        ? connection.getInputStream()
+                        : connection.getErrorStream();
 
-                        if (body == null || body.trim().isEmpty()) {
-                            result.put("data", JSONObject.NULL);
+                String body = readBounded(stream);
+
+                JSObject result = new JSObject();
+                result.put("status", status);
+                result.put(
+                    "contentType",
+                    contentType == null ? "" : contentType
+                );
+
+                if (body == null || body.trim().isEmpty()) {
+                    result.put("data", JSONObject.NULL);
+                } else {
+                    String trimmed = body.trim();
+                    try {
+                        if (trimmed.startsWith("[")) {
+                            result.put("data", new JSONArray(trimmed));
                         } else {
-                            String trimmed = body.trim();
-                            try {
-                                if (trimmed.startsWith("[")) {
-                                    result.put("data", new JSONArray(trimmed));
-                                } else {
-                                    result.put("data", new JSONObject(trimmed));
-                                }
-                            } catch (JSONException jsonError) {
-                                // Do not reflect provider HTML/error bodies or URLs with
-                                // embedded credentials back into JavaScript.
-                                if (status >= 400) {
-                                    JSObject safeError = new JSObject();
-                                    safeError.put("error", "Provider returned a non-JSON error response.");
-                                    result.put("data", safeError);
-                                } else {
-                                    call.reject("Provider returned a non-JSON response.");
-                                    return;
-                                }
-                            }
+                            result.put("data", new JSONObject(trimmed));
                         }
-
-                        call.resolve(result);
-                        return;
+                    } catch (JSONException jsonError) {
+                        if (status >= 400) {
+                            JSObject safeError = new JSObject();
+                            safeError.put(
+                                "error",
+                                "Provider returned a non-JSON error response."
+                            );
+                            result.put("data", safeError);
+                        } else {
+                            call.reject("Provider returned a non-JSON response.");
+                            return;
+                        }
                     }
                 }
+
+                call.resolve(result);
             } catch (Exception error) {
-                // Never echo the requested URL: Xtream URLs can contain credentials.
-                call.reject(safeMessage(error));
+                // Never echo the requested URL because Xtream URLs contain
+                // account credentials in their query string.
+                call.reject(safeMessage(error, phase));
+            } finally {
+                if (connection != null) {
+                    connection.disconnect();
+                }
             }
         });
     }
 
-    private Request buildRequest(URL url, String userAgent, String mac, String token) throws Exception {
-        Request.Builder builder = new Request.Builder()
-            .url(url)
-            .get()
-            .header("Accept", "*/*")
-            .header("Connection", "keep-alive");
-
-        if (userAgent != null && !userAgent.trim().isEmpty()) {
-            builder.header("User-Agent", userAgent.trim());
-        }
-
-        if (mac != null && !mac.trim().isEmpty()) {
-            String encodedMac = URLEncoder.encode(mac.trim(), StandardCharsets.UTF_8.name());
-            builder.header("Cookie", "mac=" + encodedMac + "; stb_lang=en; timezone=Europe/London;");
-            builder.header("X-User-Agent", "Model: MAG250; Link: Ethernet");
-        }
-
-        if (token != null && !token.trim().isEmpty()) {
-            builder.header("Authorization", "Bearer " + token.trim());
-        }
-
-        return builder.build();
-    }
-
-    private URL validatePublicHttpUrl(String value) throws Exception {
+    private URL validateHttpUrl(String value) throws Exception {
         URI uri = new URI(value);
         String scheme = uri.getScheme();
-        if (scheme == null || !(scheme.equalsIgnoreCase("http") || scheme.equalsIgnoreCase("https"))) {
-            throw new IllegalArgumentException("Only HTTP and HTTPS provider URLs are supported.");
-        }
-        if (uri.getUserInfo() != null) {
-            throw new IllegalArgumentException("Embedded URL credentials are not allowed.");
+
+        if (
+            scheme == null ||
+            !(scheme.equalsIgnoreCase("http") || scheme.equalsIgnoreCase("https"))
+        ) {
+            throw new IllegalArgumentException(
+                "Only HTTP and HTTPS provider URLs are supported."
+            );
         }
 
-        String host = uri.getHost();
-        if (host == null || host.isEmpty()) {
+        if (uri.getHost() == null || uri.getHost().isEmpty()) {
             throw new IllegalArgumentException("Provider host is invalid.");
         }
 
-        // Preserve SSRF/local-network protections while letting OkHttp perform
-        // the actual connection/DNS route selection after validation.
-        for (InetAddress address : InetAddress.getAllByName(host)) {
-            if (address.isAnyLocalAddress() ||
-                address.isLoopbackAddress() ||
-                address.isLinkLocalAddress() ||
-                address.isSiteLocalAddress() ||
-                address.isMulticastAddress()) {
-                throw new SecurityException("Private or local provider addresses are not allowed.");
-            }
-        }
-
+        // Native IPTV clients must be able to connect to user-configured
+        // provider hosts, including legitimate LAN/private portal addresses.
+        // Do not apply server-side SSRF restrictions to requests originating
+        // from the user's Android device.
         return uri.toURL();
     }
 
-    private String readBounded(ResponseBody responseBody) throws Exception {
-        if (responseBody == null) return "";
-
-        long declaredLength = responseBody.contentLength();
-        if (declaredLength > MAX_RESPONSE_BYTES) {
-            throw new IllegalStateException("Provider response exceeded the safety limit.");
+    private String readBounded(InputStream stream) throws Exception {
+        if (stream == null) {
+            return "";
         }
 
-        byte[] body = responseBody.bytes();
-        if (body.length > MAX_RESPONSE_BYTES) {
-            throw new IllegalStateException("Provider response exceeded the safety limit.");
+        BufferedReader reader = new BufferedReader(
+            new InputStreamReader(stream, StandardCharsets.UTF_8)
+        );
+        StringBuilder body = new StringBuilder();
+        String line;
+
+        while ((line = reader.readLine()) != null) {
+            if (body.length() + line.length() + 1 > MAX_RESPONSE_BYTES) {
+                reader.close();
+                throw new IllegalStateException(
+                    "Provider response exceeded the safety limit."
+                );
+            }
+
+            body.append(line).append('\n');
         }
 
-        return new String(body, StandardCharsets.UTF_8);
+        reader.close();
+        return body.toString();
     }
 
-    private String safeMessage(Exception error) {
+    private String safeMessage(Exception error, String phase) {
         if (error instanceof java.net.SocketTimeoutException) {
-            String message = error.getMessage();
-            if (message != null && message.toLowerCase().contains("connect")) {
-                return "Provider connection timed out before the server accepted the connection.";
+            if ("connecting".equals(phase)) {
+                return "Provider TCP connection timed out after 40 seconds.";
             }
-            return "Provider connection timed out while waiting for a response.";
+            if ("reading".equals(phase)) {
+                return "Provider connected, but the server did not return data within 35 seconds.";
+            }
+            return "Provider connection timed out.";
         }
+
         if (error instanceof java.net.ConnectException) {
             return "Provider refused the network connection.";
         }
+
         if (error instanceof java.net.UnknownHostException) {
             return "Provider host could not be resolved.";
         }
+
         if (error instanceof SSLException) {
             return "Provider TLS/SSL negotiation failed.";
         }
-        if (error instanceof SecurityException || error instanceof IllegalArgumentException) {
+
+        if (
+            error instanceof SecurityException ||
+            error instanceof IllegalArgumentException
+        ) {
             return error.getMessage();
         }
-        if (error instanceof IllegalStateException && error.getMessage() != null) {
+
+        if (
+            error instanceof IllegalStateException &&
+            error.getMessage() != null
+        ) {
             return error.getMessage();
         }
-        return "Native provider request failed.";
+
+        return "Native provider request failed during " + phase + ".";
     }
 
     @Override
     protected void handleOnDestroy() {
         executor.shutdownNow();
-        httpClient.dispatcher().executorService().shutdownNow();
-        httpClient.connectionPool().evictAll();
         super.handleOnDestroy();
     }
 }
