@@ -93,7 +93,7 @@ export const TopBar: React.FC<TopBarProps> = ({
   };
 
   return (
-    <header ref={topBarRef} onKeyDownCapture={handleTVNavigation} data-tv-topbar className="sticky top-0 z-40 bg-[#06090f]/90 backdrop-blur-xl border-b border-slate-800/80 px-4 sm:px-6 py-3 transition-colors">
+    <header ref={topBarRef} onKeyDownCapture={handleTVNavigation} data-tv-topbar className="sticky top-0 z-40 bg-[#06101b]/96 backdrop-blur-xl border-b border-[#17304a] px-3 sm:px-4 lg:px-5 py-2 transition-colors shadow-[0_8px_24px_rgba(0,0,0,.12)]">
       <div className="w-full flex items-center justify-between gap-4">
         {/* Left Section: Mobile Brand or View Header on Desktop */}
         <div className="flex items-center gap-3">
@@ -103,13 +103,13 @@ export const TopBar: React.FC<TopBarProps> = ({
               <Radio className="w-4 h-4 animate-pulse" />
             </div>
             <span className="text-base font-extrabold tracking-tight text-white font-heading flex items-center gap-1.5">
-              Get Smart <span className="text-cyan-400 font-semibold text-xs px-1.5 py-0.5 rounded bg-cyan-950 border border-cyan-800/50">Media</span>
+              Get Smart <span className="text-[#4baeff] font-semibold text-xs px-1.5 py-0.5 rounded bg-cyan-950 border border-cyan-800/50">Media</span>
             </span>
           </div>
 
           {/* Desktop/TV Active View Label */}
           <div className="hidden md:flex items-center gap-2">
-            <h1 className="text-lg font-bold text-white font-heading tracking-tight">
+            <h1 className="text-[15px] font-semibold text-white font-heading tracking-[0.01em]">
               {getTabTitle(currentTab)}
             </h1>
           </div>
@@ -119,12 +119,12 @@ export const TopBar: React.FC<TopBarProps> = ({
         <div className="flex items-center gap-2.5 shrink-0">
           {/* Active Server Dropdown filter if > 1 active server */}
           {activeProfiles.length > 1 && (
-            <div className="hidden lg:flex items-center gap-1 bg-[#0d1424] border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs shadow-inner">
-              <Filter className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+            <div className="hidden lg:flex items-center gap-1.5 bg-[#091522] border border-[#19334e] rounded-lg px-2.5 py-1.5 text-[11px]">
+              <Filter className="w-3.5 h-3.5 text-[#4baeff] shrink-0" />
               <select
                 value={serverFilter}
                 onChange={(e) => onSelectServerFilter(e.target.value)}
-                className="bg-transparent text-xs text-cyan-300 font-semibold focus:outline-none cursor-pointer pr-1"
+                className="bg-transparent text-[11px] text-[#78c1ff] font-medium focus:outline-none cursor-pointer pr-1"
               >
                 <option value="all" className="bg-slate-900 text-white">
                   ⚡ All Active Sources ({activeProfiles.length})
@@ -143,8 +143,8 @@ export const TopBar: React.FC<TopBarProps> = ({
             onClick={() => onSelectTab('search')}
             className={`p-2 rounded-xl border transition tv-focus-target ${
               currentTab === 'search'
-                ? 'bg-cyan-600 text-white border-cyan-500'
-                : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white'
+                ? 'bg-[#0b63f6] text-white border-[#2d87ff]'
+                : 'bg-[#091522] border-[#19334e] text-[#95aabd] hover:text-white hover:border-[#2d5c84]'
             }`}
             title="Global Search (/)"
           >
@@ -154,7 +154,7 @@ export const TopBar: React.FC<TopBarProps> = ({
           {/* User Profile Button */}
           <button
             onClick={onOpenProfileSwitcher}
-            className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-slate-900 border border-slate-800 hover:border-cyan-500/40 hover:bg-slate-850 transition active:scale-95 tv-focus-target"
+            className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-[#091522] border border-[#19334e] hover:border-[#2d5c84] hover:bg-[#0d1d2f] transition active:scale-95 tv-focus-target"
             title={`Active Profile: ${userProfile.name} (U)`}
           >
             <div
@@ -178,7 +178,7 @@ export const TopBar: React.FC<TopBarProps> = ({
           {onOpenPlaybackSettings && (
             <button
               onClick={onOpenPlaybackSettings}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-slate-900 border border-slate-800 hover:border-cyan-500/40 hover:bg-slate-850 text-xs font-semibold text-slate-300 hover:text-cyan-300 transition active:scale-95 tv-focus-target"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[#091522] border border-[#19334e] hover:border-[#2d5c84] hover:bg-[#0d1d2f] text-[11px] font-medium text-[#a7b8c8] hover:text-[#78c1ff] transition active:scale-95 tv-focus-target"
               title="Streaming Performance & Anti-Buffering (P)"
             >
               <Activity className="w-4 h-4 text-amber-400 shrink-0" />
@@ -189,10 +189,10 @@ export const TopBar: React.FC<TopBarProps> = ({
           {/* Parental Controls Button */}
           <button
             onClick={onOpenParentalControls}
-            className="p-2 rounded-xl bg-slate-900 border border-slate-800 hover:border-cyan-500/40 hover:bg-slate-850 text-slate-300 hover:text-cyan-400 transition active:scale-95 tv-focus-target"
+            className="p-2 rounded-lg bg-[#091522] border border-[#19334e] hover:border-[#2d5c84] hover:bg-[#0d1d2f] text-[#9fb1c2] hover:text-[#78c1ff] transition active:scale-95 tv-focus-target"
             title="Parental Controls & Privacy"
           >
-            <Shield className="w-4 h-4 text-cyan-400" />
+            <Shield className="w-4 h-4 text-[#4baeff]" />
           </button>
 
           <PWAInstallButton />
@@ -200,10 +200,10 @@ export const TopBar: React.FC<TopBarProps> = ({
           {/* Connections Settings Button */}
           <button
             onClick={onOpenSettings}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 hover:border-cyan-500/40 hover:bg-slate-850 text-xs font-semibold text-slate-300 transition active:scale-95 tv-focus-target"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#091522] border border-[#19334e] hover:border-[#2d5c84] hover:bg-[#0d1d2f] text-[11px] font-medium text-[#a7b8c8] transition active:scale-95 tv-focus-target"
             title="Manage IPTV Connections & Sources (S)"
           >
-            <Server className="w-3.5 h-3.5 text-cyan-400" />
+            <Server className="w-3.5 h-3.5 text-[#4baeff]" />
             <span className="hidden xl:inline">
               {activeProfiles.length === 1 ? activeProfiles[0].name : `${activeProfiles.length} Sources`}
             </span>
