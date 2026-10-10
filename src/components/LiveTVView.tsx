@@ -258,12 +258,12 @@ export const LiveTVView: React.FC<LiveTVViewProps> = ({
   };
 
   return (
-    <section ref={workspaceRef} className="live-workspace -m-3 sm:-m-4 lg:-m-6 h-[calc(100dvh-4rem)] min-h-0 overflow-hidden bg-[#05080e]">
+    <section ref={workspaceRef} className="live-workspace -m-3 sm:-m-4 lg:-m-6 h-[calc(100dvh-3.25rem)] min-h-0 overflow-hidden bg-[#040b14]">
       <div className="h-full flex min-w-0">
-        <aside className="flex w-[var(--gs-group-rail-width)] shrink-0 flex-col border-r border-slate-800/80 bg-[#080d16]">
-          <div className="h-12 px-3 flex items-center gap-2 border-b border-slate-800/80">
-            <Layers className="w-4 h-4 text-cyan-400" />
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-200">Groups</span>
+        <aside className="flex w-[var(--gs-group-rail-width)] shrink-0 flex-col border-r border-[#17304a] bg-[#07111d]">
+          <div className="h-11 px-3 flex items-center gap-2 border-b border-[#17304a]">
+            <Layers className="w-4 h-4 text-[#4baeff]" />
+            <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#c4d2df]">Groups</span>
           </div>
           <div ref={groupsRef} className="p-2 space-y-1 overflow-y-auto custom-scrollbar">
             <button data-live-entry data-live-group onKeyDown={(e) => handleGroupKey(e, 0)} onClick={() => selectGroup('all')} className={`live-group tv-focus-target ${quickFilter === 'category' && selectedCategoryId === 'all' ? 'live-group-active' : ''}`}>
@@ -275,10 +275,10 @@ export const LiveTVView: React.FC<LiveTVViewProps> = ({
             <button data-live-group onKeyDown={(e) => handleGroupKey(e, 2)} onClick={() => setQuickFilter('recent')} className={`live-group tv-focus-target ${quickFilter === 'recent' ? 'live-group-active' : ''}`}>
               <Clock className="w-4 h-4" /><span>Recently Watched</span>
             </button>
-            <div className="px-2 pt-3 pb-1 text-[10px] uppercase tracking-widest text-slate-600">Provider groups</div>
+            <div className="px-2 pt-3 pb-1 text-[9px] uppercase tracking-[0.18em] text-[#5f768d]">Provider groups</div>
             {visibleCategories.filter((cat) => cat.category_id !== 'all').map((cat, categoryIndex) => (
               <button key={cat.category_id} data-live-group onKeyDown={(e) => handleGroupKey(e, categoryIndex + 3)} onClick={() => selectGroup(cat.category_id)} className={`live-group tv-focus-target ${quickFilter === 'category' && selectedCategoryId === cat.category_id ? 'live-group-active' : ''}`}>
-                {parentalControlService.isCategoryLocked(cat.category_id, 'live') ? <Lock className="w-3.5 h-3.5 text-rose-400" /> : <span className="w-1.5 h-1.5 rounded-full bg-cyan-500" />}
+                {parentalControlService.isCategoryLocked(cat.category_id, 'live') ? <Lock className="w-3.5 h-3.5 text-rose-400" /> : <span className="w-1.5 h-1.5 rounded-full bg-[#197cff]" />}
                 <span>{cat.category_name}</span>
               </button>
             ))}
@@ -286,32 +286,32 @@ export const LiveTVView: React.FC<LiveTVViewProps> = ({
         </aside>
 
         <div className="flex-1 min-w-0 flex flex-col">
-          <div className="live-feature shrink-0 hidden lg:flex h-[clamp(108px,16dvh,148px)] min-h-0 border-b border-slate-800/80 relative overflow-hidden">
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_82%_30%,rgba(14,165,233,0.16),transparent_34%),linear-gradient(100deg,#08111f_0%,#0a1220_58%,#060a11_100%)]" />
+          <div className="live-feature shrink-0 hidden lg:flex h-[clamp(112px,16dvh,148px)] min-h-0 border-b border-[#17304a] relative overflow-hidden">
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_82%_20%,rgba(23,120,255,0.20),transparent_34%),linear-gradient(100deg,#07111d_0%,#0a1726_58%,#050b13_100%)]" />
             <div className="relative z-10 flex w-full items-center justify-between gap-8 px-6 py-4">
               <div className="flex min-w-0 items-center gap-4">
-                <div className="w-16 h-16 shrink-0 rounded-2xl border border-slate-700/70 bg-[#0a1423] shadow-xl flex items-center justify-center overflow-hidden p-2">
-                  {selectedStream?.stream_icon ? <img src={selectedStream.stream_icon} alt="" className="max-w-full max-h-full object-contain" /> : <Tv className="w-7 h-7 text-cyan-400" />}
+                <div className="w-16 h-16 shrink-0 rounded-lg border border-[#21415f] bg-[#091725] shadow-[0_8px_24px_rgba(0,0,0,.28)] flex items-center justify-center overflow-hidden p-2">
+                  {selectedStream?.stream_icon ? <img src={selectedStream.stream_icon} alt="" className="max-w-full max-h-full object-contain" /> : <Tv className="w-7 h-7 text-[#4baeff]" />}
                 </div>
                 <div className="min-w-0">
-                  <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.18em] text-cyan-400 font-bold mb-1">
+                  <div className="flex items-center gap-2 text-[9px] uppercase tracking-[0.20em] text-[#5aaeff] font-bold mb-1">
                     <span>Live TV</span><span className="w-1 h-1 rounded-full bg-slate-600" />
                     <span>{quickFilter === 'category' ? (visibleCategories.find((cat) => cat.category_id === selectedCategoryId)?.category_name || 'All Channels') : quickFilter === 'favorites' ? 'Favorites' : 'Recently Watched'}</span>
                   </div>
-                  <h2 className="text-xl 2xl:text-2xl font-bold text-white font-heading truncate">{selectedNow?.title || selectedStream?.currentProgram || selectedStream?.name || 'Live TV'}</h2>
+                  <h2 className="text-lg 2xl:text-xl font-semibold text-white font-heading truncate">{selectedNow?.title || selectedStream?.currentProgram || selectedStream?.name || 'Live TV'}</h2>
                   <div className="mt-1 text-xs text-slate-300 flex items-center gap-2">
                     <span className="font-semibold">{selectedStream?.name || 'Select a channel'}</span>
                     {selectedNow && <span className="text-slate-500 font-mono">{timeLabel(selectedNow.start)}–{timeLabel(selectedNow.end)}</span>}
-                    {selectedStream && <span className="px-1.5 py-0.5 rounded bg-rose-500/15 border border-rose-500/30 text-[9px] font-black text-rose-400 uppercase">Live</span>}
+                    {selectedStream && <span className="px-1.5 py-0.5 rounded-md bg-[#ff254f]/15 border border-[#ff4568]/35 text-[8px] font-black text-[#ff5576] uppercase">Live</span>}
                   </div>
                   <p className="mt-2 max-w-2xl text-[11px] leading-relaxed text-slate-400 line-clamp-2">{selectedNow?.description || 'Browse the guide, choose a channel, and keep your place while exploring what is on now and next.'}</p>
                 </div>
               </div>
-              {selectedStream && <button onClick={() => play(selectedStream)} className="tv-focus-target shrink-0 flex items-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-500 border border-blue-400/40 px-4 py-2.5 text-xs font-bold text-white"><Play className="w-4 h-4 fill-current" /> Watch Live</button>}
+              {selectedStream && <button onClick={() => play(selectedStream)} className="tv-focus-target shrink-0 flex items-center gap-2 rounded-lg bg-[#0b63f6] hover:bg-[#1677ff] border border-[#438fff] px-4 py-2 text-[11px] font-semibold text-white shadow-[0_8px_18px_rgba(0,75,190,.24)]"><Play className="w-4 h-4 fill-current" /> Watch Live</button>}
             </div>
           </div>
 
-          <header className="h-14 shrink-0 flex items-center gap-3 px-3 sm:px-4 border-b border-slate-800/80 bg-[#070b13]">
+          <header className="h-12 shrink-0 flex items-center gap-3 px-3 border-b border-[#17304a] bg-[#06101b]">
             <div className="relative flex-1 max-w-xl">
               <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
               <input
@@ -323,20 +323,20 @@ export const LiveTVView: React.FC<LiveTVViewProps> = ({
                   else if (e.key === 'ArrowLeft') { e.preventDefault(); e.stopPropagation(); focusGroup(); }
                 }}
                 placeholder="Search channels or programs"
-                className="tv-focus-target w-full h-9 bg-[#0b111d] border border-slate-800 rounded-xl pl-8 pr-3 text-xs text-white focus:outline-none focus:border-cyan-400"
+                className="tv-focus-target w-full h-8 bg-[#091522] border border-[#19334e] rounded-lg pl-8 pr-3 text-[11px] text-white placeholder:text-[#607890] focus:outline-none focus:border-[#2d87ff]"
               />
             </div>
             <span className="hidden sm:block text-[11px] text-slate-500 tabular-nums">{filteredStreams.length.toLocaleString()} channels</span>
           </header>
 
-          <div className="h-10 shrink-0 flex border-b border-slate-800 bg-[#060a11] text-[10px] uppercase tracking-wider text-slate-500">
-            <div className="w-[var(--gs-guide-channel-width)] shrink-0 px-3 flex items-center border-r border-slate-800">Channel</div>
+          <div className="h-9 shrink-0 flex border-b border-[#17304a] bg-[#050d17] text-[9px] uppercase tracking-[0.14em] text-[#71869a]">
+            <div className="w-[var(--gs-guide-channel-width)] shrink-0 px-3 flex items-center border-r border-[#17304a]">Channel</div>
             <div className="flex-1 grid grid-cols-3">
-              <div className="px-3 flex items-center gap-2"><span className="text-cyan-400">Now</span><span className="h-px flex-1 bg-cyan-900/50" /></div>
-              <div className="px-3 flex items-center border-l border-slate-800/60">Next</div>
+              <div className="px-3 flex items-center gap-2"><span className="text-[#4baeff]">Now</span><span className="h-px flex-1 bg-cyan-900/50" /></div>
+              <div className="px-3 flex items-center border-l border-[#17304a]/80">Next</div>
               <div className="px-3 flex items-center border-l border-slate-800/60">Later</div>
             </div>
-            <div className="w-16 shrink-0 border-l border-slate-800/60" />
+            <div className="w-14 shrink-0 border-l border-[#17304a]/80" />
           </div>
 
           <div ref={scrollerRef} onScroll={(e) => setScrollTop(e.currentTarget.scrollTop)} className="flex-1 min-h-0 overflow-y-auto custom-scrollbar relative" role="grid" aria-label="Live channels and program guide">
@@ -353,13 +353,13 @@ export const LiveTVView: React.FC<LiveTVViewProps> = ({
                   onKeyDown: (e: React.KeyboardEvent<HTMLElement>) => handleGridKey(e, row, zone),
                 });
                 return (
-                  <div key={stream.stream_id} style={{ position: 'absolute', top: row * ROW_HEIGHT, left: 0, right: 0, height: ROW_HEIGHT }} className={`live-guide-row flex border-b border-slate-800/60 ${selected ? 'live-guide-row-selected' : 'bg-[#070b12] hover:bg-[#0b121e]'}`}>
-                    <button {...cellProps('channels')} onClick={() => play(stream)} onKeyDown={(e) => { handleGridKey(e, row, 'channels'); activateOnEnter(e, () => play(stream)); }} className="w-[var(--gs-guide-channel-width)] shrink-0 px-2 flex items-center gap-2 border-r border-slate-800 text-left tv-focus-target">
+                  <div key={stream.stream_id} style={{ position: 'absolute', top: row * ROW_HEIGHT, left: 0, right: 0, height: ROW_HEIGHT }} className={`live-guide-row flex border-b border-[#132a40] ${selected ? 'live-guide-row-selected' : 'bg-[#06101a] hover:bg-[#0a1827]'}`}>
+                    <button {...cellProps('channels')} onClick={() => play(stream)} onKeyDown={(e) => { handleGridKey(e, row, 'channels'); activateOnEnter(e, () => play(stream)); }} className="w-[var(--gs-guide-channel-width)] shrink-0 px-2 flex items-center gap-2 border-r border-[#17304a] text-left tv-focus-target">
                       <span className="w-6 text-[10px] text-slate-500 font-mono text-right">{stream.num || row + 1}</span>
-                      <div className="w-8 h-8 shrink-0 rounded-md bg-slate-900 flex items-center justify-center overflow-hidden p-1">
+                      <div className="w-8 h-8 shrink-0 rounded-md bg-[#0a1724] border border-[#17304a] flex items-center justify-center overflow-hidden p-1">
                         {stream.stream_icon ? <img src={stream.stream_icon} alt="" className="max-w-full max-h-full object-contain" loading="lazy" /> : <Tv className="w-4 h-4 text-slate-500" />}
                       </div>
-                      <span className={`text-[11px] font-semibold truncate ${selected ? 'text-cyan-300' : 'text-slate-100'}`}>{stream.name}</span>
+                      <span className={`text-[11px] font-semibold truncate ${selected ? 'text-[#78c1ff]' : 'text-slate-100'}`}>{stream.name}</span>
                     </button>
 
                     <div className="flex-1 min-w-0 grid grid-cols-3">
@@ -371,7 +371,7 @@ export const LiveTVView: React.FC<LiveTVViewProps> = ({
                             {...cellProps(zone)}
                             onClick={() => { setSelectedStreamId(String(stream.stream_id)); if (zone === 'now') play(stream); }}
                             onKeyDown={(e) => { handleGridKey(e, row, zone); if (zone === 'now') activateOnEnter(e, () => play(stream)); }}
-                            className={`min-w-0 px-3 text-left border-l border-slate-800/50 tv-focus-target ${zone === 'now' ? 'bg-cyan-950/10' : ''}`}
+                            className={`min-w-0 px-3 text-left border-l border-[#17304a]/80 tv-focus-target ${zone === 'now' ? 'bg-[#0b63f6]/[0.06]' : ''}`}
                             title={program?.description || program?.title || stream.currentProgram || stream.name}
                           >
                             <div className="flex items-center gap-2 min-w-0">
@@ -384,7 +384,7 @@ export const LiveTVView: React.FC<LiveTVViewProps> = ({
                       })}
                     </div>
 
-                    <div className="w-16 shrink-0 flex items-center justify-center border-l border-slate-800/60">
+                    <div className="w-14 shrink-0 flex items-center justify-center border-l border-[#17304a]/80">
                       <button {...cellProps('favorite')} onClick={() => onToggleFavorite(stream.stream_id)} onKeyDown={(e) => { handleGridKey(e, row, 'favorite'); activateOnEnter(e, () => onToggleFavorite(stream.stream_id)); }} className="p-2 rounded-md text-slate-500 hover:text-amber-400 tv-focus-target" aria-label={`${stream.isFavorite ? 'Remove' : 'Add'} ${stream.name} favorite`}>
                         <Star className={`w-3.5 h-3.5 ${stream.isFavorite ? 'fill-amber-400 text-amber-400' : ''}`} />
                       </button>
