@@ -3,6 +3,7 @@ import { Clock, Layers, Lock, Play, Search, ShieldAlert, Star, Tv } from 'lucide
 import { XtreamCategory, XtreamEPGProgramme, XtreamLiveStream } from '../types/xtream';
 import { parentalControlService } from '../services/parentalControlService';
 import { xtreamService } from '../services/xtreamClient';
+import { adultDiscoveryCategoryIds, isPrivateDiscoveryContent } from '../services/discoveryPrivacy';
 
 interface LiveTVViewProps {
   categories: XtreamCategory[];
@@ -104,13 +105,15 @@ export const LiveTVView: React.FC<LiveTVViewProps> = ({
     }
     const q = searchQuery.trim().toLowerCase();
     if (q) {
+      const adultIds = adultDiscoveryCategoryIds(categories);
+      list = list.filter((stream) => !isPrivateDiscoveryContent(stream, adultIds));
       list = list.filter((stream) =>
         stream.name.toLowerCase().includes(q) ||
         (epg[String(stream.stream_id)] || []).some((program) => program.title?.toLowerCase().includes(q))
       );
     }
     return list;
-  }, [streams, quickFilter, searchQuery, epg, parentalSettings.hideLockedContentCompletely]);
+  }, [streams, categories, quickFilter, searchQuery, epg, parentalSettings.hideLockedContentCompletely]);
 
   const startIndex = Math.max(0, Math.floor(scrollTop / ROW_HEIGHT) - OVERSCAN);
   const visibleCount = Math.ceil(viewportHeight / ROW_HEIGHT) + OVERSCAN * 2;
