@@ -15,6 +15,7 @@ import {
   Plus,
 } from 'lucide-react';
 import {
+  XtreamCategory,
   XtreamLiveStream,
   XtreamVodStream,
   XtreamSeries,
