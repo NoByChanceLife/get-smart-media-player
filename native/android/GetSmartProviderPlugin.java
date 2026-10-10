@@ -941,9 +941,6 @@ public class GetSmartProviderPlugin extends Plugin {
         button.setOnFocusChangeListener((view, hasFocus) -> {
             if (hasFocus) {
                 nativeUiHandler.removeCallbacks(hideNativeOsdRunnable);
-        nativeUiHandler.removeCallbacks(refreshNativeProgressRunnable);
-        nativeUiHandler.removeCallbacks(commitNativeNumericEntryRunnable);
-        nativeNumericEntry.setLength(0);
             } else if (nativeOsdVisible) {
                 scheduleNativeOsdHide();
             }
@@ -1666,6 +1663,9 @@ public class GetSmartProviderPlugin extends Plugin {
 
     private void releaseNativePlayer() {
         nativeUiHandler.removeCallbacks(hideNativeOsdRunnable);
+        nativeUiHandler.removeCallbacks(refreshNativeProgressRunnable);
+        nativeUiHandler.removeCallbacks(commitNativeNumericEntryRunnable);
+        nativeNumericEntry.setLength(0);
         if (nativePlayer != null) {
             nativePlayer.removeListener(nativePlayerListener);
         }
