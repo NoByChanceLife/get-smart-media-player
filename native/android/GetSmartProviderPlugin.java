@@ -35,6 +35,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.BufferedInputStream;
+import java.lang.ref.WeakReference;
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
@@ -85,6 +86,7 @@ public class GetSmartProviderPlugin extends Plugin {
     private static final String KEYSTORE_ALIAS = "getsmart_xtream_draft_key_v1";
 
     private final ExecutorService executor = Executors.newCachedThreadPool();
+    private static WeakReference<GetSmartProviderPlugin> activeInstance = new WeakReference<>(null);
 
     private static final class HttpResult {
         final int status;
@@ -138,6 +140,7 @@ public class GetSmartProviderPlugin extends Plugin {
 
     @PluginMethod
     public void getTransportInfo(PluginCall call) {
+        activeInstance = new WeakReference<>(this);
         JSObject result = new JSObject();
         result.put("marker", TRANSPORT_BUILD);
         result.put("engine", "XCIPTV HttpURLConnection + direct-address HTTP fallback");
@@ -320,6 +323,7 @@ public class GetSmartProviderPlugin extends Plugin {
 
     @PluginMethod
     public void playMedia(PluginCall call) {
+        activeInstance = new WeakReference<>(this);
         final String rawUrl = call.getString("url");
         if (rawUrl == null || rawUrl.trim().isEmpty()) {
             call.reject("Missing media URL.");
@@ -530,67 +534,86 @@ public class GetSmartProviderPlugin extends Plugin {
             )
         );
 
-        nativePlayerView.setOnKeyListener((view, keyCode, event) -> {
-            if (event.getAction() != KeyEvent.ACTION_DOWN) return false;
-
-            if (keyCode == KeyEvent.KEYCODE_MEDIA_STOP) {
-                emitPlayerCommand("stop");
-                return true;
-            }
-
-            if (keyCode == KeyEvent.KEYCODE_CHANNEL_UP) {
-                emitPlayerCommand("channelPrevious");
-                return true;
-            }
-
-            if (keyCode == KeyEvent.KEYCODE_CHANNEL_DOWN) {
-                emitPlayerCommand("channelNext");
-                return true;
-            }
-
-            boolean controllerVisible = nativePlayerView.isControllerFullyVisible();
-
-            if (!controllerVisible && keyCode == KeyEvent.KEYCODE_DPAD_UP) {
-                emitPlayerCommand("channelPrevious");
-                return true;
-            }
-
-            if (!controllerVisible && keyCode == KeyEvent.KEYCODE_DPAD_DOWN) {
-                emitPlayerCommand("channelNext");
-                return true;
-            }
-
-            if (!controllerVisible && keyCode == KeyEvent.KEYCODE_DPAD_LEFT) {
-                emitPlayerCommand("guide");
-                return true;
-            }
-
-            if (keyCode == KeyEvent.KEYCODE_GUIDE || keyCode == KeyEvent.KEYCODE_MENU) {
-                emitPlayerCommand("guide");
-                return true;
-            }
-
-            if (keyCode == KeyEvent.KEYCODE_BACK) {
-                if (controllerVisible) {
-                    nativePlayerView.hideController();
-                } else {
-                    emitPlayerCommand("back");
-                }
-                return true;
-            }
-
-            if (
-                (keyCode == KeyEvent.KEYCODE_DPAD_CENTER || keyCode == KeyEvent.KEYCODE_ENTER) &&
-                !controllerVisible
-            ) {
-                nativePlayerView.showController();
-                return true;
-            }
-
-            return false;
-        });
+        nativePlayerView.setOnKeyListener((view, keyCode, event) ->
+            handleNativePlayerKeyEvent(event)
+        );
 
         applyNativePlayerVisibility();
+    }
+
+    public static boolean dispatchPlayerKeyEvent(KeyEvent event) {
+        GetSmartProviderPlugin plugin = activeInstance.get();
+        return plugin != null && plugin.handleNativePlayerKeyEvent(event);
+    }
+
+    private boolean handleNativePlayerKeyEvent(KeyEvent event) {
+        if (
+            event == null ||
+            event.getAction() != KeyEvent.ACTION_DOWN ||
+            nativePlayer == null ||
+            nativePlayerView == null ||
+            !nativePlayerVisible
+        ) {
+            return false;
+        }
+
+        int keyCode = event.getKeyCode();
+
+        if (keyCode == KeyEvent.KEYCODE_MEDIA_STOP) {
+            emitPlayerCommand("stop");
+            return true;
+        }
+
+        if (keyCode == KeyEvent.KEYCODE_CHANNEL_UP) {
+            emitPlayerCommand("channelPrevious");
+            return true;
+        }
+
+        if (keyCode == KeyEvent.KEYCODE_CHANNEL_DOWN) {
+            emitPlayerCommand("channelNext");
+            return true;
+        }
+
+        boolean controllerVisible = nativePlayerView.isControllerFullyVisible();
+
+        if (!controllerVisible && keyCode == KeyEvent.KEYCODE_DPAD_UP) {
+            emitPlayerCommand("channelPrevious");
+            return true;
+        }
+
+        if (!controllerVisible && keyCode == KeyEvent.KEYCODE_DPAD_DOWN) {
+            emitPlayerCommand("channelNext");
+            return true;
+        }
+
+        if (!controllerVisible && keyCode == KeyEvent.KEYCODE_DPAD_LEFT) {
+            emitPlayerCommand("guide");
+            return true;
+        }
+
+        if (keyCode == KeyEvent.KEYCODE_GUIDE || keyCode == KeyEvent.KEYCODE_MENU) {
+            emitPlayerCommand("guide");
+            return true;
+        }
+
+        if (keyCode == KeyEvent.KEYCODE_BACK) {
+            if (controllerVisible) {
+                nativePlayerView.hideController();
+            } else {
+                emitPlayerCommand("back");
+            }
+            return true;
+        }
+
+        if (
+            (keyCode == KeyEvent.KEYCODE_DPAD_CENTER || keyCode == KeyEvent.KEYCODE_ENTER) &&
+            !controllerVisible
+        ) {
+            nativePlayerView.showController();
+            return true;
+        }
+
+        return false;
     }
 
     private void applyNativePlayerVisibility() {
