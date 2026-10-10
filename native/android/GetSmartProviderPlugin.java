@@ -100,7 +100,7 @@ public class GetSmartProviderPlugin extends Plugin {
     private static final int DIRECT_ADDRESS_CONNECT_TIMEOUT_MS = 6_000;
     private static final int NETWORK_ROUTE_CONNECT_TIMEOUT_MS = 8_000;
     private static final int MAX_REDIRECTS = 5;
-    private static final String TRANSPORT_BUILD = "GS-NATIVE-XCIPTV-HS15";
+    private static final String TRANSPORT_BUILD = "GS-NATIVE-XCIPTV-HS16";
 
     private static final String CREDENTIAL_PREFS = "getsmart_secure_credentials";
     private static final String CREDENTIAL_DRAFT_KEY = "xtream_draft_v1";
@@ -529,6 +529,10 @@ public class GetSmartProviderPlugin extends Plugin {
         getActivity().runOnUiThread(() -> {
             try {
                 boolean mediaChanged = !requestedUrl.equals(nativePlayerUrl);
+                boolean requestProfileChanged =
+                    !nativePlaybackUserAgent.equals(requestedUserAgent.trim()) ||
+                    !nativePlaybackReferer.equals(requestedReferer.trim()) ||
+                    !nativePlaybackCookie.equals(requestedCookie.trim());
 
                 nativePlayerTitle = requestedTitle;
                 nativePlayerMediaType = requestedMediaType;
@@ -549,6 +553,10 @@ public class GetSmartProviderPlugin extends Plugin {
                 nativePlaybackReferer = requestedReferer.trim();
                 nativePlaybackCookie = requestedCookie.trim();
 
+                if (nativePlayer != null && requestProfileChanged) {
+                    replaceNativePlayerForSourceProfile();
+                }
+
                 if (!requestedRecovery && mediaChanged) {
                     resetNativePlaybackHealth();
                 } else if (requestedRecovery) {
@@ -560,7 +568,7 @@ public class GetSmartProviderPlugin extends Plugin {
                 applyNativeTrackPreferences();
                 applyNativeVideoQualityPreference();
 
-                if (mediaChanged) {
+                if (mediaChanged || requestProfileChanged) {
                     nativePlayerUrl = requestedUrl;
                     nativePlaybackStartedElapsedMs = SystemClock.elapsedRealtime();
                     nativePlayer.setMediaItem(buildNativeMediaItem(requestedUrl));
@@ -977,6 +985,7 @@ public class GetSmartProviderPlugin extends Plugin {
         if (lower.contains(".mpd")) return MimeTypes.APPLICATION_MPD;
         if (lower.matches(".*\\.ts(?:$|[?#]).*")) return MimeTypes.VIDEO_MP2T;
         if (lower.contains(".mp4") || lower.contains(".m4v")) return MimeTypes.VIDEO_MP4;
+        if (lower.contains(".mkv")) return MimeTypes.VIDEO_MATROSKA;
         if (lower.contains(".webm")) return MimeTypes.VIDEO_WEBM;
         return "";
     }
@@ -1020,6 +1029,34 @@ public class GetSmartProviderPlugin extends Plugin {
             )
             .setPrioritizeTimeOverSizeThresholds(true)
             .build();
+    }
+
+    private void replaceNativePlayerForSourceProfile() {
+        if (nativePlayer == null || getActivity() == null) return;
+
+        float volume = nativePlayer.getVolume();
+        boolean playWhenReady = nativePlayer.getPlayWhenReady();
+
+        nativePlayer.removeListener(nativePlayerListener);
+        nativePlayer.release();
+        nativePlayer = createNativeExoPlayer();
+
+        if (nativePlayerView != null) {
+            nativePlayerView.setPlayer(nativePlayer);
+        }
+
+        nativePlayer.setVolume(volume);
+        applyNativeTrackPreferences();
+        applyNativeVideoQualityPreference();
+
+        // Do not restore the prior MediaItem here. playMedia() immediately
+        // attaches the requested media using the newly built request profile.
+        if (!playWhenReady) {
+            nativePlayer.pause();
+        }
+
+        emitPlayerState("source-request-profile-rebuild");
+        notifyListeners("playerDiagnostics", buildNativeDiagnostics());
     }
 
     private void rebuildNativePlayerForPerformanceMode(String reason) {
