@@ -419,3 +419,38 @@ Remediation applied:
 - Added MAC/cookie/Bearer headers to the native bridge for portal compatibility.
 - scripts/sync-android.mjs now injects com.squareup.okhttp3:okhttp:3.12.11 into the generated Android app dependencies.
 - This change requires a fresh android:prepare / native rebuild; a web-only refresh cannot test it.
+
+---
+
+# Corrected login transport finding — direct DEX trace
+
+A deeper method-level trace of the supplied working APK corrected an earlier inference.
+
+The APK bundles OkHttp, but its actual Xtream login and catalog WebServicesAdapter does **not** use OkHttp. The player_api.php call path is:
+
+- LoginActivity$l.doInBackground
+- constructs base + /player_api.php?username= + username + &password= + password
+- calls c/f/a/h4/e.a(...) (the app's WebServicesAdapter)
+- that method uses Android HttpURLConnection
+- request method: GET
+- request header: User-Agent
+- User-Agent value resolves from Config.h to MEGAPLUSTV-v4.0.3
+- read timeout: 35000 ms
+- connect timeout: 40000 ms
+- calls connect(), then getInputStream(), then reads the response line-by-line
+- no extra public-host DNS filtering is present in this Xtream adapter
+- no custom redirect loop is present in this Xtream adapter; normal URLConnection behavior applies
+
+The same adapter is reused by the live-category and live-stream update jobs.
+
+Remediation on Get Smart:
+- removed the OkHttp-specific Xtream bridge implementation
+- restored native HttpURLConnection
+- matched 40s connect / 35s read timeouts
+- matched the working app's Xtream User-Agent for interoperability testing
+- removed extra native public/private DNS filtering that the working app does not perform
+- removed manual redirect handling and extra Accept/Connection headers
+- removed the no-longer-needed OkHttp Gradle injection
+- retained credential-safe error messages and encrypted credential-draft storage
+
+This is now a protocol-parity change based on the working APK's actual Xtream request path rather than a library-presence inference.
