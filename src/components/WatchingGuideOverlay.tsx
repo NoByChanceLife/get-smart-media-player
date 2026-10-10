@@ -150,8 +150,8 @@ export const WatchingGuideOverlay: React.FC<WatchingGuideOverlayProps> = ({
       aria-label="Watching guide"
     >
       <div className="absolute inset-0 bg-gradient-to-r from-black/88 via-black/48 to-transparent" />
-      <div className="absolute inset-x-0 bottom-0 h-[76vh] min-h-[430px] pointer-events-auto flex items-end">
-        <section className="w-full max-h-[72vh] border-t border-white/10 bg-gradient-to-r from-[#050912]/94 via-[#07101b]/84 to-black/35 backdrop-blur-md shadow-[0_-24px_80px_rgba(0,0,0,0.45)]">
+      <div className="absolute inset-x-0 bottom-0 h-[min(74dvh,620px)] pointer-events-auto flex items-end">
+        <section className="w-full max-h-[min(72dvh,600px)] border-t border-white/10 bg-gradient-to-r from-[#050912]/94 via-[#07101b]/84 to-black/35 backdrop-blur-md shadow-[0_-24px_80px_rgba(0,0,0,0.45)]">
           <div className="h-14 px-6 flex items-center justify-between border-b border-white/10">
             <div className="min-w-0">
               <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-cyan-400"><span>Live TV</span><span className="text-slate-600">•</span><span className="text-slate-400">Watching</span></div>
@@ -197,8 +197,8 @@ export const WatchingGuideOverlay: React.FC<WatchingGuideOverlayProps> = ({
             </div>
           </div>
 
-          <div className="flex h-[min(58vh,520px)] min-h-[330px]">
-            <aside className="w-56 shrink-0 border-r border-white/10 bg-black/28 p-3 overflow-y-auto custom-scrollbar">
+          <div className="flex h-[clamp(260px,52dvh,500px)] min-h-0">
+            <aside className="w-[var(--gs-group-rail-width)] shrink-0 border-r border-white/10 bg-black/28 p-2.5 overflow-y-auto custom-scrollbar">
               <div className="flex items-center gap-2 px-2 pb-2 text-[10px] uppercase tracking-widest text-slate-400">
                 <Layers className="w-3.5 h-3.5" /> Groups
               </div>
@@ -220,7 +220,7 @@ export const WatchingGuideOverlay: React.FC<WatchingGuideOverlayProps> = ({
               ))}
             </aside>
 
-            <div className="flex-1 min-w-0 overflow-y-auto custom-scrollbar py-2 pr-[18vw]">
+            <div className="flex-1 min-w-0 overflow-y-auto custom-scrollbar py-2 pr-2 sm:pr-4">
               {visibleStreams.map((stream, index) => {
                 const isPlaying = String(stream.stream_id) === String(currentStream.stream_id);
                 return (
