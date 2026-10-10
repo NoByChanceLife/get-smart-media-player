@@ -643,7 +643,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       />
 
       {!isVisuallyHidden && errorMsg && errorDetail && (
-        <div className="absolute left-1/2 top-1/2 z-[70] w-[min(90vw,680px)] -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-red-400/30 bg-black/85 p-5 text-center shadow-2xl">
+        <div className="absolute left-1/2 top-1/2 z-[70] w-[min(90vw,680px)] -translate-x-1/2 -translate-y-1/2 rounded-lg border border-red-400/30 bg-black/85 p-5 text-center shadow-2xl">
           <p className="text-base font-semibold text-white">{errorMsg}</p>
           <p className="mt-2 font-mono text-sm text-red-200">{errorDetail}</p>
         </div>
@@ -661,7 +661,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       {/* Non-blocking stream status. A dead stream must not hide the TV OSD/options. */}
       {!isVisuallyHidden && errorMsg && (
         <div className="absolute inset-0 flex items-center justify-center p-6 text-center z-10 pointer-events-none">
-          <div className="pointer-events-auto max-w-lg rounded-2xl border border-white/10 bg-black/60 backdrop-blur-xl px-5 py-4 shadow-2xl">
+          <div className="pointer-events-auto max-w-lg rounded-lg border border-white/10 bg-black/60 backdrop-blur-xl px-5 py-4 shadow-2xl">
             <div className="flex items-center justify-center gap-2 text-rose-300 mb-1.5">
               <Radio className="w-4 h-4" />
               <h3 className="text-sm font-bold text-white">Stream unavailable</h3>
@@ -675,14 +675,14 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
                   const v = videoRef.current;
                   if (v) v.load();
                 }}
-                className="tv-focus-target px-3 py-2 bg-white/10 hover:bg-white/15 border border-white/10 text-white rounded-xl text-xs font-semibold flex items-center gap-2"
+                className="tv-focus-target px-3 py-2 bg-white/10 hover:bg-white/15 border border-white/10 text-white rounded-lg text-xs font-semibold flex items-center gap-2"
               >
                 <RotateCw className="w-3.5 h-3.5" />
                 <span>Retry</span>
               </button>
               <button
                 onClick={onClose}
-                className="tv-focus-target px-3 py-2 bg-white/10 hover:bg-white/15 border border-white/10 text-slate-200 rounded-xl text-xs font-medium"
+                className="tv-focus-target px-3 py-2 bg-white/10 hover:bg-white/15 border border-white/10 text-slate-200 rounded-lg text-xs font-medium"
               >
                 Guide
               </button>
@@ -701,7 +701,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         <div className="flex items-center gap-4">
           <button
             onClick={onClose}
-            className="w-10 h-10 rounded-xl bg-white/10 hover:bg-white/20 backdrop-blur-md flex items-center justify-center text-white transition active:scale-95"
+            className="w-10 h-10 rounded-lg bg-white/10 hover:bg-white/20 backdrop-blur-md flex items-center justify-center text-white transition active:scale-95"
             title="Return to App (Esc)"
           >
             <ArrowLeft className="w-5 h-5" />
@@ -728,7 +728,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
           {target.type !== 'live' && onMinimizeToPiP && (
             <button
               onClick={onMinimizeToPiP}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-cyan-600/30 hover:bg-cyan-600/50 border border-cyan-500/40 backdrop-blur-md text-xs font-semibold text-cyan-300 transition active:scale-95"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-[#0b63f6]/28 hover:bg-[#0b63f6]/48 border border-[#2d87ff]/45 backdrop-blur-md text-xs font-semibold text-[#78c1ff] transition active:scale-95"
               title="Minimize to Floating In-App PiP"
             >
               <PictureInPicture2 className="w-4 h-4" />
@@ -739,10 +739,10 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
           {target.type === 'live' && allLiveStreams.length > 0 && (
             <button
               onClick={() => setShowChannelDrawer(!showChannelDrawer)}
-              className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 backdrop-blur-md text-xs font-medium text-white transition active:scale-95"
+              className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/10 hover:bg-white/20 backdrop-blur-md text-xs font-medium text-white transition active:scale-95"
               title="Quick Channel Switcher & Multi-View"
             >
-              <List className="w-4 h-4 text-cyan-400" />
+              <List className="w-4 h-4 text-[#4baeff]" />
               <span className="hidden sm:inline">Channels</span>
             </button>
           )}
@@ -751,21 +751,21 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             <>
               <button
                 onClick={() => setShowHealthPanel(!showHealthPanel)}
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl backdrop-blur-md text-xs font-semibold transition active:scale-95 tv-focus-target ${
-                  showHealthPanel ? 'bg-cyan-600 text-white' : 'bg-white/10 hover:bg-white/20 text-cyan-300'
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg backdrop-blur-md text-xs font-semibold transition active:scale-95 tv-focus-target ${
+                  showHealthPanel ? 'bg-[#0b63f6] text-white' : 'bg-white/10 hover:bg-white/20 text-[#78c1ff]'
                 }`}
                 title="Stream Health & Performance Diagnostics (H)"
               >
                 <Activity className="w-4 h-4" />
                 <span className="hidden sm:inline">Stream Health</span>
               </button>
-              <button onClick={cycleAspectRatio} className="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-xs text-white">
+              <button onClick={cycleAspectRatio} className="px-3 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-xs text-white">
                 <span className="capitalize">{aspectRatio}</span>
               </button>
-              <button onClick={togglePiP} className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white hidden sm:flex">
+              <button onClick={togglePiP} className="p-2 rounded-lg bg-white/10 hover:bg-white/20 text-white hidden sm:flex">
                 <PictureInPicture2 className="w-4 h-4" />
               </button>
-              <button onClick={toggleFullscreen} className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white">
+              <button onClick={toggleFullscreen} className="p-2 rounded-lg bg-white/10 hover:bg-white/20 text-white">
                 {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
               </button>
             </>
@@ -777,7 +777,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       {!isPlaying && (
         <button
           onClick={togglePlay}
-          className="absolute inset-0 m-auto w-20 h-20 rounded-full bg-cyan-500/90 text-white flex items-center justify-center shadow-2xl hover:scale-105 active:scale-95 transition-all z-20"
+          className="absolute inset-0 m-auto w-20 h-20 rounded-full bg-[#0b63f6]/95 text-white flex items-center justify-center shadow-2xl hover:scale-105 active:scale-95 transition-all z-20"
         >
           <Play className="w-10 h-10 ml-1 fill-white" />
         </button>
@@ -815,7 +815,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
         {/* Live Channel Info Banner & EPG Next Up */}
         {target.type === 'live' && (
-          <div className="mb-4 p-3 rounded-xl bg-white/5 border border-white/10 backdrop-blur-md flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="mb-4 p-3 rounded-lg bg-white/5 border border-white/10 backdrop-blur-md flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-slate-800 border border-slate-700 overflow-hidden flex items-center justify-center shrink-0">
                 {target.stream.stream_icon ? (
@@ -834,7 +834,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-mono font-bold text-cyan-400 tabular-nums">
+                  <span className="text-xs font-mono font-bold text-[#4baeff] tabular-nums">
                     CH {target.stream.num || target.stream.stream_id}
                   </span>
                   <span className="text-sm font-bold text-white">{target.stream.name}</span>
@@ -859,7 +859,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
           <div className="flex items-center gap-3">
             <button
               onClick={togglePlay}
-              className="w-10 h-10 rounded-xl bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition active:scale-95"
+              className="w-10 h-10 rounded-lg bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition active:scale-95"
               title="Play / Pause (Space)"
             >
               {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5 ml-0.5 fill-white" />}
@@ -867,7 +867,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
             <button
               onClick={onStop}
-              className="tv-focus-target h-10 px-3 rounded-xl bg-rose-500/18 hover:bg-rose-500/32 border border-rose-400/35 text-rose-100 flex items-center gap-2 justify-center transition active:scale-95"
+              className="tv-focus-target h-10 px-3 rounded-lg bg-rose-500/18 hover:bg-rose-500/32 border border-rose-400/35 text-rose-100 flex items-center gap-2 justify-center transition active:scale-95"
               title="Stop playback (X / Media Stop)"
             >
               <Square className="w-4 h-4 fill-current" />
@@ -876,7 +876,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
             <button
               onClick={onClose}
-              className="tv-focus-target h-10 px-3 rounded-xl bg-white/10 hover:bg-white/20 border border-white/10 text-white flex items-center gap-2 justify-center transition active:scale-95"
+              className="tv-focus-target h-10 px-3 rounded-lg bg-white/10 hover:bg-white/20 border border-white/10 text-white flex items-center gap-2 justify-center transition active:scale-95"
               title="Home / browse while playback continues"
             >
               <Home className="w-4 h-4" />
@@ -892,7 +892,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
                     const prev = idx > 0 ? idx - 1 : allLiveStreams.length - 1;
                     onSelectLiveStream(allLiveStreams[prev]);
                   }}
-                  className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition"
+                  className="p-2 rounded-lg bg-white/10 hover:bg-white/20 text-white transition"
                   title="Previous Channel (Up Arrow)"
                 >
                   <ChevronLeft className="w-4 h-4" />
@@ -903,7 +903,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
                     const next = idx < allLiveStreams.length - 1 ? idx + 1 : 0;
                     onSelectLiveStream(allLiveStreams[next]);
                   }}
-                  className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition"
+                  className="p-2 rounded-lg bg-white/10 hover:bg-white/20 text-white transition"
                   title="Next Channel (Down Arrow)"
                 >
                   <ChevronRight className="w-4 h-4" />
@@ -915,7 +915,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             <div className="flex items-center gap-2 group">
               <button
                 onClick={toggleMute}
-                className="w-10 h-10 rounded-xl bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition"
+                className="w-10 h-10 rounded-lg bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition"
                 title="Mute (M)"
               >
                 {isMuted || volume === 0 ? <VolumeX className="w-5 h-5 text-rose-400" /> : <Volume2 className="w-5 h-5" />}
@@ -960,10 +960,10 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
       {/* Slide-out Quick Channel Switcher Overlay Drawer */}
       {showChannelDrawer && target.type === 'live' && (
-        <div className="absolute inset-y-0 left-0 w-[clamp(240px,28vw,320px)] max-w-[90vw] bg-slate-950/95 border-r border-slate-800 backdrop-blur-xl p-3 sm:p-4 flex flex-col z-30 animate-in slide-in-from-left duration-200">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+        <div className="absolute inset-y-0 left-0 w-[clamp(240px,28vw,320px)] max-w-[90vw] bg-[#050d17]/97 border-r border-[#17304a] backdrop-blur-xl p-3 sm:p-4 flex flex-col z-30 animate-in slide-in-from-left duration-200">
+          <div className="flex items-center justify-between pb-3 border-b border-[#17304a]">
             <div className="flex items-center gap-2">
-              <Tv className="w-4 h-4 text-cyan-400" />
+              <Tv className="w-4 h-4 text-[#4baeff]" />
               <h3 className="text-sm font-bold text-white">Channel Switcher</h3>
             </div>
             <button
@@ -986,13 +986,13 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
                       setShowChannelDrawer(false);
                     }
                   }}
-                  className={`w-full p-2.5 rounded-xl flex items-center gap-3 text-left transition-all ${
+                  className={`w-full p-2.5 rounded-lg flex items-center gap-3 text-left transition-all ${
                     isCurrent
-                      ? 'bg-cyan-500/20 border border-cyan-500/40 text-white'
+                      ? 'bg-cyan-500/20 border border-[#2d87ff]/45 text-white'
                       : 'hover:bg-slate-900 text-slate-300'
                   }`}
                 >
-                  <span className="text-xs font-mono font-bold text-cyan-400 w-8 tabular-nums">
+                  <span className="text-xs font-mono font-bold text-[#4baeff] w-8 tabular-nums">
                     {s.num || s.stream_id}
                   </span>
                   <div className="w-7 h-7 rounded-lg bg-slate-800 overflow-hidden shrink-0 flex items-center justify-center">
@@ -1031,7 +1031,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
                     </p>
                   </div>
                   {isCurrent ? (
-                    <Radio className="w-3.5 h-3.5 text-cyan-400 shrink-0 animate-pulse" />
+                    <Radio className="w-3.5 h-3.5 text-[#4baeff] shrink-0 animate-pulse" />
                   ) : onLaunchDualPiP ? (
                     <button
                       onClick={(e) => {
@@ -1039,7 +1039,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
                         onLaunchDualPiP({ type: 'live', stream: s });
                         setShowChannelDrawer(false);
                       }}
-                      className="px-2 py-1 rounded-lg bg-cyan-600/30 hover:bg-cyan-600/60 text-cyan-300 text-[10px] font-bold shrink-0 transition"
+                      className="px-2 py-1 rounded-lg bg-[#0b63f6]/28 hover:bg-[#0b63f6]/60 text-[#78c1ff] text-[10px] font-bold shrink-0 transition"
                       title="Watch in Dual PiP Multi-View"
                     >
                       + PiP
