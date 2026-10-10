@@ -16,7 +16,7 @@ interface LiveTVViewProps {
 }
 
 type LiveZone = 'groups' | 'channels' | 'now' | 'next' | 'later' | 'favorite';
-const ROW_HEIGHT = 58;
+const ROW_HEIGHT = 52;
 const OVERSCAN = 6;
 
 const timeLabel = (value?: string) => {
@@ -258,9 +258,9 @@ export const LiveTVView: React.FC<LiveTVViewProps> = ({
   };
 
   return (
-    <section ref={workspaceRef} className="live-workspace -m-4 sm:-m-6 h-[calc(100dvh-4rem)] min-h-0 overflow-hidden bg-[#05080e]">
+    <section ref={workspaceRef} className="live-workspace -m-3 sm:-m-4 lg:-m-6 h-[calc(100dvh-4rem)] min-h-0 overflow-hidden bg-[#05080e]">
       <div className="h-full flex min-w-0">
-        <aside className="flex w-36 sm:w-44 lg:w-52 xl:w-60 shrink-0 flex-col border-r border-slate-800/80 bg-[#080d16]">
+        <aside className="flex w-[var(--gs-group-rail-width)] shrink-0 flex-col border-r border-slate-800/80 bg-[#080d16]">
           <div className="h-12 px-3 flex items-center gap-2 border-b border-slate-800/80">
             <Layers className="w-4 h-4 text-cyan-400" />
             <span className="text-xs font-bold uppercase tracking-wider text-slate-200">Groups</span>
@@ -286,7 +286,7 @@ export const LiveTVView: React.FC<LiveTVViewProps> = ({
         </aside>
 
         <div className="flex-1 min-w-0 flex flex-col">
-          <div className="live-feature shrink-0 hidden xl:flex min-h-[138px] border-b border-slate-800/80 relative overflow-hidden">
+          <div className="live-feature shrink-0 hidden lg:flex h-[clamp(108px,16dvh,148px)] min-h-0 border-b border-slate-800/80 relative overflow-hidden">
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_82%_30%,rgba(14,165,233,0.16),transparent_34%),linear-gradient(100deg,#08111f_0%,#0a1220_58%,#060a11_100%)]" />
             <div className="relative z-10 flex w-full items-center justify-between gap-8 px-6 py-4">
               <div className="flex min-w-0 items-center gap-4">
@@ -330,7 +330,7 @@ export const LiveTVView: React.FC<LiveTVViewProps> = ({
           </header>
 
           <div className="h-10 shrink-0 flex border-b border-slate-800 bg-[#060a11] text-[10px] uppercase tracking-wider text-slate-500">
-            <div className="w-40 sm:w-48 lg:w-56 shrink-0 px-3 flex items-center border-r border-slate-800">Channel</div>
+            <div className="w-[var(--gs-guide-channel-width)] shrink-0 px-3 flex items-center border-r border-slate-800">Channel</div>
             <div className="flex-1 grid grid-cols-3">
               <div className="px-3 flex items-center gap-2"><span className="text-cyan-400">Now</span><span className="h-px flex-1 bg-cyan-900/50" /></div>
               <div className="px-3 flex items-center border-l border-slate-800/60">Next</div>
@@ -354,7 +354,7 @@ export const LiveTVView: React.FC<LiveTVViewProps> = ({
                 });
                 return (
                   <div key={stream.stream_id} style={{ position: 'absolute', top: row * ROW_HEIGHT, left: 0, right: 0, height: ROW_HEIGHT }} className={`live-guide-row flex border-b border-slate-800/60 ${selected ? 'live-guide-row-selected' : 'bg-[#070b12] hover:bg-[#0b121e]'}`}>
-                    <button {...cellProps('channels')} onClick={() => play(stream)} onKeyDown={(e) => { handleGridKey(e, row, 'channels'); activateOnEnter(e, () => play(stream)); }} className="w-40 sm:w-48 lg:w-56 shrink-0 px-2 flex items-center gap-2 border-r border-slate-800 text-left tv-focus-target">
+                    <button {...cellProps('channels')} onClick={() => play(stream)} onKeyDown={(e) => { handleGridKey(e, row, 'channels'); activateOnEnter(e, () => play(stream)); }} className="w-[var(--gs-guide-channel-width)] shrink-0 px-2 flex items-center gap-2 border-r border-slate-800 text-left tv-focus-target">
                       <span className="w-6 text-[10px] text-slate-500 font-mono text-right">{stream.num || row + 1}</span>
                       <div className="w-8 h-8 shrink-0 rounded-md bg-slate-900 flex items-center justify-center overflow-hidden p-1">
                         {stream.stream_icon ? <img src={stream.stream_icon} alt="" className="max-w-full max-h-full object-contain" loading="lazy" /> : <Tv className="w-4 h-4 text-slate-500" />}
