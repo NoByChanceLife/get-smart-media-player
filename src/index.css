@@ -70,6 +70,19 @@
   justify-content: start;
 }
 
+.gs-modal-viewport {
+  padding: clamp(10px, 1.2vw, 16px);
+}
+
+.gs-modal-shell {
+  max-height: calc(100dvh - 24px);
+  min-height: 0;
+}
+
+.gs-modal-pad {
+  padding: var(--gs-modal-pad);
+}
+
 .gs-channel-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--gs-channel-tile-min)), var(--gs-channel-tile-max)));
