@@ -318,6 +318,8 @@ public class GetSmartProviderPlugin extends Plugin {
     private Button nativePlayPauseButton;
     private Button nativeAudioButton;
     private Button nativeSubtitleButton;
+    private Button nativeQualityButton;
+    private Button nativeHealthButton;
     private Button nativeMuteButton;
     private Button nativeVolumeDownButton;
     private Button nativeVolumeUpButton;
@@ -1143,6 +1145,8 @@ public class GetSmartProviderPlugin extends Plugin {
 
         nativeAudioButton = makeOsdButton("Audio");
         nativeSubtitleButton = makeOsdButton("CC");
+        nativeQualityButton = makeOsdButton("Quality");
+        nativeHealthButton = makeOsdButton("Health");
         nativeMuteButton = makeOsdButton("Mute");
         nativeVolumeDownButton = makeOsdButton("Vol −");
         nativeVolumeUpButton = makeOsdButton("Vol +");
@@ -1150,6 +1154,8 @@ public class GetSmartProviderPlugin extends Plugin {
 
         nativeAudioButton.setOnClickListener((v) -> showNativeTrackDialog(C.TRACK_TYPE_AUDIO, "Audio Track"));
         nativeSubtitleButton.setOnClickListener((v) -> showNativeTrackDialog(C.TRACK_TYPE_TEXT, "Subtitles & Captions"));
+        nativeQualityButton.setOnClickListener((v) -> showNativeTrackDialog(C.TRACK_TYPE_VIDEO, "Video Quality"));
+        nativeHealthButton.setOnClickListener((v) -> showNativeHealthDialog());
         nativeMuteButton.setOnClickListener((v) -> {
             toggleNativeMute();
             showNativeOsd(true);
@@ -1170,6 +1176,8 @@ public class GetSmartProviderPlugin extends Plugin {
         for (Button button : new Button[] {
             nativeAudioButton,
             nativeSubtitleButton,
+            nativeQualityButton,
+            nativeHealthButton,
             nativeMuteButton,
             nativeVolumeDownButton,
             nativeVolumeUpButton,
@@ -1777,6 +1785,13 @@ public class GetSmartProviderPlugin extends Plugin {
                 nativeSubtitleButton.setEnabled(count > 0);
                 nativeSubtitleButton.setAlpha(count > 0 ? 1f : 0.45f);
             }
+
+            if (nativeQualityButton != null && nativePlayer != null) {
+                int count = countTracks(nativePlayer.getCurrentTracks(), C.TRACK_TYPE_VIDEO);
+                nativeQualityButton.setText(count > 1 ? "Quality (" + count + ")" : "Quality");
+                nativeQualityButton.setEnabled(count > 1);
+                nativeQualityButton.setAlpha(count > 1 ? 1f : 0.45f);
+            }
         });
     }
 
@@ -1816,6 +1831,60 @@ public class GetSmartProviderPlugin extends Plugin {
         if (nativePlayerView != null && nativePlayerVisible) {
             nativePlayerView.requestFocus();
         }
+    }
+
+    private void showNativeHealthDialog() {
+        if (getActivity() == null) return;
+
+        JSObject diagnostics = buildNativeDiagnostics();
+        StringBuilder message = new StringBuilder();
+        message.append("Status: ").append(diagnostics.optString("state", "idle")).append("\n");
+        message.append("Health: ").append(diagnostics.optString("healthRating", "good")).append("\n");
+        message.append("Resolution: ").append(diagnostics.optString("resolution", "—")).append("\n");
+
+        long bitrate = diagnostics.optLong("bitrateBps", 0L);
+        if (bitrate > 0L) {
+            message.append("Bitrate: ");
+            if (bitrate >= 1_000_000L) {
+                message.append(String.format(Locale.US, "%.1f Mbps", bitrate / 1_000_000.0));
+            } else {
+                message.append(Math.round(bitrate / 1000.0)).append(" Kbps");
+            }
+            message.append("\n");
+        } else {
+            message.append("Bitrate: unavailable\n");
+        }
+
+        message.append("Forward buffer: ")
+            .append(String.format(Locale.US, "%.1f s", diagnostics.optDouble("bufferedSeconds", 0.0)))
+            .append("\n");
+        message.append("Rebuffers: ").append(diagnostics.optInt("rebufferCount", 0)).append("\n");
+        message.append("Startup: ").append(diagnostics.optLong("startupTimeMs", 0L)).append(" ms\n");
+        message.append("Protocol: ").append(diagnostics.optString("protocol", "Media3")).append("\n");
+        message.append("Mode: ")
+            .append(diagnostics.optString("performanceMode", "auto"))
+            .append(" → ")
+            .append(diagnostics.optString("effectivePerformanceMode", "balanced"))
+            .append("\n");
+        message.append("Recovery: stage ")
+            .append(diagnostics.optInt("recoveryStage", 0))
+            .append(", attempt ")
+            .append(diagnostics.optInt("recoveryAttempt", 0))
+            .append("/")
+            .append(diagnostics.optInt("maxRetryAttempts", 3))
+            .append("\n\n");
+        message.append(diagnostics.optString("diagnosticMessage", ""));
+
+        nativeUiHandler.removeCallbacks(hideNativeOsdRunnable);
+
+        new AlertDialog.Builder(getActivity())
+            .setTitle("Stream Health")
+            .setMessage(message.toString())
+            .setPositiveButton("Done", (dialog, which) -> {
+                dialog.dismiss();
+                showNativeOsd(true);
+            })
+            .show();
     }
 
     private void showNativeTrackDialog(int trackType, String title) {
@@ -2312,6 +2381,8 @@ public class GetSmartProviderPlugin extends Plugin {
         nativePlayPauseButton = null;
         nativeAudioButton = null;
         nativeSubtitleButton = null;
+        nativeQualityButton = null;
+        nativeHealthButton = null;
         nativeMuteButton = null;
         nativeVolumeDownButton = null;
         nativeVolumeUpButton = null;
