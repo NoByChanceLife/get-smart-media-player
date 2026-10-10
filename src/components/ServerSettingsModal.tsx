@@ -432,7 +432,7 @@ export const ServerSettingsModal: React.FC<ServerSettingsModalProps> = ({
                   {activeCount} Active Simultaneously
                 </span>
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#132337] text-amber-300 border border-amber-500/35 tracking-wide">
-                  BUILD GSM-20261010-HS5
+                  BUILD GSM-20261010-HS6
                 </span>
               </div>
               <p className="text-xs text-slate-400">
