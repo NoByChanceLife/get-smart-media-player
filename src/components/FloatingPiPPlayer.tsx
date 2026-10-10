@@ -231,8 +231,8 @@ export const FloatingPiPPlayer: React.FC<FloatingPiPPlayerProps> = ({
     <div
       className={`fixed z-40 transition-all duration-300 ${
         secondaryTarget && layoutMode === 'side_by_side'
-          ? 'bottom-20 md:bottom-6 right-4 left-4 sm:left-auto sm:w-[680px] h-64'
-          : 'bottom-20 md:bottom-6 right-4 w-72 sm:w-88 aspect-video'
+          ? 'bottom-20 md:bottom-6 right-4 left-4 sm:left-auto sm:w-[min(70vw,680px)] h-[clamp(190px,30dvh,256px)]'
+          : 'bottom-20 md:bottom-6 right-4 w-[clamp(240px,28vw,352px)] max-w-[calc(100vw-2rem)] aspect-video'
       } rounded-2xl overflow-hidden shadow-2xl border border-cyan-500/40 bg-slate-950 backdrop-blur-xl group`}
     >
       {/* Video Display Container */}
@@ -259,7 +259,7 @@ export const FloatingPiPPlayer: React.FC<FloatingPiPPlayerProps> = ({
             className={`relative ${
               layoutMode === 'side_by_side'
                 ? 'w-1/2'
-                : 'absolute bottom-2 right-2 w-32 aspect-video rounded-xl overflow-hidden border border-cyan-400/50 shadow-lg'
+                : 'absolute bottom-2 right-2 w-[clamp(96px,12vw,128px)] aspect-video rounded-xl overflow-hidden border border-cyan-400/50 shadow-lg'
             } h-full bg-black flex items-center justify-center`}
           >
             <video
