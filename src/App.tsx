@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { TopBar } from './components/TopBar';
 import { TVNavigationRail, NavTab } from './components/TVNavigationRail';
 import { HomeView } from './components/HomeView';
 import { LiveTVView } from './components/LiveTVView';
@@ -118,13 +117,6 @@ export default function App() {
     );
     first?.focus();
   }, [currentTab]);
-
-  const focusTopBar = useCallback(() => {
-    const first = document.querySelector<HTMLElement>(
-      '[data-tv-topbar] .tv-focus-target, [data-tv-topbar] button:not([disabled]), [data-tv-topbar] select:not([disabled])'
-    );
-    first?.focus();
-  }, []);
 
   const focusNavigationRail = useCallback(() => {
     const first = document.querySelector<HTMLElement>(
@@ -417,26 +409,6 @@ export default function App() {
           return;
         }
 
-        if (
-          e.key === 'ArrowUp' &&
-          mainContentRef.current?.contains(target) &&
-          !target.closest('input, textarea, select')
-        ) {
-          const rect = target.getBoundingClientRect();
-          const contentRect = mainContentRef.current.getBoundingClientRect();
-          if (rect.top <= contentRect.top + 180) {
-            e.preventDefault();
-            focusTopBar();
-            return;
-          }
-        }
-
-        if (e.key === 'ArrowDown' && target.closest('[data-tv-topbar]')) {
-          e.preventDefault();
-          focusFirstContentControl();
-          return;
-        }
-
         // From any control in the main content, Left provides a predictable
         // escape path to the application navigation rail.
         if (
@@ -506,7 +478,6 @@ export default function App() {
     pinPromptState.isOpen,
     focusFirstContentControl,
     focusNavigationRail,
-    focusTopBar,
   ]);
 
   return (
@@ -533,21 +504,7 @@ export default function App() {
           isRailExpanded ? 'ml-64' : 'ml-[74px]'
         } ${playbackTarget && isBrowsingDuringPlayback ? 'relative z-[55] bg-transparent' : ''}`}
       >
-        {/* Top Header */}
-        <TopBar
-          currentTab={currentTab}
-          onSelectTab={setCurrentTab}
-          activeProfiles={activeProfiles}
-          serverFilter={serverFilter}
-          onSelectServerFilter={(filter) => {
-            setServerFilter(filter);
-          }}
-          onOpenSettings={handleOpenServerSettings}
-          onOpenPlaybackSettings={() => setIsPerformanceModalOpen(true)}
-          userProfile={userProfile}
-          onOpenProfileSwitcher={() => setIsProfileSwitcherOpen(true)}
-          onOpenParentalControls={handleOpenParentalControls}
-        />
+        {/* The persistent left rail is the single app navigation surface. */}
 
         {/* Main Content Area */}
         <main
