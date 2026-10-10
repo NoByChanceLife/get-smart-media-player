@@ -119,7 +119,7 @@ export const GlobalSearchView: React.FC<GlobalSearchViewProps> = ({
   };
 
   return (
-    <div ref={viewRef} onKeyDownCapture={handleTVNavigation} className="space-y-6 max-w-6xl mx-auto pb-12 animate-in fade-in duration-200">
+    <div ref={viewRef} onKeyDownCapture={handleTVNavigation} className="gs-full-canvas space-y-5 pb-12 animate-in fade-in duration-200">
       {/* Search Header Bar */}
       <div className="flex flex-col sm:flex-row items-center gap-3">
         <div className="relative flex-1 w-full">
@@ -196,7 +196,7 @@ export const GlobalSearchView: React.FC<GlobalSearchViewProps> = ({
             </h3>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          <div className="gs-landscape-grid">
             {results.live.map((stream) => (
               <div
                 key={stream.stream_id}
@@ -250,7 +250,7 @@ export const GlobalSearchView: React.FC<GlobalSearchViewProps> = ({
             </h3>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3.5">
+          <div className="gs-poster-grid">
             {results.movies.map((movie) => {
               const isLocked = parentalControlService.isMovieLocked(movie);
               return (
@@ -313,7 +313,7 @@ export const GlobalSearchView: React.FC<GlobalSearchViewProps> = ({
             </h3>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3.5">
+          <div className="gs-poster-grid">
             {results.series.map((series) => (
               <div
                 key={series.series_id}
