@@ -18,6 +18,7 @@ export interface NativePlayerState {
   currentProgram?: string;
   nextProgram?: string;
   osdVisible?: boolean;
+  aspectMode?: 'Fit' | 'Fill' | 'Zoom' | string;
   playbackState: 'idle' | 'buffering' | 'ready' | 'ended';
   isPlaying: boolean;
   playWhenReady: boolean;
@@ -28,7 +29,15 @@ export interface NativePlayerState {
 }
 
 export interface NativePlayerCommand {
-  command: 'stop' | 'channelPrevious' | 'channelNext' | 'guide' | 'back';
+  command:
+    | 'stop'
+    | 'channelPrevious'
+    | 'channelNext'
+    | 'lastChannel'
+    | 'numericChannel'
+    | 'guide'
+    | 'back';
+  value?: string;
 }
 
 export interface NativePlayerError {
@@ -102,7 +111,7 @@ interface NativeProviderPlugin {
   }): Promise<{ status: number; contentType?: string; route?: string; data: unknown }>;
 }
 
-const EXPECTED_TRANSPORT_MARKER = 'GS-NATIVE-XCIPTV-HS11';
+const EXPECTED_TRANSPORT_MARKER = 'GS-NATIVE-XCIPTV-HS12';
 const NativeProvider = registerPlugin<NativeProviderPlugin>('GetSmartProvider');
 
 export class AndroidProviderTransport implements ProviderTransport {
