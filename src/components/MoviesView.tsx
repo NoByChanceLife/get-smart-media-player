@@ -197,8 +197,8 @@ export const MoviesView: React.FC<MoviesViewProps> = ({
 
   if (!canAccess) {
     return (
-      <div className="flex flex-col items-center justify-center py-24 text-center bg-[#0d1424] rounded-3xl border border-slate-800 p-8 max-w-lg mx-auto">
-        <div className="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 mb-4">
+      <div className="flex flex-col items-center justify-center py-24 text-center bg-[#091522] rounded-xl border border-[#17304a] p-8 max-w-lg mx-auto">
+        <div className="w-16 h-16 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 mb-4">
           <ShieldAlert className="w-8 h-8" />
         </div>
         <h3 className="text-base font-bold text-white font-heading">Movies Catalog Restricted</h3>
@@ -248,7 +248,7 @@ export const MoviesView: React.FC<MoviesViewProps> = ({
     <div ref={movieViewRef} onKeyDownCapture={handleMediaViewNavigation} className="gs-full-canvas flex flex-col h-full space-y-5 animate-in fade-in duration-200">
       {/* Featured Movie Spotlight Banner */}
       {featuredMovie && !searchQuery && selectedCategoryId === 'all' && (
-        <div className="relative w-full rounded-3xl overflow-hidden border border-slate-800/80 shadow-2xl group">
+        <div className="relative w-full rounded-xl overflow-hidden border border-[#17304a] shadow-2xl group">
           <div className="aspect-[21/9] sm:aspect-[24/9] w-full bg-[#070b14] overflow-hidden relative">
             <img
               src={featuredMovie.stream_icon || '/src/assets/images/iptv_hero_banner_1791054500017.jpg'}
@@ -261,7 +261,7 @@ export const MoviesView: React.FC<MoviesViewProps> = ({
 
           <div className="absolute bottom-0 left-0 p-6 sm:p-10 max-w-xl z-10">
             <div className="flex items-center gap-2 mb-2">
-              <span className="px-2.5 py-0.5 rounded-full bg-cyan-950 text-cyan-400 border border-cyan-800/50 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1">
+              <span className="px-2.5 py-0.5 rounded-full bg-cyan-950 text-[#4baeff] border border-cyan-800/50 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1">
                 <Sparkles className="w-3 h-3" />
                 Featured Motion Picture
               </span>
@@ -285,7 +285,7 @@ export const MoviesView: React.FC<MoviesViewProps> = ({
             <div className="flex items-center gap-3">
               <button
                 data-tv-zone="featured" onClick={() => handleMoviePlayRequest(featuredMovie)}
-                className="px-6 py-2.5 rounded-2xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-xs font-bold flex items-center gap-2 shadow-lg shadow-cyan-500/25 active:scale-95 transition tv-focus-target"
+                className="px-6 py-2.5 rounded-lg bg-[#0b63f6] hover:bg-[#1677ff] text-white text-xs font-bold flex items-center gap-2 shadow-lg shadow-cyan-500/25 active:scale-95 transition tv-focus-target"
               >
                 <Play className="w-4 h-4 fill-slate-950" />
                 <span>Watch Movie (Enter)</span>
@@ -293,9 +293,9 @@ export const MoviesView: React.FC<MoviesViewProps> = ({
 
               <button
                 data-tv-zone="featured" onClick={() => setSelectedMovie(featuredMovie)}
-                className="px-4 py-2.5 rounded-2xl bg-slate-900/80 hover:bg-slate-800 text-slate-200 text-xs font-semibold border border-slate-700/80 flex items-center gap-2 backdrop-blur-md transition tv-focus-target"
+                className="px-4 py-2.5 rounded-lg bg-[#091522]/90 hover:bg-slate-800 text-slate-200 text-xs font-semibold border border-[#23415d] flex items-center gap-2 backdrop-blur-md transition tv-focus-target"
               >
-                <Info className="w-4 h-4 text-cyan-400" />
+                <Info className="w-4 h-4 text-[#4baeff]" />
                 <span>Details</span>
               </button>
             </div>
@@ -317,8 +317,8 @@ export const MoviesView: React.FC<MoviesViewProps> = ({
                 onClick={() => onSelectCategory(cat.category_id)}
                 className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition tv-focus-target ${
                   isSelected
-                    ? 'bg-cyan-600 text-white shadow-md shadow-cyan-950/40 font-bold'
-                    : 'bg-slate-900/80 text-slate-400 hover:text-white border border-slate-800/80 hover:bg-slate-800'
+                    ? 'bg-[#0b63f6] text-white shadow-[0_6px_16px_rgba(0,70,180,.24)] font-semibold'
+                    : 'bg-[#091522]/90 text-slate-400 hover:text-white border border-[#17304a] hover:bg-slate-800'
                 }`}
               >
                 {isCategoryLocked && <Lock className="w-3 h-3 text-rose-400" />}
@@ -336,7 +336,7 @@ export const MoviesView: React.FC<MoviesViewProps> = ({
             placeholder="Search movies..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-[#0a0f1c] border border-slate-800 rounded-xl pl-9 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 transition tv-focus-target"
+            className="w-full bg-[#07111d] border border-[#17304a] rounded-xl pl-9 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#2d87ff] transition tv-focus-target"
           />
         </div>
       </div>
@@ -356,7 +356,7 @@ export const MoviesView: React.FC<MoviesViewProps> = ({
               aria-label={`Open ${movie.name}`}
               onKeyDown={(e) => handlePosterKeyDown(e, movieIndex, movie)}
               onClick={() => setSelectedMovie(movie)}
-              className="group relative flex flex-col bg-[#0e1422] rounded-2xl border border-slate-800/80 hover:border-cyan-500/50 overflow-hidden cursor-pointer transition-all duration-200 shadow-md tv-focus-target"
+              className="group relative flex flex-col bg-[#091522] rounded-lg border border-[#17304a] hover:border-[#2d87ff]/70 overflow-hidden cursor-pointer transition-all duration-200 shadow-md tv-focus-target"
             >
               {/* Poster Image */}
               <div className="relative aspect-[2/3] w-full bg-slate-950 overflow-hidden">
@@ -406,7 +406,7 @@ export const MoviesView: React.FC<MoviesViewProps> = ({
 
               {/* Title & Info */}
               <div className="p-3">
-                <h3 className="text-xs font-bold text-white truncate group-hover:text-cyan-300 transition">
+                <h3 className="text-xs font-bold text-white truncate group-hover:text-[#78c1ff] transition">
                   {movie.name}
                 </h3>
                 <div className="flex items-center gap-2 mt-1 text-[10px] text-slate-400">
@@ -422,7 +422,7 @@ export const MoviesView: React.FC<MoviesViewProps> = ({
       {/* Cinematic Movie Details Modal */}
       {selectedMovie && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md p-4 animate-in fade-in duration-200">
-          <div className="w-full max-w-2xl rounded-3xl bg-[#0c121e] border border-slate-800 shadow-2xl overflow-hidden relative">
+          <div className="w-full max-w-2xl rounded-xl bg-[#07111d] border border-[#17304a] shadow-2xl overflow-hidden relative">
             <button
               onClick={() => setSelectedMovie(null)}
               className="absolute top-4 right-4 z-20 p-2 rounded-xl bg-black/60 text-slate-400 hover:text-white backdrop-blur-md transition tv-focus-target"
@@ -441,7 +441,7 @@ export const MoviesView: React.FC<MoviesViewProps> = ({
               <div className="absolute bottom-4 left-6 right-6">
                 <div className="flex items-center gap-2 mb-1.5 text-xs">
                   {selectedMovie.year && (
-                    <span className="font-mono text-cyan-400 font-bold">{selectedMovie.year}</span>
+                    <span className="font-mono text-[#4baeff] font-bold">{selectedMovie.year}</span>
                   )}
                   {selectedMovie.duration && (
                     <span className="text-slate-300">· {selectedMovie.duration}</span>
@@ -471,7 +471,7 @@ export const MoviesView: React.FC<MoviesViewProps> = ({
                     handleMoviePlayRequest(selectedMovie);
                     setSelectedMovie(null);
                   }}
-                  className="flex-1 py-3 rounded-2xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-cyan-500/25 transition tv-focus-target active:scale-95"
+                  className="flex-1 py-3 rounded-lg bg-[#0b63f6] hover:bg-[#1677ff] text-white font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-cyan-500/25 transition tv-focus-target active:scale-95"
                 >
                   <Play className="w-4 h-4 fill-slate-950" />
                   <span>Watch Movie Now (Enter)</span>
@@ -479,10 +479,10 @@ export const MoviesView: React.FC<MoviesViewProps> = ({
 
                 <button
                   onClick={() => onToggleFavorite(selectedMovie.stream_id)}
-                  className={`p-3 rounded-2xl border transition ${
+                  className={`p-3 rounded-lg border transition ${
                     selectedMovie.isFavorite
                       ? 'bg-amber-500/20 border-amber-500/50 text-amber-300'
-                      : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white'
+                      : 'bg-[#0a1724] border-[#17304a] text-slate-400 hover:text-white'
                   } tv-focus-target`}
                   title="Toggle Favorite"
                 >
