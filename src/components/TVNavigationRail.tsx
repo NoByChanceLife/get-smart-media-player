@@ -171,8 +171,9 @@ export const TVNavigationRail: React.FC<TVNavigationRailProps> = ({
       >
         {touchOpen ? <ChevronLeft className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
       </button>
+      <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar">
       {/* Top Branding Section */}
-      <div className="p-3.5 pb-2 shrink-0">
+      <div className="p-3.5 pb-2">
         <div
           onClick={onToggleExpanded}
           className="flex items-center gap-3 p-2 rounded-2xl hover:bg-slate-800/60 cursor-pointer transition-all active:scale-95 group"
@@ -197,7 +198,7 @@ export const TVNavigationRail: React.FC<TVNavigationRailProps> = ({
       </div>
 
       {/* Center Navigation Links */}
-      <nav className="flex-1 min-h-0 px-3 py-2 space-y-1.5 overflow-y-auto custom-scrollbar">
+      <nav className="px-3 py-2 space-y-1.5">
         {primaryNavItems.map((item) => {
           const isActive = currentTab === item.id;
           return (
@@ -254,8 +255,8 @@ export const TVNavigationRail: React.FC<TVNavigationRailProps> = ({
         })}
       </nav>
 
-      {/* Bottom Section: Connections, Profiles, Settings, Collapse */}
-      <div className="p-3 border-t border-slate-800/70 space-y-1.5 bg-[#05080e]/60 shrink-0 max-h-[48dvh] overflow-y-auto custom-scrollbar">
+      {/* Utility navigation continues in the same menu flow. */}
+      <div className="px-3 pb-3 pt-2 space-y-1.5">
         {/* Connections / Server Manager Button */}
         <button
           onClick={onOpenConnections}
@@ -376,6 +377,7 @@ export const TVNavigationRail: React.FC<TVNavigationRailProps> = ({
             <ChevronRight className="w-4 h-4" />
           )}
         </button>
+      </div>
       </div>
     </aside>
   );
