@@ -14,6 +14,10 @@ export interface NativePlayerState {
   visible: boolean;
   title: string;
   mediaType: string;
+  channelNumber?: string;
+  currentProgram?: string;
+  nextProgram?: string;
+  osdVisible?: boolean;
   playbackState: 'idle' | 'buffering' | 'ready' | 'ended';
   isPlaying: boolean;
   playWhenReady: boolean;
@@ -33,17 +37,53 @@ export interface NativePlayerError {
   message: string;
 }
 
-export interface NativePlayerTrackSummary {
-  audioTracks: number;
-  videoTracks: number;
-  textTracks: number;
+export interface NativePlayerTrack {
+  groupId: string;
+  trackIndex: number;
+  type: 'audio' | 'video' | 'text' | 'unknown';
+  label: string;
+  language: string;
+  mimeType: string;
+  codecs: string;
+  bitrate: number;
+  width: number;
+  height: number;
+  channelCount: number;
+  selected: boolean;
+  supported: boolean;
+}
+
+export interface NativePlayerTracks {
+  audioTracks: NativePlayerTrack[];
+  videoTracks: NativePlayerTrack[];
+  textTracks: NativePlayerTrack[];
 }
 
 interface NativeProviderPlugin {
-  playMedia(options: { url: string; title?: string; mediaType?: 'live' | 'vod' | 'series' }): Promise<{ started: boolean; engine: string }>;
+  playMedia(options: {
+    url: string;
+    title?: string;
+    mediaType?: 'live' | 'vod' | 'series';
+    channelNumber?: string;
+    currentProgram?: string;
+    nextProgram?: string;
+  }): Promise<{ started: boolean; engine: string }>;
+  updatePlayerMetadata(options: {
+    title?: string;
+    channelNumber?: string;
+    currentProgram?: string;
+    nextProgram?: string;
+  }): Promise<NativePlayerState>;
   stopMedia(): Promise<{ stopped: boolean }>;
   setPlayerVisible(options: { visible: boolean }): Promise<NativePlayerState>;
   getPlayerState(): Promise<NativePlayerState>;
+  getPlayerTracks(): Promise<NativePlayerTracks>;
+  selectPlayerTrack(options: {
+    type: 'audio' | 'video' | 'text';
+    groupId?: string;
+    trackIndex?: number;
+    disabled?: boolean;
+  }): Promise<NativePlayerTracks>;
   controlMedia(options: {
     action: 'play' | 'pause' | 'toggle' | 'mute' | 'unmute' | 'toggleMute' | 'setVolume' | 'seekBy' | 'showControls' | 'hideControls';
     value?: number;
@@ -52,7 +92,7 @@ interface NativeProviderPlugin {
   addListener(eventName: 'playerState', listenerFunc: (state: NativePlayerState) => void): Promise<PluginListenerHandle>;
   addListener(eventName: 'playerCommand', listenerFunc: (event: NativePlayerCommand) => void): Promise<PluginListenerHandle>;
   addListener(eventName: 'playerError', listenerFunc: (event: NativePlayerError) => void): Promise<PluginListenerHandle>;
-  addListener(eventName: 'playerTracks', listenerFunc: (event: NativePlayerTrackSummary) => void): Promise<PluginListenerHandle>;
+  addListener(eventName: 'playerTracks', listenerFunc: (event: NativePlayerTracks) => void): Promise<PluginListenerHandle>;
   getTransportInfo(): Promise<NativeTransportInfo>;
   requestJson(options: {
     url: string;
@@ -62,7 +102,7 @@ interface NativeProviderPlugin {
   }): Promise<{ status: number; contentType?: string; route?: string; data: unknown }>;
 }
 
-const EXPECTED_TRANSPORT_MARKER = 'GS-NATIVE-XCIPTV-HS10';
+const EXPECTED_TRANSPORT_MARKER = 'GS-NATIVE-XCIPTV-HS11';
 const NativeProvider = registerPlugin<NativeProviderPlugin>('GetSmartProvider');
 
 export class AndroidProviderTransport implements ProviderTransport {
@@ -122,9 +162,22 @@ export async function playNativeAndroidMedia(options: {
   url: string;
   title?: string;
   mediaType?: 'live' | 'vod' | 'series';
+  channelNumber?: string;
+  currentProgram?: string;
+  nextProgram?: string;
 }): Promise<void> {
   if (!isNativeAndroidRuntime()) throw new Error('Native Android playback is unavailable.');
   await NativeProvider.playMedia(options);
+}
+
+export async function updateNativeAndroidPlayerMetadata(options: {
+  title?: string;
+  channelNumber?: string;
+  currentProgram?: string;
+  nextProgram?: string;
+}): Promise<NativePlayerState | null> {
+  if (!isNativeAndroidRuntime()) return null;
+  return NativeProvider.updatePlayerMetadata(options);
 }
 
 export async function setNativeAndroidPlayerVisible(visible: boolean): Promise<NativePlayerState | null> {
@@ -135,6 +188,21 @@ export async function setNativeAndroidPlayerVisible(visible: boolean): Promise<N
 export async function getNativeAndroidPlayerState(): Promise<NativePlayerState | null> {
   if (!isNativeAndroidRuntime()) return null;
   return NativeProvider.getPlayerState();
+}
+
+export async function getNativeAndroidPlayerTracks(): Promise<NativePlayerTracks | null> {
+  if (!isNativeAndroidRuntime()) return null;
+  return NativeProvider.getPlayerTracks();
+}
+
+export async function selectNativeAndroidPlayerTrack(options: {
+  type: 'audio' | 'video' | 'text';
+  groupId?: string;
+  trackIndex?: number;
+  disabled?: boolean;
+}): Promise<NativePlayerTracks | null> {
+  if (!isNativeAndroidRuntime()) return null;
+  return NativeProvider.selectPlayerTrack(options);
 }
 
 export async function controlNativeAndroidMedia(
@@ -167,7 +235,7 @@ export function addNativeAndroidPlayerErrorListener(
 }
 
 export function addNativeAndroidPlayerTracksListener(
-  listener: (event: NativePlayerTrackSummary) => void
+  listener: (event: NativePlayerTracks) => void
 ): Promise<PluginListenerHandle> | null {
   if (!isNativeAndroidRuntime()) return null;
   return NativeProvider.addListener('playerTracks', listener);
